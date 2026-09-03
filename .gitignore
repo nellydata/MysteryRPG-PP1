@@ -1,0 +1,19 @@
+# Ignore Visual Studio workspace junk
+.vs/
+*.sln
+*.slnx
+
+# Ignore Visual Studio cache/databases
+*.db
+*.sqlite
+*.cache
+*.log
+
+# Ignore Visual Studio layout/index junk
+FileContentIndex/
+CopilotIndices/
+v18/
+
+# Ignore build output
+Debug/
+Release/

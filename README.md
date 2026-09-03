@@ -24,7 +24,7 @@ After completing the above steps, feel free to begin updating this readme where 
 
 ### Student First & Last Name
 
-Hello my name is [enter name]. I am a student from [where are you from?]. The purpose of this repository is to practice development using version control. This work will help me begin to build a portfolio of skills and accomplishment that can be shared in the future.
+Hello my name is Nelson. I am a student from Chicago, IL. The purpose of this repository is to practice development using version control. This work will help me begin to build a portfolio of skills and accomplishment that can be shared in the future.
 
 <br>
 
@@ -44,7 +44,7 @@ Each week I will summarize my milestone activity and progress by writing a stand
 
 ### Week 1
 
-Replace this paragraph with your stand up for this week. Use the prompts above to summarize your most recent milestone activity and work.
+This week I focused on setting up my development environment and configuring my GitHub repository. I created the required folder structure, fixed issues with .gitignore, removed Visual Studio workspace files from version control, and verified that my repo is clean and ready for development. I also cloned the repository locally and confirmed that Visual Studio opens it correctly. My next step is to begin Milestone 1 and start outlining the core structure of my project.
 
 ### Week 2
 

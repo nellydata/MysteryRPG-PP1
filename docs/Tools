@@ -1,0 +1,5 @@
+AI Tool Usage Disclosure
+GitHub Copilot was employed as an assistive coding tool during development.
+Its role was limited to generating boilerplate code and accelerating implementation of predefined class structures.
+All conceptual design, gameplay systems, and architectural decisions were independently developed by the author.
+Copilot’s contributions were curated and integrated only when consistent with the project’s documented design goals.

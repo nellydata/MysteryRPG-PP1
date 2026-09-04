@@ -1,59 +1,42 @@
-# 🚀 Welcome to Project & Portfolio!
+# Micare
 
-This repository will be used to keep track of research and development conducted in this class. Follow the instructions below to get started.
-cos
-### Getting Started
+Micare is a console-based noir roguelike RPG written in C++17. Adelaide explores a cathedral overtaken by the Shimmer, discovers clues and items, encounters NPCs, and fights enemies while progressing through Floor 1.
 
-**1.** Review the [About](./docs/01_about/README.md) README and all of the links it provides.
+## Project Structure
 
-**2.** Review the documentation and [Getting Started](./docs/02_getting_started/README.md) steps in this repository's docs folder.
+- `dev/include/` - C++ header files
+- `dev/src/` - C++ source files and program entry point
+- `docs/` - project and course documentation
+- `COS-PP1.vcxproj` - Visual Studio project
 
-**3.** Attend the first Live Lecture to see a live setup demo. If you are unable to attend, make sure to watch the archive.
+## Current Features
 
-### Next Steps...
+- Deterministic Floor 1 map with Entrance Hall, Archive Room, Chapel, and Storage Room
+- Interactable rooms with neutral environmental descriptions
+- Deterministic enemy spawning
+- Combat with Attack, Block, Shimmer, Interrogate, Expose Weakness, and Flee
+- Health, attack, defense, XP, and level progression
+- Item and clue inventory listing
+- NPC placeholders and input validation
 
-After completing the above steps, feel free to begin updating this readme where indicated below. Remember to update this document each week to receive proper credit for the weekly Milestone assignment.
+## Building and Running
 
-<br>
+Open `COS-PP1.vcxproj` in Visual Studio and build Debug x64. The project uses C++17 and no external libraries.
 
-> ❗️ &nbsp; Now that you have read to this point, go ahead and delete this sentence and everything above it.
+## Milestone Stand-Up
 
-<br>
+### Overview
 
-# Project & Portfolio 1
+This milestone focused on building the initial Micare architecture and a playable console prototype. I organized the project into separate header and source folders, created the core classes, and connected map, encounter, combat, progression, player, and enemy systems.
 
-### Student First & Last Name
+### Challenges
 
-Hello my name is Nelson. I am a student from Chicago, IL. The purpose of this repository is to practice development using version control. This work will help me begin to build a portfolio of skills and accomplishment that can be shared in the future.
+The main challenges were keeping the project structure consistent with Visual Studio and separating room exploration from combat. I also diagnosed a Windows Application Control policy that blocked the unsigned debug executable even though the project compiled successfully.
 
-<br>
+### Accomplishments
 
-## 📢 &nbsp; Weekly Stand Up
+I built a deterministic Floor 1 map, added four interactable rooms, created basic enemy types, implemented combat actions, added XP and level progression, and created readable item and clue inventory output. The project builds with zero errors and zero warnings.
 
-Each week I will summarize my milestone activity and progress by writing a stand-up. A stand-up is meant to be a succinct update on how things are going. Use these prompts as a guide on what to write about:
+### Next Steps
 
-⚙️ Overview - What I worked on this past week
-<br>
-🌵 Challenges - What problems did I have & how I'm addressing them
-<br>
-🏆 Accomplishments - What is something I "leveled up" on this week
-<br>
-🔮 Next Steps - What I plan to prioritize and do next
-
-<br>
-
-### Week 1
-
-This week I focused on setting up my development environment and configuring my GitHub repository. I created the required folder structure, fixed issues with .gitignore, removed Visual Studio workspace files from version control, and verified that my repo is clean and ready for development. I also cloned the repository locally and confirmed that Visual Studio opens it correctly. My next step is to begin Milestone 1 and start outlining the core structure of my project.
-
-### Week 2
-
-My next stand up will go here...
-
-### Week 3
-
-Stay tuned, this stand up is coming soon...
-
-### Week 4
-
-My final stand up...
+The next priority is adding the first working Shimmer skill, improving NPC and clue interactions, and expanding the room loop while keeping the systems small and deterministic.

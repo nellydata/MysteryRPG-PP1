@@ -2,27 +2,31 @@
 #include "Player.h"
 #include <iostream>
 
-ProgressionManager::ProgressionManager() : xp_(0), level_(1) {}
+ProgressionManager::ProgressionManager()
+    : level_(1), xp_(0), xpToNextLevel_(100) {}
 
-void ProgressionManager::awardXP(Player& player, int amount) {
-	if (amount <= 0) return;
-
-	xp_ += amount;
-	std::cout << "Gained " << amount << " XP.\n";
-
-	while (xp_ >= getXPToNextLevel()) {
-		xp_ -= getXPToNextLevel();
-		levelUp(player);
-	}
+void ProgressionManager::GrantXP(int amount) {
+    if (amount > 0) xp_ += amount;
 }
 
-int ProgressionManager::getXP() const { return xp_; }
-int ProgressionManager::getLevel() const { return level_; }
-int ProgressionManager::getXPToNextLevel() const { return level_ * 25; }
+bool ProgressionManager::CheckLevelUp(Player& player) {
+    bool leveledUp = false;
 
-void ProgressionManager::levelUp(Player& player) {
-	++level_;
-	player.heal(5);
-	player.gainSP(2);
-	std::cout << "Adelaide reached level " << level_ << ".\n";
+    while (xp_ >= xpToNextLevel_) {
+        xp_ -= xpToNextLevel_;
+        ++level_;
+        player.increaseMaxHP(2);
+        player.increaseAttack(1);
+        player.increaseDefense(1);
+        player.heal(5);
+        leveledUp = true;
+
+        std::cout << "Level up! Adelaide is now level " << level_ << ".\n"
+                  << "Max HP +2, Attack +1, Defense +1, HP restored +5.\n";
+    }
+
+    return leveledUp;
 }
+
+int ProgressionManager::GetLevel() const { return level_; }
+int ProgressionManager::GetXP() const { return xp_; }

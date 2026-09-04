@@ -6,14 +6,13 @@ class ProgressionManager {
 public:
     ProgressionManager();
 
-    void awardXP(Player& player, int amount);
-    int getXP() const;
-    int getLevel() const;
-    int getXPToNextLevel() const;
+    void GrantXP(int amount);
+    bool CheckLevelUp(Player& player);
+    int GetLevel() const;
+    int GetXP() const;
 
 private:
-    void levelUp(Player& player);
-
-    int xp_;
     int level_;
+    int xp_;
+    int xpToNextLevel_;
 };

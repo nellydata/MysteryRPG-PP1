@@ -21,9 +21,11 @@ void GameManager::Run() {
 	auto entrance = map.generateArea("Entrance Hall");
 	const bool cleared = encounters.explore(*entrance, player, combat, progression);
 
+	std::cout << "Level: " << progression.GetLevel()
+			  << " | XP: " << progression.GetXP() << "\n";
+
 	if (cleared) {
-		std::cout << "The Entrance Hall is clear. Adelaide reaches level "
-				  << progression.getLevel() << ".\n";
+		std::cout << "The Entrance Hall is clear.\n";
 	} else if (!player.isAlive()) {
 		std::cout << "The Shimmer claims Adelaide.\n";
 	} else {

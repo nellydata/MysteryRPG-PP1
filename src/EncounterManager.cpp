@@ -41,10 +41,14 @@ bool EncounterManager::explore(Area& area, Player& player, CombatManager& combat
 			continue;
 		}
 
-		if (!combat.resolve(action, player, *enemy, nullptr, 5)) continue;
+		if (!combat.resolve(action, player, *enemy, nullptr, 5, &progression)) continue;
+
+		if (action == CombatAction::Interrogate) {
+			progression.GrantXP(10);
+			progression.CheckLevelUp(player);
+		}
 
 		if (!enemy->isAlive()) {
-			progression.awardXP(player, 15);
 			area.removeDeadEnemies();
 			continue;
 		}

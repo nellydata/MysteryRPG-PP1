@@ -3,6 +3,7 @@
 class Player;
 class Enemy;
 class ShimmerSkill;
+class ProgressionManager;
 
 enum class CombatAction {
     Attack,
@@ -20,7 +21,8 @@ public:
     ~CombatManager();
 
     bool resolve(CombatAction action, Player& player, Enemy& enemy,
-                 ShimmerSkill* skill = nullptr, int itemHealing = 0);
+                 ShimmerSkill* skill = nullptr, int itemHealing = 0,
+                 ProgressionManager* progression = nullptr);
     void enemyTurn(Player& player, Enemy& enemy);
 
 private:

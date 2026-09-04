@@ -83,3 +83,14 @@ Spent ~1 hour wrangling scaffolding and resolving small issues to ensure everyth
 •	GameManager controls the overall map-and-room loop.
 •	Progression remains minimal and fixed-threshold.
 •	The current system is ready for later clue persistence, dialogue, item usage, and map progression features.
+
+Current issues:
+•	Flee currently returns the player to the map rather than directly to the room interaction menu.
+•	Shimmer has no concrete usable skill yet.
+•	NPCs still use placeholder messaging.
+•	Inventory displays items and clues, but item usage is intentionally not implemented.
+•	Interrogation success was not observed in this particular test run because the deterministic rolls produced failures.
+•	Level-up behavior was not reached through the normal room rewards.
+•	Room clues are generic: the first inspected object in a room may reveal the room’s clue regardless of which object logically contains it.
+•	Enemy spawn conditions are deterministic based on room identity, so a room will always produce the same spawn result each time it is first entered.
+•	The game does not yet have a full multi-room progression or victory condition.

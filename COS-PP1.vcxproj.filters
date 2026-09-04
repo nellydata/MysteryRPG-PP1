@@ -22,27 +22,6 @@
     <ClInclude Include="dev\include\Area.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="dev\include\CombatManager.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="dev\include\EncounterManager.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="dev\include\Enemy.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="dev\include\Item.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="dev\include\MapManager.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="dev\include\ProgressionManager.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="dev\include\ShimmerSkill.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="dev\include\Automata.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -50,6 +29,15 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="dev\include\Clue.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="dev\include\CombatManager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="dev\include\EncounterManager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="dev\include\Enemy.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="dev\include\GameManager.h">
@@ -61,33 +49,27 @@
     <ClInclude Include="dev\include\Inventory.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="dev\include\Item.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="dev\include\MapManager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="dev\include\Nun.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="dev\include\Player.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="dev\include\ProgressionManager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="dev\include\ShimmerSkill.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dev\src\Area.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="dev\src\CombatManager.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="dev\src\EncounterManager.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="dev\src\Enemy.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="dev\src\Item.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="dev\src\MapManager.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="dev\src\ProgressionManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="dev\src\Automata.cpp">
@@ -99,6 +81,15 @@
     <ClCompile Include="dev\src\Clue.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="dev\src\CombatManager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="dev\src\EncounterManager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="dev\src\Enemy.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="dev\src\GameManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -108,13 +99,22 @@
     <ClCompile Include="dev\src\Inventory.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="dev\src\Item.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="dev\src\main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="dev\src\MapManager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="dev\src\Nun.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="dev\src\Player.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="dev\src\main.cpp">
+    <ClCompile Include="dev\src\ProgressionManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="dev\src\ShimmerSkill.cpp">
@@ -122,5 +122,3 @@
     </ClCompile>
   </ItemGroup>
 </Project>
-
-

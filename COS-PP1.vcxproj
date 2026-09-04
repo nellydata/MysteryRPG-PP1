@@ -148,46 +148,40 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="dev\include\Area.h" />
-    <ClInclude Include="dev\include\CombatManager.h" />
-    <ClInclude Include="dev\include\EncounterManager.h" />
-    <ClInclude Include="dev\include\Enemy.h" />
-    <ClInclude Include="dev\include\Item.h" />
-    <ClInclude Include="dev\include\MapManager.h" />
-    <ClInclude Include="dev\include\ProgressionManager.h" />
-    <ClInclude Include="dev\include\ShimmerSkill.h" />
     <ClInclude Include="dev\include\Automata.h" />
     <ClInclude Include="dev\include\Boss.h" />
     <ClInclude Include="dev\include\Clue.h" />
+    <ClInclude Include="dev\include\CombatManager.h" />
+    <ClInclude Include="dev\include\EncounterManager.h" />
+    <ClInclude Include="dev\include\Enemy.h" />
     <ClInclude Include="dev\include\GameManager.h" />
     <ClInclude Include="dev\include\InteractionManager.h" />
     <ClInclude Include="dev\include\Inventory.h" />
+    <ClInclude Include="dev\include\Item.h" />
+    <ClInclude Include="dev\include\MapManager.h" />
     <ClInclude Include="dev\include\Nun.h" />
     <ClInclude Include="dev\include\Player.h" />
-    <ClInclude Include="include\EncounterManager.h" />
-    <ClInclude Include="include\Enemy.h" />
-    <ClInclude Include="include\ProgressionManager.h" />
+    <ClInclude Include="dev\include\ProgressionManager.h" />
+    <ClInclude Include="dev\include\ShimmerSkill.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dev\src\Area.cpp" />
-    <ClCompile Include="dev\src\CombatManager.cpp" />
-    <ClCompile Include="dev\src\EncounterManager.cpp" />
-    <ClCompile Include="dev\src\Enemy.cpp" />
-    <ClCompile Include="dev\src\Item.cpp" />
-    <ClCompile Include="dev\src\MapManager.cpp" />
-    <ClCompile Include="dev\src\ProgressionManager.cpp" />
-    <ClCompile Include="dev\src\ShimmerSkill.cpp" />
     <ClCompile Include="dev\src\Automata.cpp" />
     <ClCompile Include="dev\src\Boss.cpp" />
     <ClCompile Include="dev\src\Clue.cpp" />
+    <ClCompile Include="dev\src\CombatManager.cpp" />
+    <ClCompile Include="dev\src\EncounterManager.cpp" />
+    <ClCompile Include="dev\src\Enemy.cpp" />
     <ClCompile Include="dev\src\GameManager.cpp" />
     <ClCompile Include="dev\src\InteractionManager.cpp" />
     <ClCompile Include="dev\src\Inventory.cpp" />
+    <ClCompile Include="dev\src\Item.cpp" />
+    <ClCompile Include="dev\src\main.cpp" />
+    <ClCompile Include="dev\src\MapManager.cpp" />
     <ClCompile Include="dev\src\Nun.cpp" />
     <ClCompile Include="dev\src\Player.cpp" />
-    <ClCompile Include="dev\src\main.cpp" />
-    <ClCompile Include="src\EncounterManager.cpp" />
-    <ClCompile Include="src\Enemy.cpp" />
-    <ClCompile Include="src\ProgressionManager.cpp" />
+    <ClCompile Include="dev\src\ProgressionManager.cpp" />
+    <ClCompile Include="dev\src\ShimmerSkill.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

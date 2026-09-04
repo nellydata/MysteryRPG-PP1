@@ -1,7 +1,8 @@
 #pragma once
+
 #include <iostream>
 
-class GameManager {
+class InteractionManager {
 public:
-    void Run();
+	void Inspect();
 };

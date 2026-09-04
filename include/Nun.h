@@ -1,4 +1,5 @@
 #pragma once
+
 #include "Enemy.h"
 
 class Nun : public Enemy {

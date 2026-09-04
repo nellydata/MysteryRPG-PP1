@@ -1,10 +1,11 @@
 #pragma once
+
 #include <vector>
 #include "Clue.h"
 
 class Inventory {
 public:
-    std::vector<Clue> clues;
+	std::vector<Clue> clues;
 
-    void AddClue(const Clue& clue);
+	void AddClue(const Clue& clue);
 };

@@ -2,12 +2,28 @@
 
 class Player;
 class Enemy;
+class ShimmerSkill;
+
+enum class CombatAction {
+    Attack,
+    Block,
+    Shimmer,
+    Interrogate,
+    ExposeWeakness,
+    Item,
+    Flee
+};
 
 class CombatManager {
 public:
     CombatManager();
     ~CombatManager();
 
-    void Attack(Enemy& enemy, int damage);
-    void EnemyAttack(Enemy& enemy);
+    bool resolve(CombatAction action, Player& player, Enemy& enemy,
+                 ShimmerSkill* skill = nullptr, int itemHealing = 0);
+    void enemyTurn(Player& player, Enemy& enemy);
+
+private:
+    bool blocked_;
+    bool weaknessExposed_;
 };

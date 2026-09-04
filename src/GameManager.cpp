@@ -1,36 +1,32 @@
 #include "GameManager.h"
-#include "Player.h"
-#include "MapManager.h"
-#include "CombatManager.h"
 #include "Area.h"
-#include "Enemy.h"
+#include "CombatManager.h"
+#include "EncounterManager.h"
+#include "MapManager.h"
+#include "Player.h"
+#include "ProgressionManager.h"
 #include <memory>
 
 void GameManager::Run() {
-	auto player = std::make_unique<Player>("Adelaide", 30, 10);
+	Player player("Adelaide", 30, 10);
 	MapManager map;
 	CombatManager combat;
+	EncounterManager encounters;
+	ProgressionManager progression;
 
-	std::cout << "Entering the cathedral...\n";
-	auto area = map.generateArea("Entrance Hall");
+	std::cout << "MICARE\n"
+			  << "The cathedral is silent except for the pulse of the Shimmer.\n"
+			  << "Entering the cathedral...\n";
 
-	while (area->hasEnemies() && player->isAlive()) {
-		Enemy* enemy = area->getFirstAliveEnemy();
-		if (!enemy) break;
+	auto entrance = map.generateArea("Entrance Hall");
+	const bool cleared = encounters.explore(*entrance, player, combat, progression);
 
-		std::cout << "You encounter: " << enemy->getName()
-				  << " (HP: " << enemy->getHP() << ")\n";
-		combat.Attack(*enemy, 6);
-
-		if (!enemy->isAlive()) {
-			area->removeDeadEnemies();
-			continue;
-		}
-
-		combat.EnemyAttack(*enemy);
-		player->takeDamage(enemy->getAtk());
-		std::cout << "Your HP: " << player->getHP() << "\n";
+	if (cleared) {
+		std::cout << "The Entrance Hall is clear. Adelaide reaches level "
+				  << progression.getLevel() << ".\n";
+	} else if (!player.isAlive()) {
+		std::cout << "The Shimmer claims Adelaide.\n";
+	} else {
+		std::cout << "Adelaide retreats into the cathedral shadows.\n";
 	}
-
-	std::cout << (player->isAlive() ? "Area cleared.\n" : "You have been defeated.\n");
 }

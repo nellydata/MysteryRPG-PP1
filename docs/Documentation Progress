@@ -77,3 +77,9 @@ Spent ~1 hour wrangling scaffolding and resolving small issues to ensure everyth
 •	XP gain
 •	Level-up behavior
 •	Area completion messages
+•	MapManager now owns the deterministic Floor 1 room list.
+•	Area stores room-specific environment and encounter metadata.
+•	EncounterManager handles room interaction and combat entry.
+•	GameManager controls the overall map-and-room loop.
+•	Progression remains minimal and fixed-threshold.
+•	The current system is ready for later clue persistence, dialogue, item usage, and map progression features.

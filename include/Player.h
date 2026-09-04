@@ -3,6 +3,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include "Clue.h"
 #include "Item.h"
 
 class Player {
@@ -28,6 +29,8 @@ public:
     void spendSP(int amount);
     void gainSP(int amount);
     void AddItem(std::unique_ptr<Item> item);
+    void AddClue(const Clue& clue);
+    void PrintInventory() const;
 
 private:
     std::string name_;
@@ -38,4 +41,5 @@ private:
     int sp_;
     int maxSp_;
     std::vector<std::unique_ptr<Item>> inventory_;
+    std::vector<Clue> clues_;
 };

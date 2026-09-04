@@ -2,18 +2,6 @@
 #include <iostream>
 #include <stdexcept>
 
-namespace {
-const char* SpawnConditionText(EnemySpawnCondition condition) {
-    switch (condition) {
-    case EnemySpawnCondition::None: return "None (0%)";
-    case EnemySpawnCondition::Low: return "Low (20%)";
-    case EnemySpawnCondition::Medium: return "Medium (50%)";
-    case EnemySpawnCondition::High: return "High (80%)";
-    }
-    return "Unknown";
-}
-}
-
 MapManager::MapManager() {
     GenerateFloor1();
 }
@@ -32,6 +20,7 @@ void MapManager::GenerateFloor1() {
     Area& archive = rooms_.back();
     archive.AddInteractable("Dusty bookshelf");
     archive.AddInteractable("Locked cabinet");
+    archive.AddInteractable("Figure in the shadows");
     archive.SetNPC(true);
     archive.SetClues(true);
     archive.SetItems(true);
@@ -41,6 +30,7 @@ void MapManager::GenerateFloor1() {
     Area& chapel = rooms_.back();
     chapel.AddInteractable("Altar");
     chapel.AddInteractable("Prayer bench");
+    chapel.AddInteractable("Figure in the shadows");
     chapel.SetNPC(true);
     chapel.SetClues(true);
     chapel.SetSpawnCondition(EnemySpawnCondition::High);
@@ -64,13 +54,8 @@ Area& MapManager::SelectRoom(int index) {
 }
 
 void MapManager::DescribeRoom(const Area& area) const {
-    std::cout << "\n" << area.getName() << "\n"
-              << "NPC present: " << (area.HasNPC() ? "Yes" : "No") << "\n"
-              << "Clues present: " << (area.HasClues() ? "Yes" : "No") << "\n"
-              << "Items present: " << (area.HasItems() ? "Yes" : "No") << "\n"
-              << "Enemy spawn chance: " << SpawnConditionText(area.GetSpawnCondition()) << "\n"
-              << "Interactables:\n";
-
+    std::cout << "\nYou enter the " << area.getName() << ".\n"
+              << "Objects of interest:\n";
     for (const auto& interactable : area.GetInteractables()) {
         std::cout << "- " << interactable << "\n";
     }

@@ -11,7 +11,6 @@ enum class CombatAction {
     Shimmer,
     Interrogate,
     ExposeWeakness,
-    Item,
     Flee
 };
 
@@ -20,12 +19,18 @@ public:
     CombatManager();
     ~CombatManager();
 
+    void BeginEncounter(Enemy& enemy);
     bool resolve(CombatAction action, Player& player, Enemy& enemy,
-                 ShimmerSkill* skill = nullptr, int itemHealing = 0,
+                 ShimmerSkill* skill = nullptr,
                  ProgressionManager* progression = nullptr);
     void enemyTurn(Player& player, Enemy& enemy);
 
 private:
+    bool interrogate(Player& player, Enemy& enemy,
+                     ProgressionManager* progression);
+
     bool blocked_;
     bool weaknessExposed_;
+    int interrogationAttempts_;
+    Enemy* activeEnemy_;
 };

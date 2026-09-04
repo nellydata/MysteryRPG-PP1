@@ -1,7 +1,7 @@
 #include "Enemy.h"
 
 Enemy::Enemy(const std::string& name, int hp, int atk, int xpReward)
-	: name_(name), hp_(hp), atk_(atk), xpReward_(xpReward) {}
+	: name_(name), hp_(hp), maxHp_(hp), atk_(atk), xpReward_(xpReward) {}
 
 Enemy::~Enemy() = default;
 
@@ -14,5 +14,6 @@ void Enemy::takeDamage(int amount) {
 bool Enemy::isAlive() const { return hp_ > 0; }
 const std::string& Enemy::getName() const { return name_; }
 int Enemy::getHP() const { return hp_; }
+int Enemy::getMaxHP() const { return maxHp_; }
 int Enemy::getAtk() const { return atk_; }
 int Enemy::getXPReward() const { return xpReward_; }

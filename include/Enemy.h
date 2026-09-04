@@ -11,12 +11,14 @@ public:
     bool isAlive() const;
     const std::string& getName() const;
     int getHP() const;
+    int getMaxHP() const;
     int getAtk() const;
     int getXPReward() const;
 
 protected:
     std::string name_;
     int hp_;
+    int maxHp_;
     int atk_;
     int xpReward_;
 };

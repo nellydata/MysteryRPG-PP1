@@ -1,4 +1,5 @@
 #include "Player.h"
+#include <iostream>
 
 Player::Player(const std::string& name, int maxHp, int maxSp)
     : name_(name), hp_(maxHp), maxHp_(maxHp), attack_(6), defense_(0),
@@ -25,7 +26,7 @@ int Player::getMaxHP() const { return maxHp_; }
 int Player::getAttack() const { return attack_; }
 int Player::getDefense() const { return defense_; }
 int Player::getSP() const { return sp_; }
-std::size_t Player::GetInventorySize() const { return inventory_.size(); }
+std::size_t Player::GetInventorySize() const { return inventory_.size() + clues_.size(); }
 
 void Player::increaseMaxHP(int amount) {
     if (amount > 0) maxHp_ += amount;
@@ -53,4 +54,29 @@ void Player::gainSP(int amount) {
 
 void Player::AddItem(std::unique_ptr<Item> item) {
     if (item) inventory_.push_back(std::move(item));
+}
+
+void Player::AddClue(const Clue& clue) {
+    clues_.push_back(clue);
+}
+
+void Player::PrintInventory() const {
+    std::cout << "\nItems:\n";
+    if (inventory_.empty()) {
+        std::cout << "- None\n";
+    } else {
+        for (const auto& item : inventory_) {
+            std::cout << "- " << item->getName() << ": "
+                      << item->getDescription() << "\n";
+        }
+    }
+
+    std::cout << "Clues:\n";
+    if (clues_.empty()) {
+        std::cout << "- None\n";
+    } else {
+        for (const auto& clue : clues_) {
+            std::cout << "- " << clue.description << "\n";
+        }
+    }
 }

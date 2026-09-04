@@ -142,37 +142,26 @@
   <ItemGroup>
     <None Include="..\.gitignore" />
     <None Include="..\README.md" />
-    <None Include="ShimmerSkill.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Area.h" />
-    <ClInclude Include="CombatManager.h" />
-    <ClInclude Include="dev\include\Clue.h" />
-    <ClInclude Include="dev\include\GameManager.h" />
-    <ClInclude Include="dev\include\InteractionManager.h" />
-    <ClInclude Include="dev\include\Inventory.h" />
-    <ClInclude Include="dev\include\Player.h" />
-    <ClInclude Include="Enemy.h" />
-    <ClInclude Include="Item.h" />
-    <ClInclude Include="MapManager.h" />
-    <ClInclude Include="ProgressionManager.h" />
+    <ClInclude Include="include\Area.h" />
+    <ClInclude Include="include\CombatManager.h" />
+    <ClInclude Include="include\EncounterManager.h" />
+    <ClInclude Include="include\Enemy.h" />
+    <ClInclude Include="include\Item.h" />
+    <ClInclude Include="include\MapManager.h" />
+    <ClInclude Include="include\ProgressionManager.h" />
+    <ClInclude Include="include\ShimmerSkill.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Area.cpp" />
-    <ClCompile Include="CombatManager.cpp" />
-    <ClCompile Include="dev\src\Clue.cpp" />
-    <ClCompile Include="dev\src\GameManager.cpp" />
-    <ClCompile Include="dev\src\InteractionManager.cpp" />
-    <ClCompile Include="dev\src\Inventory.cpp" />
-    <ClCompile Include="dev\src\main.cpp" />
-    <ClCompile Include="dev\src\Player.cpp" />
-    <ClCompile Include="EncounterManager.cpp" />
-    <ClCompile Include="EncounterManager.h" />
-    <ClCompile Include="Enemy.cpp" />
-    <ClCompile Include="Item.cpp" />
-    <ClCompile Include="MapManager.cpp" />
-    <ClCompile Include="ProgressionManager.cpp" />
-    <ClCompile Include="ShimmerSkill.cpp" />
+    <ClCompile Include="src\Area.cpp" />
+    <ClCompile Include="src\CombatManager.cpp" />
+    <ClCompile Include="src\EncounterManager.cpp" />
+    <ClCompile Include="src\Enemy.cpp" />
+    <ClCompile Include="src\Item.cpp" />
+    <ClCompile Include="src\MapManager.cpp" />
+    <ClCompile Include="src\ProgressionManager.cpp" />
+    <ClCompile Include="src\ShimmerSkill.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

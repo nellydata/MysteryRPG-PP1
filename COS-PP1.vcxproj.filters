@@ -17,89 +17,56 @@
   <ItemGroup>
     <None Include="..\.gitignore" />
     <None Include="..\README.md" />
-    <None Include="ShimmerSkill.h">
-      <Filter>Header Files</Filter>
-    </None>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="dev\include\Clue.h">
+    <ClInclude Include="include\Area.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="dev\include\GameManager.h">
+    <ClInclude Include="include\CombatManager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="dev\include\InteractionManager.h">
+    <ClInclude Include="include\EncounterManager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="dev\include\Inventory.h">
+    <ClInclude Include="include\Enemy.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="dev\include\Player.h">
+    <ClInclude Include="include\Item.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Enemy.h">
+    <ClInclude Include="include\MapManager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="ProgressionManager.h">
+    <ClInclude Include="include\ProgressionManager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="MapManager.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Area.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Item.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="CombatManager.h">
+    <ClInclude Include="include\ShimmerSkill.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="dev\src\Clue.cpp">
+    <ClCompile Include="src\Area.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="dev\src\GameManager.cpp">
+    <ClCompile Include="src\CombatManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="dev\src\InteractionManager.cpp">
+    <ClCompile Include="src\EncounterManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="dev\src\Inventory.cpp">
+    <ClCompile Include="src\Enemy.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="dev\src\main.cpp">
+    <ClCompile Include="src\Item.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="dev\src\Player.cpp">
+    <ClCompile Include="src\MapManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="EncounterManager.h">
-      <Filter>Header Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Enemy.cpp">
+    <ClCompile Include="src\ProgressionManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Area.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Item.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="ShimmerSkill.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="MapManager.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="EncounterManager.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="CombatManager.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="ProgressionManager.cpp">
+    <ClCompile Include="src\ShimmerSkill.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

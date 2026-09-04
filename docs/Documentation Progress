@@ -1,12 +1,79 @@
 9/3/2026
-Full header/source file architecture created
 
-Core gameplay classes scaffolded
 
-Manager classes scaffolded
+Spent ~1 hour wrangling scaffolding and resolving small issues to ensure everything is structured properly
 
-Project directory organized for multi-file development
-
-Documentation structure prepared
-
-Ready to begin implementing core systems (Player, Enemy, Area, GameManager)
+•	Organized the project into a cleaner include/ and src/ structure.
+•	Added the core Enemy class with:
+•	Name, health, and attack values
+•	Damage handling
+•	Alive/dead state checks
+•	Basic accessors
+•	Added enemy types:
+•	Automata
+•	Nun
+•	Boss
+•	Added the Item class with item names and descriptions.
+•	Added the Clue class for storing discovered information.
+•	Expanded Player to include:
+•	Health and maximum health
+•	Shimmer Points
+•	Healing and damage handling
+•	SP spending and recovery
+•	Inventory storage
+•	Added the abstract ShimmerSkill base class for future polymorphic Shimmer abilities.
+•	Added Area functionality for:
+•	Storing enemies with std::unique_ptr
+•	Checking whether enemies remain
+•	Finding the first living enemy
+•	Removing defeated enemies
+•	Added procedural area generation through MapManager.
+•	Area generation now creates a small selection of:
+•	Automata
+•	Nuns
+•	Shimmer Husks
+•	Bosses in special areas such as the Sanctum
+•	Added ProgressionManager for:
+•	XP tracking
+•	XP thresholds
+•	Level progression
+•	Health and SP rewards after leveling up
+•	Added a combat action system with:
+•	Attack
+•	Block
+•	Shimmer
+•	Interrogate
+•	Expose Weakness
+•	Item
+•	Flee
+•	Added enemy-turn handling, including reduced damage when blocking.
+•	Added basic weakness exposure so attacks can deal increased damage afterward.
+•	Added Shimmer skill validation based on the player’s available SP.
+•	Added EncounterManager to coordinate:
+•	Area exploration
+•	Combat menus
+•	Player actions
+•	Enemy turns
+•	XP rewards
+•	Defeated enemy cleanup
+•	Flee and defeat outcomes
+•	Added invalid numeric input handling in the console encounter menu.
+•	Connected all current managers through GameManager.
+•	Added a simple playable console flow:
+•	Adelaide enters the cathedral
+•	An area is generated
+•	Enemies are encountered
+•	Combat actions are selected
+•	XP and level progression are displayed
+•	Added a basic main.cpp entry point that starts the game.
+•	Configured the Visual Studio project for C++17.
+•	Added the canonical include/ directory to the compiler include path.
+•	Confirmed the project builds successfully with no errors or warnings.
+•	Ran a console smoke test that verified:
+•	Combat execution
+•	Enemy damage
+•	Player damage
+•	Enemy defeat
+•	XP gain
+•	Level-up behavior
+•	Area completion messages

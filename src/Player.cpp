@@ -25,6 +25,7 @@ int Player::getMaxHP() const { return maxHp_; }
 int Player::getAttack() const { return attack_; }
 int Player::getDefense() const { return defense_; }
 int Player::getSP() const { return sp_; }
+std::size_t Player::GetInventorySize() const { return inventory_.size(); }
 
 void Player::increaseMaxHP(int amount) {
     if (amount > 0) maxHp_ += amount;
@@ -48,4 +49,8 @@ void Player::gainSP(int amount) {
     if (amount <= 0) return;
     sp_ += amount;
     if (sp_ > maxSp_) sp_ = maxSp_;
+}
+
+void Player::AddItem(std::unique_ptr<Item> item) {
+    if (item) inventory_.push_back(std::move(item));
 }

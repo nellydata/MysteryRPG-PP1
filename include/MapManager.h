@@ -1,14 +1,19 @@
 #pragma once
 
-#include <memory>
+#include "Area.h"
 #include <string>
-
-class Area;
+#include <vector>
 
 class MapManager {
 public:
     MapManager();
-    ~MapManager();
 
-    std::unique_ptr<Area> generateArea(const std::string& name);
+    void GenerateFloor1();
+    std::vector<Area>& GetRooms();
+    const std::vector<Area>& GetRooms() const;
+    Area& SelectRoom(int index);
+    void DescribeRoom(const Area& area) const;
+
+private:
+    std::vector<Area> rooms_;
 };

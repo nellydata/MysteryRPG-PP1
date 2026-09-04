@@ -1,36 +1,77 @@
 #include "MapManager.h"
-#include "Area.h"
-#include "Automata.h"
-#include "Boss.h"
-#include "Nun.h"
-#include <functional>
-#include <memory>
+#include <iostream>
+#include <stdexcept>
 
-MapManager::MapManager() = default;
-MapManager::~MapManager() = default;
-
-std::unique_ptr<Area> MapManager::generateArea(const std::string& name) {
-    auto area = std::make_unique<Area>(name);
-    const std::size_t seed = std::hash<std::string>{}(name);
-    const int enemyCount = 2 + static_cast<int>(seed % 3);
-
-    for (int index = 0; index < enemyCount; ++index) {
-        switch ((seed + static_cast<std::size_t>(index)) % 3) {
-        case 0:
-            area->addEnemy(std::make_unique<Automata>());
-            break;
-        case 1:
-            area->addEnemy(std::make_unique<Nun>());
-            break;
-        default:
-            area->addEnemy(std::make_unique<Enemy>("Shimmer Husk", 10, 3));
-            break;
-        }
+namespace {
+const char* SpawnConditionText(EnemySpawnCondition condition) {
+    switch (condition) {
+    case EnemySpawnCondition::None: return "None (0%)";
+    case EnemySpawnCondition::Low: return "Low (20%)";
+    case EnemySpawnCondition::Medium: return "Medium (50%)";
+    case EnemySpawnCondition::High: return "High (80%)";
     }
+    return "Unknown";
+}
+}
 
-    if (name == "Sanctum") {
-        area->addEnemy(std::make_unique<Boss>());
+MapManager::MapManager() {
+    GenerateFloor1();
+}
+
+void MapManager::GenerateFloor1() {
+    rooms_.clear();
+
+    rooms_.emplace_back("Entrance Hall");
+    Area& entrance = rooms_.back();
+    entrance.AddInteractable("Broken statue");
+    entrance.AddInteractable("Old banner");
+    entrance.SetClues(true);
+    entrance.SetSpawnCondition(EnemySpawnCondition::Low);
+
+    rooms_.emplace_back("Archive Room");
+    Area& archive = rooms_.back();
+    archive.AddInteractable("Dusty bookshelf");
+    archive.AddInteractable("Locked cabinet");
+    archive.SetNPC(true);
+    archive.SetClues(true);
+    archive.SetItems(true);
+    archive.SetSpawnCondition(EnemySpawnCondition::Medium);
+
+    rooms_.emplace_back("Chapel");
+    Area& chapel = rooms_.back();
+    chapel.AddInteractable("Altar");
+    chapel.AddInteractable("Prayer bench");
+    chapel.SetNPC(true);
+    chapel.SetClues(true);
+    chapel.SetSpawnCondition(EnemySpawnCondition::High);
+
+    rooms_.emplace_back("Storage Room");
+    Area& storage = rooms_.back();
+    storage.AddInteractable("Crates");
+    storage.AddInteractable("Supply shelf");
+    storage.SetItems(true);
+    storage.SetSpawnCondition(EnemySpawnCondition::None);
+}
+
+std::vector<Area>& MapManager::GetRooms() { return rooms_; }
+const std::vector<Area>& MapManager::GetRooms() const { return rooms_; }
+
+Area& MapManager::SelectRoom(int index) {
+    if (index < 0 || index >= static_cast<int>(rooms_.size())) {
+        throw std::out_of_range("Room index is out of range.");
     }
+    return rooms_[index];
+}
 
-    return area;
+void MapManager::DescribeRoom(const Area& area) const {
+    std::cout << "\n" << area.getName() << "\n"
+              << "NPC present: " << (area.HasNPC() ? "Yes" : "No") << "\n"
+              << "Clues present: " << (area.HasClues() ? "Yes" : "No") << "\n"
+              << "Items present: " << (area.HasItems() ? "Yes" : "No") << "\n"
+              << "Enemy spawn chance: " << SpawnConditionText(area.GetSpawnCondition()) << "\n"
+              << "Interactables:\n";
+
+    for (const auto& interactable : area.GetInteractables()) {
+        std::cout << "- " << interactable << "\n";
+    }
 }

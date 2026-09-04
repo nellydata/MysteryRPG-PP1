@@ -1,14 +1,17 @@
 #pragma once
 
 class Area;
-class Player;
 class CombatManager;
+class Player;
 class ProgressionManager;
 
 class EncounterManager {
 public:
-	EncounterManager();
+    EncounterManager();
 
-	bool explore(Area& area, Player& player, CombatManager& combat,
-				 ProgressionManager& progression);
+    bool Explore(Area& area, Player& player, ProgressionManager& progression,
+                 CombatManager& combat);
+    bool Explore(Area& area, Player& player, ProgressionManager& progression);
+    bool explore(Area& area, Player& player, CombatManager& combat,
+                 ProgressionManager& progression);
 };

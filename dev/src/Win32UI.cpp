@@ -195,6 +195,9 @@ void Win32UI::RefreshControls() {
 	if (controls_[0] == nullptr || refreshingControls_) return;
 	refreshingControls_ = true;
 	for (HWND control : controls_) if (control != nullptr) ShowWindow(control, SW_HIDE);
+	RECT client{};
+	GetClientRect(window_, &client);
+	LayoutControls(client.right, client.bottom);
 
 	if (view_ == View::Map) {
 		const auto& rooms = mapManager_.GetRooms();
@@ -292,8 +295,8 @@ void Win32UI::LayoutControls(int width, int height) {
 	const int inventoryWidth = (std::max)(150, (panelRight - center - 36) / 4);
 	const int inventoryGap = 12;
 	if (view_ == View::Inventory) {
-		const int left = 395;
-		const int right = width - 20;
+		const int left = (std::min)(395, (std::max)(20, width / 3));
+		const int right = (std::max)(left + 240, width - 20);
 		const int top = 20;
 		const int bottom = height - 20;
 		const int split = left + (right - left) * 56 / 100;
@@ -301,12 +304,12 @@ void Win32UI::LayoutControls(int width, int height) {
 		const int listWidth = split - left;
 		const int detailWidth = right - detailLeft;
 		const int gridGap = 12;
-		const int gridWidth = (std::max)(150, (listWidth - 40 - gridGap * 3) / 4);
+		const int gridWidth = (std::max)(50, (listWidth - 40 - gridGap * 3) / 4);
 		MoveWindow(controls_[25], left + 20, top + 48, listWidth - 40, 38, TRUE);
 		MoveWindow(controls_[30], left + 20, top + 92, listWidth - 40, 40, TRUE);
 		for (int i = 0; i < 12; ++i) {
 			MoveWindow(controls_[8 + i], left + 20 + (i % 4) * (gridWidth + gridGap),
-				top + 150 + (i / 4) * 52, gridWidth, 42, TRUE);
+				top + 150 + (i / 4) * 52, gridWidth, (std::min)(42, (std::max)(28, height / 18)), TRUE);
 		}
 		const int actionWidth = (detailWidth - 40 - gridGap * 2) / 3;
 		const int actionY = bottom - 112;
@@ -899,8 +902,8 @@ void Win32UI::Paint(HDC deviceContext) {
 	}
 
 	if (view_ == View::Inventory) {
-		const int left = 395;
-		const int right = client.right - 20;
+		const int left = (std::min)(395, (std::max)(20, client.right / 3));
+		const int right = (std::max)(left + 240, client.right - 20);
 		const int top = 20;
 		const int bottom = client.bottom - 20;
 		const int split = left + (right - left) * 56 / 100;
@@ -940,6 +943,10 @@ void Win32UI::Paint(HDC deviceContext) {
 				}
 				DrawTextLine(deviceContext, detailX, detailY, type, Muted, 18);
 				detailY += 28;
+				if (!selected->getDescription().empty()) {
+					DrawTextLine(deviceContext, detailX, detailY, ToWide(selected->getDescription()), Text, 18);
+					detailY += 28;
+				}
 				const Stats& stats = selected->getStats();
 				auto drawStat = [&](const wchar_t* label, int value) {
 					if (value == 0) return;
@@ -952,12 +959,11 @@ void Win32UI::Paint(HDC deviceContext) {
 				drawStat(L"Healing potency", stats.healingPotency); drawStat(L"Healing received", stats.healingReceived);
 				drawStat(L"Barrier potency", stats.barrierPotency); drawStat(L"DOT potency", stats.dotPotency);
 				drawStat(L"Lifesteal", stats.lifesteal); drawStat(L"Debuff reduction", stats.debuffDurationReduction);
-				if (!selected->getPassive().empty()) {
-					DrawTextLine(deviceContext, detailX, detailY, L"Passive: " + ToWide(selected->getPassive()), Shimmer, 17);
-					detailY += 24;
-				}
-				if (!selected->getUniqueEffect().empty()) {
-					DrawTextLine(deviceContext, detailX, detailY, L"Effect: " + ToWide(selected->getUniqueEffect()), Shimmer, 17);
+				std::string effect = selected->getEffect();
+				if (!selected->getPassive().empty()) effect += (effect.empty() ? "" : " ") + selected->getPassive();
+				if (!selected->getUniqueEffect().empty()) effect += (effect.empty() ? "" : " ") + selected->getUniqueEffect();
+				if (!effect.empty()) {
+					DrawTextLine(deviceContext, detailX, detailY, L"Effect: " + ToWide(effect), Shimmer, 17);
 					detailY += 24;
 				}
 				if (!selected->getSetName().empty()) {
@@ -1004,77 +1010,6 @@ void Win32UI::Paint(HDC deviceContext) {
 		DrawTextLine(deviceContext, 425, contentY + 145, L"Turn order", Brass, 18, true);
 		DrawTextLine(deviceContext, 425, contentY + 180, ToWide(player_.getName()) + L"  >  " + ToWide(activeEnemy_->getName()), Text, 18);
 		if (!statusMessage_.empty()) DrawTextLine(deviceContext, 425, contentY + 225, ToWide(statusMessage_), Shimmer, 16);
-	} else if (view_ == View::Inventory) {
-		DrawPanel(deviceContext, {395, eventTop, client.right - 20, client.bottom - 20}, L"ITEM INFORMATION");
-		DrawTextLine(deviceContext, 425, contentY, L"INVENTORY // SELECT AN ITEM, THEN EQUIP", Shimmer, 23, true);
-		DrawTextLine(deviceContext, 425, contentY + 42, L"Select an item to view its details below.", Muted, 16);
-		if (!statusMessage_.empty()) DrawTextLine(deviceContext, 425, contentY + 70, ToWide(statusMessage_), Shimmer, 15);
-		if (selectedInventoryIndex_ >= 0 && selectedInventoryIndex_ < static_cast<int>(inventoryEntryItems_.size())) {
-			const Item* selected = inventoryEntryItems_[selectedInventoryIndex_];
-			const std::string description = inventoryEntryDescriptions_[selectedInventoryIndex_];
-			const Rarity rarity = selected == nullptr ? Rarity::Common : selected->getRarity();
-			DrawTextLine(deviceContext, 425, eventTop + 42, ToWide(selected == nullptr ? "Clue" : selected->getName()), RarityColor(rarity), 20, true);
-			if (selected == nullptr) {
-				DrawTextLine(deviceContext, 425, eventTop + 74, L"Type: Clue", Muted, 16);
-				DrawTextLine(deviceContext, 425, eventTop + 108, ToWide(description), Text, 16);
-			} else {
-				std::wstring type = L"Type: ";
-				switch (selected->getCategory()) {
-				case ItemCategory::Consumable: type += L"Consumable"; break;
-				case ItemCategory::Crux: type += L"Crux"; break;
-				case ItemCategory::Clue: type += L"Clue"; break;
-				case ItemCategory::ShimmerSkill: type += L"Shimmer skill"; break;
-				case ItemCategory::Equippable:
-					switch (selected->getSlot()) {
-					case EquipSlot::Head: type += L"Head"; break;
-					case EquipSlot::Torso: type += L"Torso"; break;
-					case EquipSlot::Boots: type += L"Feet"; break;
-					case EquipSlot::Hand: type += L"Hands"; break;
-					case EquipSlot::Accessory: type += L"Accessory"; break;
-					default: type += L"Equipment"; break;
-					}
-					break;
-				}
-				DrawTextLine(deviceContext, 425, eventTop + 74, type, Muted, 16);
-				int detailY = eventTop + 108;
-				const Stats& stats = selected->getStats();
-				auto drawStat = [&](const wchar_t* label, int value) {
-					if (value == 0) return;
-					DrawTextLine(deviceContext, 425, detailY, std::wstring(label) + L" " + std::to_wstring(value), Text, 15);
-					detailY += 21;
-				};
-				drawStat(L"HP", stats.hp);
-				drawStat(L"DEF", stats.def);
-				drawStat(L"SPD", stats.spd);
-				drawStat(L"ATK", stats.atk);
-				drawStat(L"ACC", stats.acc);
-				drawStat(L"RES", stats.res);
-				drawStat(L"CRIT", stats.critRate);
-				drawStat(L"CRIT DMG", stats.critDamage);
-				drawStat(L"EVASION", stats.evasion);
-				drawStat(L"HEALING", stats.healingPotency);
-			drawStat(L"HEALING RECEIVED", stats.healingReceived);
-				drawStat(L"BARRIER", stats.barrierPotency);
-				drawStat(L"DOT", stats.dotPotency);
-				drawStat(L"LIFESTEAL", stats.lifesteal);
-				drawStat(L"DEBUFF REDUCTION", stats.debuffDurationReduction);
-				if (selected->getCategory() == ItemCategory::Consumable) {
-					DrawTextLine(deviceContext, 425, detailY, L"Effect: " + ToWide(selected->getEffect()), Text, 16);
-					detailY += 20;
-				} else if (selected->getCategory() == ItemCategory::Crux) {
-					DrawTextLine(deviceContext, 425, detailY, L"Lore: " + ToWide(selected->getDescription()), Text, 16);
-					detailY += 20;
-				} else if (!selected->getPassive().empty()) {
-					DrawTextLine(deviceContext, 425, detailY, L"Passive: " + ToWide(selected->getPassive()), Text, 15);
-					detailY += 21;
-				}
-				if (!selected->getSetName().empty()) {
-					DrawTextLine(deviceContext, 425, detailY, L"Set: " + ToWide(selected->getSetName()) + L" // Bonus: " + ToWide(selected->getSetPassive()), Muted, 13);
-				} else if (!selected->getUniqueEffect().empty()) {
-					DrawTextLine(deviceContext, 425, detailY, L"Special: " + ToWide(selected->getUniqueEffect()), Muted, 13);
-				}
-			}
-		}
 	} else if (view_ == View::Map) {
 		DrawTextLine(deviceContext, 425, contentY, L"FLOOR I // MAP", Shimmer, 25, true);
 		int mapY = contentY + 55;

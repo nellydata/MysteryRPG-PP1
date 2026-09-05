@@ -19,6 +19,12 @@
     <None Include="README.md" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="dev\include\ContentCatalog.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="dev\include\GameplayTypes.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="dev\include\Area.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -69,6 +75,9 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="dev\src\ContentCatalog.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="dev\src\Area.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -122,3 +131,4 @@
     </ClCompile>
   </ItemGroup>
 </Project>
+

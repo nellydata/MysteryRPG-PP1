@@ -18,6 +18,11 @@ Micare is a console-based noir roguelike RPG written in C++17. Adelaide explores
 - Health, attack, defense, XP, and level progression
 - Item and clue inventory listing
 - NPC placeholders and input validation
+- Typed HP, DEF, SPD, ATK, ACC, RES, critical rate, and critical damage stats
+- Equipment slots, rarity metadata, artifact effects, consumables, clues, and crux items
+- Bleed, burn, poison, stun, healing-over-time, barrier, and mark status processing
+- Percentage-based defense reduction, deterministic critical hits, and turn cooldowns
+- Fifteen concrete shimmer skills with Latin display names and specification cooldowns
 
 ## Building and Running
 
@@ -39,4 +44,4 @@ I built a deterministic Floor 1 map, added four interactable rooms, created basi
 
 ### Next Steps
 
-The next priority is adding the first working Shimmer skill, improving NPC and clue interactions, and expanding the room loop while keeping the systems small and deterministic.
+The core catalog and gameplay systems are now data-driven through `ContentCatalog`, while the room loop remains deterministic and console-friendly. Further work can expand NPC dialogue, procedural room generation, save/load support, and narrative branches without changing the core stat or item APIs.

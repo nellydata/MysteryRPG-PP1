@@ -147,6 +147,8 @@
     <None Include="README.md" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="dev\include\ContentCatalog.h" />
+    <ClInclude Include="dev\include\GameplayTypes.h" />
     <ClInclude Include="dev\include\Area.h" />
     <ClInclude Include="dev\include\Automata.h" />
     <ClInclude Include="dev\include\Boss.h" />
@@ -165,6 +167,7 @@
     <ClInclude Include="dev\include\ShimmerSkill.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="dev\src\ContentCatalog.cpp" />
     <ClCompile Include="dev\src\Area.cpp" />
     <ClCompile Include="dev\src\Automata.cpp" />
     <ClCompile Include="dev\src\Boss.cpp" />
@@ -187,3 +190,4 @@
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
 </Project>
+

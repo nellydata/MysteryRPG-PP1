@@ -1,5 +1,7 @@
 #pragma once
 
+#include <memory>
+
 class Player;
 class Enemy;
 class ShimmerSkill;
@@ -32,5 +34,7 @@ private:
     bool blocked_;
     bool weaknessExposed_;
     int interrogationAttempts_;
+    int turnNumber_;
     Enemy* activeEnemy_;
+    std::unique_ptr<ShimmerSkill> defaultSkill_;
 };

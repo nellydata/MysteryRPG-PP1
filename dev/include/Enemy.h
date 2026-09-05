@@ -1,6 +1,8 @@
 #pragma once
 
 #include <string>
+#include <vector>
+#include "GameplayTypes.h"
 
 class Enemy {
 public:
@@ -14,6 +16,12 @@ public:
     int getMaxHP() const;
     int getAtk() const;
     int getXPReward() const;
+    int getDefense() const;
+    int getSpeed() const;
+    bool HasStatus(StatusType type) const;
+    void ApplyStatus(const StatusEffect& status);
+    void ProcessStatuses();
+    void ClearStatuses();
 
 protected:
     std::string name_;
@@ -21,4 +29,7 @@ protected:
     int maxHp_;
     int atk_;
     int xpReward_;
+    int defense_;
+    int speed_;
+    std::vector<StatusEffect> statuses_;
 };

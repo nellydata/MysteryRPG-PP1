@@ -1,10 +1,11 @@
 #pragma once
 
-#include <memory>
 #include <string>
 #include <vector>
 #include "Clue.h"
+#include "GameplayTypes.h"
 #include "Item.h"
+#include "Inventory.h"
 
 class Player {
 public:
@@ -21,6 +22,12 @@ public:
     int getAttack() const;
     int getDefense() const;
     int getSP() const;
+    int getSpeed() const;
+    int getAccuracy() const;
+    int getResistance() const;
+    int getCritRate() const;
+    int getCritDamage() const;
+    const Stats& getStats() const;
     std::size_t GetInventorySize() const;
 
     void increaseMaxHP(int amount);
@@ -31,15 +38,27 @@ public:
     void AddItem(std::unique_ptr<Item> item);
     void AddClue(const Clue& clue);
     void PrintInventory() const;
+    bool Equip(Item& item);
+    bool UseConsumable(const std::string& itemName, class Enemy* target = nullptr);
+    bool HasStatus(StatusType type) const;
+    void ApplyStatus(const StatusEffect& status);
+    void ProcessStatuses();
+    void ClearStatuses();
+    void ModifyStats(const Stats& delta);
+    const Inventory& GetInventory() const;
+    Item* FindItem(const std::string& itemName);
 
 private:
     std::string name_;
     int hp_;
     int maxHp_;
-    int attack_;
-    int defense_;
+    Stats baseStats_;
+    Stats totalStats_;
     int sp_;
     int maxSp_;
-    std::vector<std::unique_ptr<Item>> inventory_;
-    std::vector<Clue> clues_;
+    Inventory inventory_;
+    std::vector<StatusEffect> statuses_;
+    Item* equipped_[4];
+
+    void RecalculateStats();
 };

@@ -1,17 +1,33 @@
 #include "GameManager.h"
 #include "Area.h"
 #include "CombatManager.h"
+#include "ContentCatalog.h"
 #include "EncounterManager.h"
 #include "MapManager.h"
 #include "Player.h"
 #include "ProgressionManager.h"
+#include "Item.h"
 #include <iostream>
+
+namespace {
+void AddNamedItem(Player& player, const std::vector<ItemDefinition>& definitions,
+                  const std::string& name) {
+    for (const auto& definition : definitions) {
+        if (definition.name == name) {
+            player.AddItem(std::make_unique<Item>(definition));
+            return;
+        }
+    }
+}
+}
 
 namespace {
 void PrintStatus(const Player& player, const ProgressionManager& progression) {
     std::cout << "Status: HP " << player.getHP() << "/" << player.getMaxHP()
               << " | Attack " << player.getAttack()
               << " | Defense " << player.getDefense()
+              << " | Speed " << player.getSpeed()
+              << " | Crit " << player.getCritRate() << "%"
               << " | Level " << progression.GetLevel()
               << " | XP " << progression.GetXP() << "\n";
 }
@@ -23,6 +39,17 @@ void GameManager::Run() {
     CombatManager combat;
     EncounterManager encounterManager;
     ProgressionManager progression;
+    const auto equipment = BuildEquippableCatalog();
+    const auto consumables = BuildConsumableCatalog();
+    const auto clues = BuildClueCatalog();
+    const auto cruxItems = BuildCruxCatalog();
+    AddNamedItem(player, equipment, "plain_rosary");
+    AddNamedItem(player, equipment, "linen_veil");
+    AddNamedItem(player, consumables, "cellar_rations");
+    AddNamedItem(player, consumables, "purification_salts");
+    AddNamedItem(player, clues, "storage_key");
+    AddNamedItem(player, cruxItems, "first_nuns_diary");
+    if (Item* hand = player.FindItem("plain_rosary")) player.Equip(*hand);
 
     std::cout << "MICARE\n"
               << "The cathedral is silent except for the pulse of the Shimmer.\n";

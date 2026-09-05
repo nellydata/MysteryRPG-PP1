@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <iostream>
 #include <string>
+#include <memory>
 
 namespace {
 unsigned InterrogationRoll(const Enemy& enemy, int playerLevel, int attempt) {
@@ -41,7 +42,8 @@ int InterrogationChance(const Enemy& enemy, int playerLevel) {
 
 CombatManager::CombatManager()
     : blocked_(false), weaknessExposed_(false), interrogationAttempts_(0),
-      activeEnemy_(nullptr) {}
+      turnNumber_(0), activeEnemy_(nullptr),
+      defaultSkill_(ShimmerSkill::Create("Pulsus Luminis")) {}
 
 CombatManager::~CombatManager() = default;
 
@@ -49,6 +51,7 @@ void CombatManager::BeginEncounter(Enemy& enemy) {
     if (activeEnemy_ == &enemy) return;
     activeEnemy_ = &enemy;
     blocked_ = false;
+    turnNumber_ = 0;
     weaknessExposed_ = false;
     interrogationAttempts_ = 0;
 }
@@ -58,12 +61,24 @@ bool CombatManager::resolve(CombatAction action, Player& player, Enemy& enemy,
     BeginEncounter(enemy);
     blocked_ = false;
 
+    player.ProcessStatuses();
+    enemy.ProcessStatuses();
+    if (!player.isAlive() || !enemy.isAlive()) return false;
+    ++turnNumber_;
+
     switch (action) {
     case CombatAction::Attack: {
-        const int damage = player.getAttack() + (weaknessExposed_ ? 2 : 0);
+        const unsigned roll = static_cast<unsigned>(turnNumber_ * 37 + player.getAttack() * 11 + enemy.getHP()) % 100;
+        const bool critical = roll < static_cast<unsigned>(player.getCritRate());
+        const int rawDamage = critical
+            ? player.getAttack() * player.getCritDamage() / 100
+            : player.getAttack();
+        const int defenseReduction = std::max(0, std::min(90, enemy.getDefense()));
+        const int damage = std::max(1, rawDamage * (100 - defenseReduction) / 100)
+            + (weaknessExposed_ ? 2 : 0);
         enemy.takeDamage(damage);
         std::cout << "Adelaide attacks " << enemy.getName()
-                  << " for " << damage << " damage.\n";
+                  << " for " << damage << (critical ? " critical" : "") << " damage.\n";
         if (!enemy.isAlive() && progression != nullptr) {
             progression->GrantXP(enemy.getXPReward());
             progression->CheckLevelUp(player);
@@ -75,12 +90,13 @@ bool CombatManager::resolve(CombatAction action, Player& player, Enemy& enemy,
         std::cout << "Adelaide braces for the next attack.\n";
         return true;
     case CombatAction::Shimmer:
-        if (skill == nullptr || player.getSP() < skill->getCost()) {
+        if (skill == nullptr) skill = defaultSkill_.get();
+        if (skill == nullptr || !skill->IsReady()) {
             std::cout << "The Shimmer is not available yet.\n";
             return false;
         }
-        player.spendSP(skill->getCost());
         skill->apply(player, enemy);
+        skill->ResetCooldown();
         return true;
     case CombatAction::Interrogate:
         return interrogate(player, enemy, progression);
@@ -99,11 +115,22 @@ bool CombatManager::resolve(CombatAction action, Player& player, Enemy& enemy,
 void CombatManager::enemyTurn(Player& player, Enemy& enemy) {
     if (!enemy.isAlive()) return;
 
+    if (enemy.HasStatus(StatusType::Stun)) {
+        std::cout << enemy.getName() << " loses its turn to the stun.\n";
+        return;
+    }
+    if (player.HasStatus(StatusType::Barrier)) {
+        player.ClearStatuses();
+        std::cout << "The Shimmer barrier negates the attack.\n";
+        return;
+    }
     const int attackDamage = blocked_ ? enemy.getAtk() / 2 : enemy.getAtk();
-    const int damage = std::max(0, attackDamage - player.getDefense());
+    const int defenseReduction = std::max(0, std::min(90, player.getDefense()));
+    const int damage = std::max(0, attackDamage * (100 - defenseReduction) / 100);
     player.takeDamage(damage);
     blocked_ = false;
     std::cout << enemy.getName() << " attacks for " << damage << " damage.\n";
+    if (defaultSkill_ != nullptr) defaultSkill_->TickCooldown();
 }
 
 bool CombatManager::interrogate(Player& player, Enemy& enemy,

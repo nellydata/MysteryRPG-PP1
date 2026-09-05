@@ -3,6 +3,7 @@
 #include "Automata.h"
 #include "Boss.h"
 #include "CombatManager.h"
+#include "ContentCatalog.h"
 #include "Enemy.h"
 #include "Item.h"
 #include "Nun.h"
@@ -89,7 +90,24 @@ void SearchRoom(Area& area, Player& player) {
         return;
     }
 
-    player.AddItem(std::make_unique<Item>("Cathedral Token", "A recovered cathedral keepsake."));
+    const auto consumables = BuildConsumableCatalog();
+    const auto clues = BuildClueCatalog();
+    const std::string& room = area.getName();
+    if (room == "Archive Room") {
+        for (const auto& definition : clues) {
+            if (definition.name == "choir_logbook") {
+                player.AddItem(std::make_unique<Item>(definition));
+                break;
+            }
+        }
+    } else {
+        for (const auto& definition : consumables) {
+            if (definition.name == "cellar_rations") {
+                player.AddItem(std::make_unique<Item>(definition));
+                break;
+            }
+        }
+    }
     std::cout << "You found something useful. It was added to your inventory.\n";
 }
 }

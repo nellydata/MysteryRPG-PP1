@@ -46,6 +46,7 @@ CombatManager::CombatManager()
     : blocked_(false), weaknessExposed_(false), interrogationAttempts_(0),
       turnNumber_(0), playerTurn_(true), activeEnemy_(nullptr),
       playerGauge_(0), enemyGauge_(0),
+      consumableUsedThisTurn_(false),
       defaultSkill_(ShimmerSkill::Create("Pulsus Luminis")) {}
 
 CombatManager::~CombatManager() = default;
@@ -81,6 +82,7 @@ void CombatManager::BeginEncounter(Enemy& enemy) {
     playerTurn_ = false;
     weaknessExposed_ = false;
     interrogationAttempts_ = 0;
+    consumableUsedThisTurn_ = false;
     events_.clear();
     AddEvent(CombatEvent::Kind::Info, "Combat begins against " + enemy.getName() + ".");
 }
@@ -134,62 +136,17 @@ bool CombatManager::resolve(CombatAction action, Player& player, Enemy& enemy,
     }
     case CombatAction::Shimmer:
     {
-        if (skill == nullptr) skill = defaultSkill_.get();
-        if (skill == nullptr || !skill->IsReady()) {
-            std::cout << "The Shimmer is not available yet.\n";
+        AddEvent(CombatEvent::Kind::Info, "Shimmer skills are not available yet.");
+        return false;
+    }
+    case CombatAction::Item: {
+        if (consumableUsedThisTurn_) {
+            AddEvent(CombatEvent::Kind::Info, "Only one consumable can be used per turn.");
             return false;
         }
-        const int enemyHpBefore = enemy.getHP();
-        const int playerHpBefore = player.getHP();
-        const bool enemyHadStun = enemy.HasStatus(StatusType::Stun);
-        const bool playerHadBarrier = player.HasStatus(StatusType::Barrier);
-        const std::size_t enemyStatusCount = enemy.GetStatuses().size();
-        const std::size_t playerStatusCount = player.GetStatuses().size();
-        skill->apply(player, enemy);
-        const int damage = enemyHpBefore - enemy.getHP();
-        const int healing = player.getHP() - playerHpBefore;
-        if (damage > 0) AddEvent(CombatEvent::Kind::Damage, player.getName() + " inflicted " + std::to_string(damage) + " damage!", damage);
-        if (healing > 0) AddEvent(CombatEvent::Kind::Heal, player.getName() + " healed for " + std::to_string(healing) + ".", healing);
-        auto statusName = [](StatusType type) {
-            switch (type) {
-            case StatusType::Stun: return std::string("Stun");
-            case StatusType::Bleed: return std::string("Bleed");
-            case StatusType::Burn: return std::string("Burn");
-            case StatusType::Poison: return std::string("Poison");
-            case StatusType::Slow: return std::string("Slow");
-            case StatusType::VerdigrisMark: return std::string("Verdigris mark");
-            default: return std::string("Status");
-            }
-        };
-        if (enemy.GetStatuses().size() > enemyStatusCount) {
-            const auto& status = enemy.GetStatuses().back();
-            AddEvent(CombatEvent::Kind::Status, enemy.getName() + " is affected by " + statusName(status.type) +
-                " for " + std::to_string(status.turns) + " turns!");
-        }
-        if (player.GetStatuses().size() > playerStatusCount) {
-            const auto& status = player.GetStatuses().back();
-            AddEvent(CombatEvent::Kind::Status, player.getName() + " is affected by " + statusName(status.type) +
-                " for " + std::to_string(status.turns) + " turns!");
-        }
-        if (!playerHadBarrier && player.HasStatus(StatusType::Barrier)) AddEvent(CombatEvent::Kind::Shield, player.getName() + " gained a shield.");
-        skill->ResetCooldown();
-        if (enemy.isAlive()) playerTurn_ = false;
-        playerGauge_ -= 1000;
-        return true;
+        AddEvent(CombatEvent::Kind::Info, "Select a consumable to use.");
+        return false;
     }
-    case CombatAction::Interrogate: {
-        const bool result = interrogate(player, enemy, progression);
-        if (result && enemy.isAlive()) playerTurn_ = false;
-        if (result) AddEvent(CombatEvent::Kind::Info, player.getName() + " interrogated " + enemy.getName() + ".");
-        return result;
-    }
-    case CombatAction::ExposeWeakness:
-        weaknessExposed_ = true;
-        AddEvent(CombatEvent::Kind::Info, enemy.getName() + "'s weakness was exposed.");
-        playerTurn_ = false;
-        AddEvent(CombatEvent::Kind::Status, enemy.getName() + " is stunned and loses its turn!");
-        std::cout << "A weakness in " << enemy.getName() << " is exposed.\n";
-        return true;
     case CombatAction::Flee:
         std::cout << "Adelaide retreats from the encounter.\n";
         return true;
@@ -198,10 +155,31 @@ bool CombatManager::resolve(CombatAction action, Player& player, Enemy& enemy,
     return false;
 }
 
+bool CombatManager::UseConsumable(const std::string& itemName, Player& player, Enemy& enemy) {
+    if (!playerTurn_ || consumableUsedThisTurn_) {
+        AddEvent(CombatEvent::Kind::Info, "Only one consumable can be used per turn.");
+        return false;
+    }
+    const int healthBefore = player.getHP();
+    const int enemyHealthBefore = enemy.getHP();
+    if (!player.UseConsumable(itemName, &enemy)) {
+        AddEvent(CombatEvent::Kind::Info, "That consumable cannot be used in battle.");
+        return false;
+    }
+    consumableUsedThisTurn_ = true;
+    AddEvent(CombatEvent::Kind::Info, player.getName() + " used " + itemName + ".");
+    const int healing = player.getHP() - healthBefore;
+    const int damage = enemyHealthBefore - enemy.getHP();
+    if (healing > 0) AddEvent(CombatEvent::Kind::Heal, player.getName() + " healed for " + std::to_string(healing) + ".", healing);
+    if (damage > 0) AddEvent(CombatEvent::Kind::Damage, player.getName() + " inflicted " + std::to_string(damage) + " damage!", damage);
+    return true;
+}
+
 void CombatManager::enemyTurn(Player& player, Enemy& enemy) {
     if (!enemy.isAlive()) return;
 
     AddEvent(CombatEvent::Kind::Turn, enemy.getName() + "'s turn.");
+    consumableUsedThisTurn_ = false;
 
     if (enemy.HasStatus(StatusType::Stun)) {
         std::cout << enemy.getName() << " loses its turn to the stun.\n";
@@ -238,6 +216,7 @@ void CombatManager::enemyTurn(Player& player, Enemy& enemy) {
 }
 
 bool CombatManager::IsPlayerTurn() const { return playerTurn_; }
+bool CombatManager::HasUsedConsumableThisTurn() const { return consumableUsedThisTurn_; }
 
 bool CombatManager::interrogate(Player& player, Enemy& enemy,
                                 ProgressionManager* progression) {

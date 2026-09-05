@@ -205,6 +205,7 @@ void Win32UI::CreateControls() {
 	createButton(28, ButtonQuit, L"Quit");
 	createButton(29, ButtonInventory, L"Inventory");
 	createButton(30, ButtonSort, L"Sort / filter");
+	createButton(31, ButtonItem, L"ITEM");
 	createButton(32, ButtonDiscard, L"Discard");
 	createButton(33, ButtonEquip, L"Use");
 	createButton(34, ButtonInventoryPrevious, L"<");
@@ -295,6 +296,7 @@ void Win32UI::RefreshControls() {
 		ShowWindow(controls_[35], SW_SHOW);
 	} else if (view_ == View::Combat) {
 		ShowWindow(controls_[24], SW_SHOW);
+		ShowWindow(controls_[31], SW_SHOW);
 		ShowWindow(controls_[26], SW_SHOW);
 		ShowWindow(controls_[27], SW_SHOW);
 	} else {
@@ -364,8 +366,9 @@ void Win32UI::LayoutControls(int width, int height) {
 	MoveWindow(controls_[23], panelRight - 180, 144, 180, buttonHeight, TRUE);
 	MoveWindow(controls_[28], panelRight - 180, 196, 180, buttonHeight, TRUE);
 	MoveWindow(controls_[24], center, actionY, 180, 44, TRUE);
-	MoveWindow(controls_[26], center + 190, actionY, 180, 44, TRUE);
-	MoveWindow(controls_[27], center + 380, actionY, 180, 44, TRUE);
+	MoveWindow(controls_[31], center + 190, actionY, 180, 44, TRUE);
+	MoveWindow(controls_[26], center + 380, actionY, 180, 44, TRUE);
+	MoveWindow(controls_[27], center + 570, actionY, 180, 44, TRUE);
 	MoveWindow(controls_[33], center, inventoryActionY, inventoryWidth, 42, TRUE);
 	MoveWindow(controls_[32], center + inventoryWidth + inventoryGap, inventoryActionY, inventoryWidth, 42, TRUE);
 	MoveWindow(controls_[21], center + (inventoryWidth + inventoryGap) * 2, inventoryActionY, inventoryWidth, 42, TRUE);
@@ -403,6 +406,57 @@ void Win32UI::ShowInventoryMenu() {
 	GetCursorPos(&cursor);
 	TrackPopupMenu(menu, TPM_LEFTALIGN | TPM_TOPALIGN, cursor.x, cursor.y, 0, window_, nullptr);
 	DestroyMenu(menu);
+}
+
+void Win32UI::ShowCombatItems() {
+	if (activeEnemy_ == nullptr || !activeEnemy_->isAlive()) return;
+	HMENU menu = CreatePopupMenu();
+	if (menu == nullptr) return;
+
+	std::vector<std::string> consumables;
+	for (const auto& item : player_.GetInventory().GetItems()) {
+		if (item->getCategory() != ItemCategory::Consumable) continue;
+		if (player_.GetInventory().GetQuantity(item->getName()) <= 0) continue;
+		bool duplicate = false;
+		for (const auto& name : consumables) {
+			if (name == item->getName()) {
+				duplicate = true;
+				break;
+			}
+		}
+		if (duplicate) continue;
+		consumables.push_back(item->getName());
+		AppendMenuW(menu, MF_STRING, 700 + static_cast<UINT>(consumables.size() - 1),
+			FormatDisplayText(item->getName()).c_str());
+	}
+
+	if (consumables.empty()) {
+		AppendMenuW(menu, MF_GRAYED, 0, L"No consumables available");
+	} else if (combat_.HasUsedConsumableThisTurn()) {
+		DestroyMenu(menu);
+		menu = CreatePopupMenu();
+		if (menu == nullptr) return;
+		AppendMenuW(menu, MF_GRAYED, 0, L"One consumable already used this turn");
+	}
+
+	POINT cursor{};
+	GetCursorPos(&cursor);
+	const UINT command = TrackPopupMenu(menu, TPM_LEFTALIGN | TPM_TOPALIGN | TPM_RETURNCMD,
+		cursor.x, cursor.y, 0, window_, nullptr);
+	DestroyMenu(menu);
+
+	if (command < 700 || command >= 700 + static_cast<UINT>(consumables.size())) return;
+	if (combat_.UseConsumable(consumables[command - 700], player_, *activeEnemy_)) {
+		statusMessage_ = "Consumable used without ending the turn.";
+		AddLog("Combat: consumable used.");
+	} else {
+		statusMessage_ = "That consumable is unavailable.";
+		AddLog("Combat: consumable use failed.");
+	}
+	if (!refreshPosted_) {
+		refreshPosted_ = true;
+		PostMessageW(window_, RefreshControlsMessage, 0, 0);
+	}
 }
 
 void Win32UI::HandleCommand(int controlId) {
@@ -508,6 +562,8 @@ void Win32UI::HandleCommand(int controlId) {
 		view_ = View::Skills;
 	} else if (controlId == ButtonAttack) {
 		PerformCombatAction(CombatAction::Attack);
+	} else if (controlId == ButtonItem) {
+		ShowCombatItems();
 	} else if (controlId == ButtonShimmer) {
 		PerformCombatAction(CombatAction::Shimmer);
 	} else if (controlId == ButtonFlee) {

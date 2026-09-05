@@ -117,19 +117,46 @@ bool EncounterManager::Explore(Area& area, Player& player,
             combat.BeginEncounter(*enemy);
             combat.PrepareTurn(player, *enemy);
             ui.RenderCombat(player, progression, *enemy, combat);
-            const int choice = ui.Prompt("Choose a combat action.", 1, 5);
+            const int choice = ui.Prompt("Choose a combat action.", 1, 4);
 
-            if (choice == 5) {
+            if (choice == 4) {
                 combat.resolve(CombatAction::Flee, player, *enemy);
                 return false;
+            }
+
+            if (choice == 2) {
+                std::vector<std::string> consumables;
+                for (const auto& item : player.GetInventory().GetItems()) {
+                    if (item->getCategory() != ItemCategory::Consumable) continue;
+                    if (player.GetInventory().GetQuantity(item->getName()) <= 0) continue;
+                    bool duplicate = false;
+                    for (const auto& name : consumables) {
+                        if (name == item->getName()) {
+                            duplicate = true;
+                            break;
+                        }
+                    }
+                    if (!duplicate) consumables.push_back(item->getName());
+                }
+                if (consumables.empty()) {
+                    ui.ShowMessage("No consumables are available.");
+                    continue;
+                }
+                std::cout << "\nConsumables:\n";
+                for (std::size_t i = 0; i < consumables.size(); ++i)
+                    std::cout << "  " << i + 1 << ". " << consumables[i] << "\n";
+                const int itemChoice = ui.Prompt("Choose a consumable, or 0 to cancel.", 0,
+                                                 static_cast<int>(consumables.size()));
+                if (itemChoice == 0) continue;
+                if (!combat.UseConsumable(consumables[static_cast<std::size_t>(itemChoice - 1)], player, *enemy))
+                    ui.ShowMessage("That consumable cannot be used right now.");
+                continue;
             }
 
             CombatAction action;
             switch (choice) {
             case 1: action = CombatAction::Attack; break;
-            case 2: action = CombatAction::Shimmer; break;
-            case 3: action = CombatAction::Interrogate; break;
-            case 4: action = CombatAction::ExposeWeakness; break;
+            case 3: action = CombatAction::Shimmer; break;
             default:
                 std::cout << "That is not a combat action.\n";
                 continue;

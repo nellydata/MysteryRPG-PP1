@@ -28,6 +28,7 @@ private:
 	static constexpr int ButtonMap = 402;
 	static constexpr int ButtonSkills = 403;
 	static constexpr int ButtonAttack = 500;
+	static constexpr int ButtonItem = 501;
 	static constexpr int ButtonShimmer = 502;
 	static constexpr int ButtonFlee = 503;
 	static constexpr int ButtonQuit = 504;
@@ -59,6 +60,7 @@ private:
 	void Inspect(int interactableIndex);
 	void SearchRoom();
 	void PerformCombatAction(CombatAction action);
+	void ShowCombatItems();
 	void AddLog(const std::string& message);
 	void InitializePlayer();
 	void InitializeCompletionState();

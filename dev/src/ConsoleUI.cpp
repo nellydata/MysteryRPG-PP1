@@ -166,8 +166,8 @@ void ConsoleUI::RenderCombat(const Player& player, const ProgressionManager& pro
 			  << "Turn order: Adelaide (SPD " << player.getSpeed() << ")  >  "
 			  << enemy.getName() << " (SPD " << enemy.getSpeed() << ")\n"
 			  << "\nActions:\n"
-			  << "  1. Attack       2. Block        3. Shimmer\n"
-			  << "  4. Interrogate  5. Expose Weakness  6. Flee\n";
+			  << "  1. Attack       2. Item         3. Shimmer\n"
+			  << "  4. Flee\n";
 	if (const ShimmerSkill* skill = combat.GetDefaultSkill()) {
 		std::cout << "\nSkill ready state: " << skill->getName() << " ["
 				  << (skill->IsReady() ? "READY" : "COOLDOWN " + std::to_string(skill->getRemainingCooldown()))

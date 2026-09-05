@@ -9,9 +9,14 @@ MapManager::MapManager() {
 void MapManager::GenerateFloor1() {
     rooms_.clear();
 
+    rooms_.emplace_back("Fountain");
+    Area& fountain = rooms_.back();
+    fountain.SetUnlocked(true);
+    fountain.AddInteractable("The restorative cathedral fountain");
+    fountain.SetSpawnCondition(EnemySpawnCondition::Low);
+
     rooms_.emplace_back("Entrance Hall");
     Area& entrance = rooms_.back();
-    entrance.SetUnlocked(true);
     entrance.AddInteractable("Broken statue");
     entrance.AddInteractable("Old banner");
     entrance.SetClues(true);
@@ -45,6 +50,7 @@ void MapManager::GenerateFloor1() {
     storage.SetClues(true);
     storage.SetItems(true);
     storage.SetSpawnCondition(EnemySpawnCondition::None);
+
 }
 
 std::vector<Area>& MapManager::GetRooms() { return rooms_; }

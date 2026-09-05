@@ -5,7 +5,7 @@
 Area::Area(const std::string& name)
     : name_(name), hasNPC_(false), hasClues_(false), hasItems_(false), cluesRemaining_(0), itemsRemaining_(0),
       spawnCondition_(EnemySpawnCondition::None), unlocked_(false), searchCount_(0),
-      discoveredNPC_(false), bossDefeated_(false), bossEncountered_(false) {}
+      discoveredNPC_(false), bossDefeated_(false), bossEncountered_(false), healingUnlocked_(false) {}
 
 Area::~Area() = default;
 
@@ -39,6 +39,8 @@ bool Area::HasDiscoveredNPC() const { return discoveredNPC_; }
 void Area::DiscoverNPC() { if (hasNPC_) discoveredNPC_ = true; }
 bool Area::HasBossBeenDefeated() const { return bossDefeated_; }
 void Area::SetBossDefeated(bool defeated) { bossDefeated_ = defeated; }
+bool Area::IsHealingUnlocked() const { return healingUnlocked_; }
+void Area::SetHealingUnlocked(bool unlocked) { healingUnlocked_ = unlocked; }
 bool Area::HasBossBeenEncountered() const { return bossEncountered_; }
 void Area::MarkBossEncountered() { bossEncountered_ = true; }
 void Area::SetCleared(bool cleared) {
@@ -48,6 +50,7 @@ void Area::SetCleared(bool cleared) {
     discoveredNPC_ = hasNPC_;
     bossDefeated_ = true;
     bossEncountered_ = false;
+    if (name_ == "Fountain") healingUnlocked_ = true;
 }
 
 bool Area::hasEnemies() const {

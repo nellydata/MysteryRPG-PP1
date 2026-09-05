@@ -11,6 +11,7 @@ public:
     ProgressionManager();
 
     void GrantXP(int amount);
+    void GrantClueXP();
     bool CheckLevelUp(Player& player);
     int GetLevel() const;
     void SetMaxLevel(Player& player);
@@ -26,6 +27,7 @@ public:
     bool EquipShimmerSkill(const std::string& skillName, int cost);
     bool UnequipShimmerSkill(const std::string& skillName, int cost);
     bool UnlockShimmerFromTrigger(const std::string& trigger);
+    std::string RollShimmerSkill();
 
 private:
     int level_;

@@ -41,7 +41,7 @@ const std::vector<std::string>& BuiltInShimmerSkills() {
 		"Pulsus Luminis", "Velum Radiāns", "Gradus Coruscus", "Lucerna Echo",
 		"Fulgur Aurorae", "Flos Aeruginis", "Resonantia Chori", "Requiem Mechanicum",
 		"Scutum Coruscum", "Nota Luminosa", "Revelatio Occulta", "Catena Aeruginis",
-		"Onus Coruscum", "Lux Sanctorum", "Mutatio Horologii"
+		"Onus Coruscum", "Lux Sanctorum", "Mutatio Horologii", "Ray of Mercy", "Prism Step", "Gleam Needle"
 	};
 	return names;
 }
@@ -415,6 +415,8 @@ void Win32UI::RefreshControls() {
 			equippedSkillNames_ = progression_.GetEquippedShimmerSkills();
 			for (std::size_t index = 0; index < equippedSkillNames_.size() && index < 12; ++index) {
 				SetWindowTextW(controls_[36 + index], FormatDisplayText(equippedSkillNames_[index]).c_str());
+			auto skill = ShimmerSkill::Create(equippedSkillNames_[index]);
+			if (skill != nullptr) SetWindowTextW(controls_[36 + index], (FormatDisplayText(equippedSkillNames_[index]) + L"\n" + FormatDisplayText(skill->getDescription())).c_str());
 				ShowWindow(controls_[36 + index], SW_SHOW);
 			}
 			SetWindowTextW(controls_[21], L"CANCEL");
@@ -497,6 +499,11 @@ void Win32UI::LayoutControls(int width, int height) {
 		}
 		MoveWindow(controls_[21], center, combatButtonY + 160, 180, 42, TRUE);
 		return;
+	}
+	if (view_ == View::Combat) {
+		const int combatButtonWidth = (std::max)(130, (panelRight - center - 48) / 4);
+		for (int i = 0; i < 12; ++i)
+			MoveWindow(controls_[8 + i], center + (i % 4) * (combatButtonWidth + 10), actionY, combatButtonWidth, 52, TRUE);
 	}
 	if (view_ == View::Skills) {
 		const int left = (std::min)(395, (std::max)(20, width / 3));
@@ -898,7 +905,30 @@ void Win32UI::EnterRoom(int roomIndex) {
 	if (!area.IsUnlocked()) return;
 	LeaveCombat();
 	ChangeView(View::Room);
+	if (area.getName() == "Fountain" && area.IsHealingUnlocked()) {
+		const int recovered = player_.getMaxHP() - player_.getHP();
+		player_.RestoreHealth(player_.getMaxHP());
+		statusMessage_ = "The fountain restores " + std::to_string(recovered) + " HP. You are fully healed.";
+		AddLog("Fountain: " + player_.getName() + " recovered to full health.");
+	} else if (area.getName() == "Fountain") {
+		statusMessage_ = "The fountain is sealed. Investigate it to find its guardian.";
+	}
 	AddLog("Entered " + area.getName() + ". Investigate the visible interactions.");
+}
+
+void Win32UI::SyncCombatEvents() {
+	const auto& events = combat_.GetEvents();
+	if (loggedCombatEvents_ > events.size()) loggedCombatEvents_ = 0;
+	while (loggedCombatEvents_ < events.size()) {
+		AddLog(events[loggedCombatEvents_].message);
+		++loggedCombatEvents_;
+	}
+}
+
+void Win32UI::ScheduleEnemyTurn() {
+	if (enemyTurnPending_ || activeEnemy_ == nullptr || !activeEnemy_->isAlive() || !player_.isAlive()) return;
+	enemyTurnPending_ = true;
+	SetTimer(window_, 1, 1000, nullptr);
 }
 
 void Win32UI::Inspect(int interactableIndex) {
@@ -910,7 +940,7 @@ void Win32UI::Inspect(int interactableIndex) {
 	const std::string object = area.GetVisibleInteractables()[interactableIndex];
 	if (area.ConsumeClue()) {
 		player_.AddClue({"A fragment recovered from the " + object + "."});
-		progression_.GrantXP(10);
+		progression_.GrantClueXP();
 		progression_.CheckLevelUp(player_);
 		AddLog("Investigation: clue recovered from " + object + ".");
 		statusMessage_ = "Investigation complete: clue recovered.";
@@ -939,7 +969,18 @@ void Win32UI::SearchRoom() {
 	const bool encounterAllowed = area.GetSpawnCondition() != EnemySpawnCondition::None &&
 		roll < SpawnChance(area.GetSpawnCondition());
 	const int enemyThreshold = cluesComplete ? 70 : 50;
-	const int consumableThreshold = (std::max)(35, 62 - playerLevel / 3);
+	const int consumableThreshold = (std::max)(25, 62 - playerLevel / 3);
+	if (area.getName() == "Fountain" && !area.IsHealingUnlocked() && activeEnemy_ == nullptr && !area.hasEnemies() && area.GetSearchCount() == 1) {
+		if (auto enemy = CreateRandomCatalogueEnemy(searchSeed, 1, EnemyFaction::Devotee, EnemyTier::Basic)) {
+			area.addEnemy(std::move(enemy));
+			activeEnemy_ = area.getFirstAliveEnemy();
+			combat_.BeginEncounter(*activeEnemy_);
+			combat_.PrepareTurn(player_, *activeEnemy_);
+			view_ = View::Combat;
+			AddLog("Fountain investigation: a weak guardian appears. Defeat it to purify the fountain.");
+		}
+		return;
+	}
 	if (activeEnemy_ == nullptr && roll >= 90) {
 		const int damage = (std::max)(1, player_.getMaxHP() * 5 / 100);
 		player_.takeDamage(damage);
@@ -1019,9 +1060,18 @@ void Win32UI::SearchRoom() {
 		return;
 	}
 	if (activeEnemy_ == nullptr && encounterAllowed) {
-		const int enemyCount = 1 + static_cast<int>((searchSeed / 11) % 3);
-		for (int count = 0; count < enemyCount && count < 3; ++count) {
-			if (auto enemy = CreateRandomCatalogueEnemy(searchSeed + static_cast<unsigned>(count * 17), enemyLevel, roomFaction, encounterTier)) area.addEnemy(std::move(enemy));
+		const int compositionRoll = static_cast<int>((searchSeed / 11) % 100);
+		const int enemyCount = playerLevel >= 100 ? 2 + compositionRoll % 3
+			: playerLevel >= 50 ? (compositionRoll < playerLevel ? 2 + compositionRoll % 2 : 1)
+			: playerLevel >= 10 ? (compositionRoll < playerLevel * 2 ? 2 : 1) : 1;
+		for (int count = 0; count < enemyCount && count < 4; ++count) {
+			const unsigned enemySeed = searchSeed + static_cast<unsigned>(count * 17);
+			const int rarityRoll = static_cast<int>((enemySeed / 13) % 100);
+			EnemyTier rolledTier = encounterTier;
+			if (rarityRoll < 8 && playerLevel >= 20) rolledTier = EnemyTier::Elite;
+			else if (rarityRoll < 25 && playerLevel >= 6) rolledTier = EnemyTier::Epic;
+			const int rolledLevel = (std::max)(1, (std::min)(100, playerLevel + static_cast<int>((enemySeed / 7) % 5) - 2));
+			if (auto enemy = CreateRandomCatalogueEnemy(enemySeed, rolledLevel, roomFaction, rolledTier)) area.addEnemy(std::move(enemy));
 		}
 		activeEnemy_ = area.getFirstAliveEnemy();
 		if (activeEnemy_ == nullptr) return;
@@ -1049,7 +1099,7 @@ void Win32UI::SearchRoom() {
 		if (!area.HasAllClues()) {
 			if (area.ConsumeClue()) {
 				player_.AddClue({"A fragment recovered during the investigation."});
-				progression_.GrantXP(10);
+		progression_.GrantClueXP();
 				progression_.CheckLevelUp(player_);
 				AddLog("Search: a clue was recovered.");
 			}
@@ -1111,6 +1161,10 @@ void Win32UI::PerformCombatAction(CombatAction action) {
 		const EnemyTier defeatedTier = activeEnemy_->getTier();
 		const bool wasBoss = defeatedTier == EnemyTier::Boss;
 		area.removeDeadEnemies();
+		if (area.getName() == "Fountain" && !area.IsHealingUnlocked() && !area.hasEnemies()) {
+			area.SetHealingUnlocked(true);
+			AddLog("The Fountain is purified. Full healing is now available.");
+		}
 		statusMessage_ = "Battle ended: " + defeatedName + " defeated. XP gained: " + std::to_string(xpReward) + ".";
 		AddLog("Battle ended: " + defeatedName + " defeated. XP gained: " + std::to_string(xpReward) + ".");
 		if (wasBoss) {
@@ -1122,10 +1176,13 @@ void Win32UI::PerformCombatAction(CombatAction action) {
 			}
 		}
 		const unsigned dropRoll = RoomSeed(defeatedName) + static_cast<unsigned>(defeatedLevel * 17 + area.GetSearchCount());
-		const int dropChance = defeatedTier == EnemyTier::Elite ? 100 : (std::min)(80, 10 + defeatedLevel);
-		if (dropRoll % 100 < dropChance) {
+		const int dropChance = defeatedTier == EnemyTier::Elite ? 100 : (std::min)(90, 15 + defeatedLevel);
+		const int dropCount = defeatedTier == EnemyTier::Boss ? 3 : defeatedTier == EnemyTier::Elite ? 2 : defeatedLevel >= 20 ? 2 : 1;
+		for (int drop = 0; drop < dropCount; ++drop) {
+		const unsigned currentRoll = dropRoll + static_cast<unsigned>(drop * 41);
+		if (currentRoll % 100 < dropChance) {
 			const auto catalog = BuildEquippableCatalog();
-			const int index = static_cast<int>(dropRoll % catalog.size());
+			const int index = static_cast<int>(currentRoll % catalog.size());
 			const bool allowed = defeatedTier == EnemyTier::Boss ? catalog[index].rarity != Rarity::Artifact
 				: defeatedTier == EnemyTier::Elite ? catalog[index].rarity == Rarity::Rare || catalog[index].rarity == Rarity::Epic || catalog[index].rarity == Rarity::Legendary
 				: wasBoss ? catalog[index].rarity != Rarity::Legendary && catalog[index].rarity != Rarity::Artifact
@@ -1136,12 +1193,13 @@ void Win32UI::PerformCombatAction(CombatAction action) {
 				statusMessage_ += " Item dropped: " + catalog[index].name + ".";
 			}
 		}
+		}
 		LeaveCombat();
 		view_ = View::Room;
 		return;
 	}
-	while (!combat_.IsPlayerTurn() && activeEnemy_->isAlive() && player_.isAlive())
-		combat_.enemyTurn(player_, *activeEnemy_);
+	if (!combat_.IsPlayerTurn() && activeEnemy_->isAlive() && player_.isAlive()) ScheduleEnemyTurn();
+	SyncCombatEvents();
 	statusMessage_.clear();
 	if (!player_.isAlive()) ShowDefeatRecovery();
 }
@@ -1264,6 +1322,20 @@ LRESULT Win32UI::HandleMessage(UINT message, WPARAM wParam, LPARAM lParam) {
 	case RefreshControlsMessage:
 		refreshPosted_ = false;
 		RefreshControls();
+		SyncCombatEvents();
+		return 0;
+	case WM_TIMER:
+		if (wParam == 1 && enemyTurnPending_) {
+			KillTimer(window_, 1);
+			enemyTurnPending_ = false;
+			if (view_ == View::Combat && activeEnemy_ != nullptr && activeEnemy_->isAlive() && player_.isAlive()) {
+				combat_.enemyTurn(player_, *activeEnemy_);
+				SyncCombatEvents();
+				if (!combat_.IsPlayerTurn() && activeEnemy_->isAlive() && player_.isAlive()) ScheduleEnemyTurn();
+				if (!player_.isAlive()) ShowDefeatRecovery();
+				Invalidate();
+			}
+		}
 		return 0;
 	case WM_COMMAND:
 		if (HIWORD(wParam) == EN_CHANGE && LOWORD(wParam) == InventorySearch) {
@@ -1276,6 +1348,7 @@ LRESULT Win32UI::HandleMessage(UINT message, WPARAM wParam, LPARAM lParam) {
 				refreshPosted_ = true;
 				PostMessageW(window_, RefreshControlsMessage, 0, 0);
 			}
+	SyncCombatEvents();
 		} else if (HIWORD(wParam) == BN_CLICKED) HandleCommand(LOWORD(wParam));
 		return 0;
 	case WM_DRAWITEM: {
@@ -1331,7 +1404,8 @@ void Win32UI::Paint(HDC deviceContext) {
 
 	DrawPanel(deviceContext, {20, 20, 365, client.bottom - 20}, ToWide(player_.getName()) + L" // CHARACTER");
 	DrawTextLine(deviceContext, 42, 65, L"MICARE", Brass, 28, true);
-	DrawRainbowText(deviceContext, 42, 110, ToWide(player_.getName()), 19, true);
+	if (progression_.GetLevel() == 100) DrawRainbowText(deviceContext, 42, 110, ToWide(player_.getName()), 19, true);
+	else DrawTextLine(deviceContext, 42, 110, ToWide(player_.getName()), Text, 19, true);
 	DrawTextLine(deviceContext, 250, 110, L"LEVEL " + std::to_wstring(progression_.GetLevel()), Text, 19, true);
 	DrawTextLine(deviceContext, 42, 150, L"HP", Muted); DrawTextLine(deviceContext, 150, 150, std::to_wstring(player_.getHP()) + L" / " + std::to_wstring(player_.getMaxHP()), Text);
 	DrawTextLine(deviceContext, 42, 182, L"XP", Muted); DrawTextLine(deviceContext, 150, 182,
@@ -1345,7 +1419,10 @@ void Win32UI::Paint(HDC deviceContext) {
 	for (const auto& status : player_.GetStatuses()) {
 		if (status.type == StatusType::VerdigrisMark) continue;
 		displayedStatus = true;
-		DrawTextLine(deviceContext, 48, y, StatusName(status.type) + L" (" + std::to_wstring(status.turns) + L")", Danger, 15);
+		const bool healing = status.type == StatusType::HealOverTime;
+		const bool beneficial = status.type == StatusType::Barrier || status.type == StatusType::DamageReduction;
+		const COLORREF statusColor = healing ? RGB(90, 210, 110) : beneficial ? RGB(90, 160, 245) : Danger;
+		DrawTextLine(deviceContext, 48, y, StatusName(status.type) + L" (" + std::to_wstring(status.turns) + L")", statusColor, 15);
 		y += 25;
 	}
 	if (!displayedStatus) DrawTextLine(deviceContext, 48, y, L"No active effects", Muted, 15);
@@ -1513,11 +1590,22 @@ void Win32UI::Paint(HDC deviceContext) {
 			contentY += 34;
 		}
 	} else if (view_ == View::Combat && activeEnemy_ != nullptr) {
-		DrawTextLine(deviceContext, 425, contentY, ToWide(activeEnemy_->getName()), EnemyTierColor(activeEnemy_->getTier()), 26, true);
-		if (targetEnemies_.size() > 1) DrawTextLine(deviceContext, 425, contentY + 25, L"Select a living target before acting.", Muted, 15);
-		DrawTextLine(deviceContext, 425, contentY + 48, L"HP  " + std::to_wstring(activeEnemy_->getHP()) + L" / " + std::to_wstring(activeEnemy_->getMaxHP()), Text, 20);
-		DrawTextLine(deviceContext, 425, contentY + 84, L"ATK " + std::to_wstring(activeEnemy_->getAtk()) + L"   DEF " + std::to_wstring(activeEnemy_->getDefense()) + L"   SPD " + std::to_wstring(activeEnemy_->getSpeed()), Muted, 17);
-		DrawTextLine(deviceContext, 425, contentY + 112, ToWide(std::string(EnemyFactionName(activeEnemy_->getFaction())) + " // " + EnemyTierName(activeEnemy_->getTier()) + " // Phase " + std::to_string(activeEnemy_->GetPhase())), Brass, 15);
+		int cardX = 425;
+		for (Enemy* target : targetEnemies_) {
+			if (target == nullptr || !target->isAlive()) continue;
+			DrawTextLine(deviceContext, cardX, contentY, ToWide(target->getName()), EnemyTierColor(target->getTier()), 18, true, 170);
+			DrawTextLine(deviceContext, cardX, contentY + 26, L"HP " + std::to_wstring(target->getHP()) + L" / " + std::to_wstring(target->getMaxHP()), Text, 15);
+			DrawTextLine(deviceContext, cardX, contentY + 48, L"LV " + std::to_wstring(target->getLevel()), Text, 15);
+			int enemyStatusY = contentY + 70;
+			for (const auto& status : target->GetStatuses()) {
+			const bool beneficial = status.type == StatusType::Barrier || status.type == StatusType::DamageReduction;
+			const bool healing = status.type == StatusType::HealOverTime;
+			DrawTextLine(deviceContext, cardX, enemyStatusY, StatusName(status.type) + L" (" + std::to_wstring(status.turns) + L")",
+				healing ? RGB(90, 210, 110) : beneficial ? RGB(90, 160, 245) : Danger, 15);
+			enemyStatusY += 24;
+			}
+			cardX += 205;
+		}
 		DrawTextLine(deviceContext, 425, contentY + 145, L"Battle event log", Brass, 18, true);
 		int eventY = contentY + 180;
 		const auto& events = combat_.GetEvents();
@@ -1527,8 +1615,9 @@ void Win32UI::Paint(HDC deviceContext) {
 			COLORREF eventColor = Text;
 			if (event.kind == CombatManager::CombatEvent::Kind::Damage || event.kind == CombatManager::CombatEvent::Kind::Attack || event.kind == CombatManager::CombatEvent::Kind::Skill || event.kind == CombatManager::CombatEvent::Kind::DotTick || event.kind == CombatManager::CombatEvent::Kind::Death) eventColor = Danger;
 			else if (event.kind == CombatManager::CombatEvent::Kind::Heal) eventColor = RGB(90, 210, 110);
-			else if (event.kind == CombatManager::CombatEvent::Kind::Shield) eventColor = RGB(90, 160, 245);
-			else if (event.kind == CombatManager::CombatEvent::Kind::Status || event.kind == CombatManager::CombatEvent::Kind::Buff || event.kind == CombatManager::CombatEvent::Kind::Debuff || event.kind == CombatManager::CombatEvent::Kind::PhaseTransition || event.kind == CombatManager::CombatEvent::Kind::Mutation) eventColor = Shimmer;
+			else if (event.kind == CombatManager::CombatEvent::Kind::Shield || event.kind == CombatManager::CombatEvent::Kind::Buff) eventColor = RGB(90, 160, 245);
+			else if (event.kind == CombatManager::CombatEvent::Kind::Debuff || event.kind == CombatManager::CombatEvent::Kind::DotTick) eventColor = Danger;
+			else if (event.kind == CombatManager::CombatEvent::Kind::Status || event.kind == CombatManager::CombatEvent::Kind::PhaseTransition || event.kind == CombatManager::CombatEvent::Kind::Mutation) eventColor = Shimmer;
 			const std::wstring symbol = event.kind == CombatManager::CombatEvent::Kind::Status || event.kind == CombatManager::CombatEvent::Kind::Buff || event.kind == CombatManager::CombatEvent::Kind::Debuff ? L"[STATUS] " :
 				event.kind == CombatManager::CombatEvent::Kind::Damage || event.kind == CombatManager::CombatEvent::Kind::Attack || event.kind == CombatManager::CombatEvent::Kind::Skill || event.kind == CombatManager::CombatEvent::Kind::DotTick ? L"[DAMAGE] " :
 				event.kind == CombatManager::CombatEvent::Kind::Heal ? L"[HEAL] " :

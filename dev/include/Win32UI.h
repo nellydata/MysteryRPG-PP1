@@ -71,6 +71,7 @@ private:
 	void ShowCombatItems();
 	std::string CompactConsumableSummary(const Item& item) const;
 	void AddLog(const std::string& message);
+	void SyncCombatEvents();
 	void InitializePlayer();
 	void InitializeCompletionState();
 	void Invalidate();
@@ -127,4 +128,7 @@ private:
 	std::vector<Enemy*> targetEnemies_;
 	std::string selectedCombatSkillName_;
 	bool combatSkillSelection_ = false;
+	std::size_t loggedCombatEvents_ = 0;
+	bool enemyTurnPending_ = false;
+	void ScheduleEnemyTurn();
 };

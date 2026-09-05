@@ -3,6 +3,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <map>
 
 class Player;
 class Enemy;
@@ -60,6 +61,7 @@ private:
     std::unique_ptr<ShimmerSkill> defaultSkill_;
     std::vector<CombatEvent> events_;
     bool consumableUsedThisTurn_;
+    std::map<std::string, int> shimmerCooldowns_;
 
     void AddEvent(CombatEvent::Kind kind, const std::string& message, int value = 0);
 };

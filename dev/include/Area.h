@@ -56,6 +56,8 @@ public:
     void DiscoverNPC();
     bool HasBossBeenDefeated() const;
     void SetBossDefeated(bool defeated);
+    bool IsHealingUnlocked() const;
+    void SetHealingUnlocked(bool unlocked);
     bool HasBossBeenEncountered() const;
     void MarkBossEncountered();
     void SetCleared(bool cleared);
@@ -76,4 +78,5 @@ private:
     bool discoveredNPC_;
     bool bossDefeated_;
     bool bossEncountered_;
+    bool healingUnlocked_;
 };

@@ -68,7 +68,7 @@ int Enemy::GetSkillCooldown(std::size_t index) const {
 }
 bool Enemy::IsSkillReady(std::size_t index) const { return GetSkillCooldown(index) == 0; }
 void Enemy::StartSkillCooldown(std::size_t index) {
-	if (index < skillCooldowns_.size()) skillCooldowns_[index] = skills_[index].cooldown;
+	if (index < skillCooldowns_.size()) skillCooldowns_[index] = skills_[index].cooldown + 1;
 }
 void Enemy::TickSkillCooldowns() {
 	for (int& cooldown : skillCooldowns_) if (cooldown > 0) --cooldown;

@@ -21,6 +21,7 @@ bool HasValue(const Stats& stats, ItemStat stat) {
     case ItemStat::Lifesteal: return stats.lifesteal != 0;
     case ItemStat::DebuffDurationReduction: return stats.debuffDurationReduction != 0;
     }
+
     return false;
 }
 
@@ -62,6 +63,26 @@ void Player::heal(int amount) {
 
 void Player::RestoreHealth(int amount) {
     hp_ = (std::max)(0, (std::min)(maxHp_, amount));
+}
+
+int Player::GetBarrier() const { return barrier_; }
+
+int Player::AddBarrier(int amount, int duration) {
+    if (amount <= 0) return barrier_;
+    barrier_ += amount;
+    if (duration > 0) statuses_.push_back({StatusType::Barrier, duration, 0, 0});
+    return barrier_;
+}
+
+int Player::AbsorbDamage(int amount) {
+    if (amount <= 0) return 0;
+    const int absorbed = (std::min)(barrier_, amount);
+    barrier_ -= absorbed;
+    return amount - absorbed;
+}
+
+void Player::ReduceBarrier(int amount) {
+    if (amount > 0) barrier_ = (std::max)(0, barrier_ - amount);
 }
 
 bool Player::isAlive() const { return hp_ > 0; }
@@ -225,19 +246,25 @@ void Player::ApplyStatus(const StatusEffect& status) {
 }
 
 void Player::ProcessStatuses() {
+    bool barrierExpired = false;
     for (auto& status : statuses_) {
-        if (status.type == StatusType::Bleed) takeDamage(status.sourceAttack * 30 * (100 + status.dotPotency) / 10000);
-        else if (status.type == StatusType::Burn) takeDamage(status.sourceAttack * 60 * (100 + status.dotPotency) / 10000);
-        else if (status.type == StatusType::Poison) takeDamage(maxHp_ * 5 / 100);
+        if (status.type == StatusType::Bleed) takeDamage(AbsorbDamage(status.sourceAttack * 30 * (100 + status.dotPotency) / 10000));
+        else if (status.type == StatusType::Burn) takeDamage(AbsorbDamage(status.sourceAttack * 60 * (100 + status.dotPotency) / 10000));
+        else if (status.type == StatusType::Poison) takeDamage(AbsorbDamage(maxHp_ * 5 / 100));
         else if (status.type == StatusType::HealOverTime) heal(status.potency);
         --status.turns;
+        if (status.type == StatusType::Barrier && status.turns <= 0) barrierExpired = true;
     }
     statuses_.erase(std::remove_if(statuses_.begin(), statuses_.end(), [](const StatusEffect& status) {
         return status.turns <= 0;
     }), statuses_.end());
+    if (barrierExpired) barrier_ = 0;
 }
 
-void Player::ClearStatuses() { statuses_.clear(); }
+void Player::ClearStatuses() {
+    statuses_.clear();
+    barrier_ = 0;
+}
 
 void Player::ModifyStats(const Stats& delta) {
     baseStats_.atk += delta.atk;

@@ -8,8 +8,12 @@ class Enemy;
 
 class ShimmerSkill {
 public:
-	ShimmerSkill(const std::string& name, int cooldown,
+	ShimmerSkill(const std::string& name, int equipCost, int cooldown,
 		const std::string& description = "", const std::string& effect = "");
+	ShimmerSkill(const std::string& name, int equipCost, int cooldown,
+		const std::string& description, const std::string& effect, int powerPercent, int duration);
+	ShimmerSkill(const std::string& name, int cooldown,
+		const std::string& description, const std::string& effect);
 	virtual ~ShimmerSkill();
 
 	virtual void apply(Player& player, Enemy& enemy) = 0;
@@ -18,7 +22,10 @@ public:
 	const std::string& getDescription() const;
 	const std::string& getEffect() const;
 	int getCost() const;
+	int getEquipCost() const;
 	int getCooldown() const;
+	int getPowerPercent() const;
+	int getDuration() const;
 	int getRemainingCooldown() const;
 	bool IsReady() const;
 	void TickCooldown();
@@ -29,6 +36,9 @@ protected:
 	std::string name_;
 	std::string description_;
 	std::string effect_;
+	int equipCost_;
 	int cooldown_;
+	int powerPercent_;
+	int duration_;
 	int remainingCooldown_;
 };

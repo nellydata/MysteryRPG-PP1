@@ -170,7 +170,7 @@ bool CombatManager::resolve(CombatAction action, Player& player, Enemy& enemy,
             progression->CheckLevelUp(player);
         }
         playerGauge_ -= 1000;
-        playerTurn_ = enemy.isAlive() && playerGauge_ >= 1000;
+        playerTurn_ = false;
         return true;
     }
     case CombatAction::Shimmer:
@@ -180,6 +180,11 @@ bool CombatManager::resolve(CombatAction action, Player& player, Enemy& enemy,
             return false;
         }
         const std::string effect = skill->getEffect();
+        const int remainingCooldown = shimmerCooldowns_[skill->getName()];
+        if (remainingCooldown > 0) {
+            AddEvent(CombatEvent::Kind::Info, skill->getName() + " is recharging for " + std::to_string(remainingCooldown) + " more turns.");
+            return false;
+        }
         const int enemyHealthBefore = enemy.getHP();
         const int playerHealthBefore = player.getHP();
         AddEvent(CombatEvent::Kind::Shimmer, player.getName() + " uses Shimmer skill " + skill->getName() + ". Effect: " + effect + ".");
@@ -200,13 +205,13 @@ bool CombatManager::resolve(CombatAction action, Player& player, Enemy& enemy,
             effect.find("mark") == std::string::npos && effect != "stat_boost" && effect != "extra_turn") {
             AddEvent(CombatEvent::Kind::Info, "Shimmer effect resolved: " + effect + ".");
         }
-        skill->ResetCooldown();
+        shimmerCooldowns_[skill->getName()] = skill->getCooldown() + 1;
         if (!enemy.isAlive() && progression != nullptr) {
             progression->GrantXP(enemy.getXPReward());
             progression->CheckLevelUp(player);
         }
         playerGauge_ -= 1000;
-        playerTurn_ = enemy.isAlive() && playerGauge_ >= 1000;
+        playerTurn_ = false;
         return true;
     }
     case CombatAction::Item: {
@@ -266,8 +271,9 @@ void CombatManager::enemyTurn(Player& player, Enemy& enemy) {
             ? (std::max)(1, enemy.getAtk() * skill.multiplier / 100)
             : 0;
         if (damage > 0) {
-            player.takeDamage((std::max)(1, static_cast<int>(std::lround(
+            const int finalDamage = player.AbsorbDamage((std::max)(1, static_cast<int>(std::lround(
                 static_cast<double>(damage) * 70.0 / (100.0 + player.getDefense())))));
+            player.takeDamage(finalDamage);
             AddEvent(CombatEvent::Kind::Skill, enemy.getName() + " uses " + skill.name + ". " + enemy.getName() + " dealt " + std::to_string(damage) +
                 " damage to " + player.getName() + " with " + skill.name + ".", damage);
         }
@@ -297,7 +303,7 @@ void CombatManager::enemyTurn(Player& player, Enemy& enemy) {
         }
         if (!enemy.isAlive()) AddEvent(CombatEvent::Kind::Death, enemy.getName() + " has been defeated.");
         enemy.StartSkillCooldown(index);
-        enemy.TickSkillCooldowns();
+        for (auto& cooldown : shimmerCooldowns_) if (cooldown.second > 0) --cooldown.second;
         enemyGauge_ -= 1000;
         playerTurn_ = false;
         AccumulateGaugesUntilReady(playerGauge_, enemyGauge_, player.getSpeed(), enemy.getSpeed());
@@ -313,21 +319,16 @@ void CombatManager::enemyTurn(Player& player, Enemy& enemy) {
         playerTurn_ = playerGauge_ >= 1000;
         return;
     }
-    if (player.HasStatus(StatusType::Barrier)) {
-        player.ClearStatuses();
-        std::cout << "The Shimmer barrier negates the attack.\n";
-        playerTurn_ = true;
-        AddEvent(CombatEvent::Kind::Shield, player.getName() + "'s shield blocked the attack.");
-        return;
-    }
     const int attackDamage = enemy.getAtk();
     const int damage = (std::max)(1, static_cast<int>(std::lround(
         static_cast<double>(attackDamage) * 70.0 / (100.0 + player.getDefense()))));
-    player.takeDamage(damage);
-    AddEvent(CombatEvent::Kind::Attack, enemy.getName() + " uses Basic Attack and inflicted " + std::to_string(damage) + " damage!", damage);
+    const int finalDamage = player.AbsorbDamage(damage);
+    player.takeDamage(finalDamage);
+    AddEvent(CombatEvent::Kind::Attack, enemy.getName() + " uses Basic Attack and inflicted " + std::to_string(finalDamage) + " damage!", finalDamage);
     if (!player.isAlive()) AddEvent(CombatEvent::Kind::Death, player.getName() + " has fallen.");
     std::cout << enemy.getName() << " attacks for " << damage << " damage.\n";
     if (defaultSkill_ != nullptr) defaultSkill_->TickCooldown();
+    for (auto& cooldown : shimmerCooldowns_) if (cooldown.second > 0) --cooldown.second;
     enemyGauge_ -= 1000;
     playerTurn_ = false;
     AccumulateGaugesUntilReady(playerGauge_, enemyGauge_, player.getSpeed(), enemy.getSpeed());

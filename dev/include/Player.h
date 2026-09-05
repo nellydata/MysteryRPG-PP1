@@ -15,6 +15,10 @@ public:
     void takeDamage(int amount);
     void heal(int amount);
     void RestoreHealth(int amount);
+    int GetBarrier() const;
+    int AddBarrier(int amount, int duration = 0);
+    int AbsorbDamage(int amount);
+    void ReduceBarrier(int amount);
     bool isAlive() const;
 
     const std::string& getName() const;
@@ -74,6 +78,7 @@ private:
     Stats totalStats_;
     int sp_;
     int maxSp_;
+    int barrier_ = 0;
     Inventory inventory_;
     std::vector<StatusEffect> statuses_;
     Item* equipped_[5];

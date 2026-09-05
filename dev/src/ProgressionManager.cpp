@@ -1,13 +1,19 @@
 #include "ProgressionManager.h"
 #include "Player.h"
+#include "ShimmerSkill.h"
 #include <algorithm>
 #include <iostream>
+#include <random>
 
 ProgressionManager::ProgressionManager()
     : level_(1), xp_(0), xpToNextLevel_(100), shimmerPointsUsed_(0) {}
 
 void ProgressionManager::GrantXP(int amount) {
     if (amount > 0) xp_ += amount;
+}
+
+void ProgressionManager::GrantClueXP() {
+    GrantXP((std::max)(1, xpToNextLevel_ / 4));
 }
 
 bool ProgressionManager::UnequipShimmerSkill(const std::string& skillName, int cost) {
@@ -23,14 +29,46 @@ bool ProgressionManager::CheckLevelUp(Player& player) {
         xp_ -= xpToNextLevel_;
         ++level_;
         player.SetLevelStats(level_);
+        player.RestoreHealth(player.getMaxHP());
         xpToNextLevel_ = static_cast<int>(xpToNextLevel_ * 1.10f + 0.5f);
+        const std::string reward = RollShimmerSkill();
+        if (!reward.empty()) UnlockShimmerSkill(reward);
         leveledUp = true;
 
         std::cout << "Level up! Adelaide is now level " << level_ << ".\n"
-                   << "Max HP +5, Defense +10, Attack +15.\n";
+                   << "Recovered to full health and discovered Shimmer skill " << reward << ".\n";
     }
 
     return leveledUp;
+}
+
+std::string ProgressionManager::RollShimmerSkill() {
+    static std::mt19937 generator(0x4D494341u);
+    static const std::vector<std::pair<int, int>> costs = {{2, 45}, {3, 30}, {4, 17}, {5, 8}};
+    std::uniform_int_distribution<int> roll(1, 100);
+    const int targetCost = [&]() {
+        int value = roll(generator);
+        for (const auto& entry : costs) {
+            if (value <= entry.second) return entry.first;
+            value -= entry.second;
+        }
+        return 2;
+    }();
+    std::vector<std::string> candidates;
+    static const std::vector<std::string> names = {
+        "Ray of Mercy", "Prism Step", "Gleam Needle", "Phragmós Phōtós", "Therapeía Anakláseōs", "Anástasis Φωτός", "Phthorá Phōtós",
+        "Phōteinḕ Kátharsis", "Phōteinòs Thṓrax", "Refractio Ultima", "Lumen Spiculum",
+        "Lux Vortex", "Siphon Lux", "Lux Aegis", "Refraction Cataclysm", "Lux Ascension"
+    };
+    for (const auto& name : names) {
+        auto skill = ShimmerSkill::Create(name);
+        if (skill != nullptr && skill->getEquipCost() == targetCost && !HasShimmerSkill(name)) candidates.push_back(name);
+    }
+    if (candidates.empty()) {
+        for (const auto& name : names) if (!HasShimmerSkill(name)) return name;
+        return {};
+    }
+    return candidates[static_cast<std::size_t>(roll(generator) % candidates.size())];
 }
 
 int ProgressionManager::GetLevel() const { return level_; }

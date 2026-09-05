@@ -37,6 +37,7 @@ private:
 	static constexpr int ButtonEquip = 509;
 	static constexpr int ButtonInventoryPrevious = 510;
 	static constexpr int ButtonInventoryNext = 511;
+	static constexpr int InventorySearch = 512;
 	static constexpr int SortModeBase = 600;
 	static constexpr int FilterModeBase = 620;
 	static constexpr UINT RefreshControlsMessage = WM_APP + 1;
@@ -88,6 +89,7 @@ private:
 	Enemy* activeEnemy_;
 	std::vector<std::string> log_;
 	std::string statusMessage_;
+	std::string inventorySearchQuery_;
 	InventorySort inventorySort_ = InventorySort::RecentlyObtained;
 	ItemStat inventoryFocusStat_ = ItemStat::ATK;
 	int inventoryFilter_ = -1;

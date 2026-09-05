@@ -7,6 +7,7 @@
 #include <cstdlib>
 #include <cstdio>
 #include <array>
+#include <cctype>
 
 namespace {
 constexpr COLORREF Background = RGB(24, 24, 24);
@@ -58,6 +59,11 @@ void AddNamedItem(Player& player, const std::vector<ItemDefinition>& definitions
 			return;
 		}
 	}
+}
+
+std::string Lowercase(std::string value) {
+	for (char& character : value) character = static_cast<char>(std::tolower(static_cast<unsigned char>(character)));
+	return value;
 }
 
 bool EnvironmentEquals(const char* name, const char* expected) {
@@ -147,10 +153,10 @@ void Win32UI::CreateWindowShell(HINSTANCE instance) {
 }
 
 void Win32UI::CreateControls() {
-	font_ = CreateFontW(18, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET,
+	font_ = CreateFontW(21, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET,
 						OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY,
 						DEFAULT_PITCH | FF_DONTCARE, L"IM FELL English");
-	headingFont_ = CreateFontW(22, 0, 0, 0, FW_SEMIBOLD, FALSE, FALSE, FALSE,
+	headingFont_ = CreateFontW(26, 0, 0, 0, FW_SEMIBOLD, FALSE, FALSE, FALSE,
 							   DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
 														   CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, L"IM FELL English");
 
@@ -165,6 +171,9 @@ void Win32UI::CreateControls() {
 	for (int i = 0; i < 4; ++i) createButton(i, RoomButtonBase + i, L"Room");
 	for (int i = 0; i < 4; ++i) createButton(4 + i, InspectButtonBase + i, L"Inspect");
 	for (int i = 0; i < 12; ++i) createButton(8 + i, InventoryButtonBase + i, L"Item");
+	controls_[25] = CreateWindowW(L"EDIT", L"", WS_CHILD | WS_BORDER | ES_AUTOHSCROLL,
+		0, 0, 0, 0, window_, reinterpret_cast<HMENU>(InventorySearch), GetModuleHandleW(nullptr), nullptr);
+	SendMessageW(controls_[25], WM_SETFONT, reinterpret_cast<WPARAM>(font_), TRUE);
 	createButton(20, ButtonSearch, L"Investigate");
 	createButton(21, ButtonBack, L"Back");
 	createButton(22, ButtonMap, L"Map");
@@ -224,6 +233,11 @@ void Win32UI::RefreshControls() {
 		const auto items = player_.GetInventory().GetSortedItems(inventorySort_, inventoryFocusStat_);
 		for (const auto* item : items) {
 			if (inventoryFilter_ >= 0 && static_cast<int>(item->getCategory()) != inventoryFilter_) continue;
+			const std::string query = Lowercase(inventorySearchQuery_);
+			if (!query.empty()) {
+				const std::string searchable = Lowercase(item->getName() + " " + item->getDescription() + " " + item->getTheme() + " " + item->getPassive());
+				if (searchable.find(query) == std::string::npos) continue;
+			}
 			for (int quantity = 0; quantity < player_.GetInventory().GetQuantity(item->getName()); ++quantity) {
 				inventoryEntryItems_.push_back(const_cast<Item*>(item));
 				inventoryEntryDescriptions_.push_back(item->getDescription());
@@ -250,6 +264,7 @@ void Win32UI::RefreshControls() {
 		}
 		ShowWindow(controls_[21], SW_SHOW);
 		ShowWindow(controls_[30], SW_SHOW);
+		ShowWindow(controls_[25], SW_SHOW);
 		ShowWindow(controls_[32], SW_SHOW);
 		ShowWindow(controls_[33], SW_SHOW);
 		ShowWindow(controls_[34], SW_SHOW);
@@ -276,6 +291,32 @@ void Win32UI::LayoutControls(int width, int height) {
 	const int inventoryActionY = eventTop + 260;
 	const int inventoryWidth = (std::max)(150, (panelRight - center - 36) / 4);
 	const int inventoryGap = 12;
+	if (view_ == View::Inventory) {
+		const int left = 395;
+		const int right = width - 20;
+		const int top = 20;
+		const int bottom = height - 20;
+		const int split = left + (right - left) * 56 / 100;
+		const int detailLeft = split + 16;
+		const int listWidth = split - left;
+		const int detailWidth = right - detailLeft;
+		const int gridGap = 12;
+		const int gridWidth = (std::max)(150, (listWidth - 40 - gridGap * 3) / 4);
+		MoveWindow(controls_[25], left + 20, top + 48, listWidth - 40, 38, TRUE);
+		MoveWindow(controls_[30], left + 20, top + 92, listWidth - 40, 40, TRUE);
+		for (int i = 0; i < 12; ++i) {
+			MoveWindow(controls_[8 + i], left + 20 + (i % 4) * (gridWidth + gridGap),
+				top + 150 + (i / 4) * 52, gridWidth, 42, TRUE);
+		}
+		const int actionWidth = (detailWidth - 40 - gridGap * 2) / 3;
+		const int actionY = bottom - 112;
+		MoveWindow(controls_[33], detailLeft + 20, actionY, actionWidth, 44, TRUE);
+		MoveWindow(controls_[32], detailLeft + 20 + actionWidth + gridGap, actionY, actionWidth, 44, TRUE);
+		MoveWindow(controls_[21], detailLeft + 20 + (actionWidth + gridGap) * 2, actionY, actionWidth, 44, TRUE);
+		MoveWindow(controls_[34], detailLeft + 20, bottom - 58, 70, 40, TRUE);
+		MoveWindow(controls_[35], right - 90, bottom - 58, 70, 40, TRUE);
+		return;
+	}
 
 	for (int i = 0; i < 4; ++i) {
 		MoveWindow(controls_[i], center + (i % 2) * 225, actionY + (i / 2) * 50,
@@ -770,7 +811,17 @@ LRESULT Win32UI::HandleMessage(UINT message, WPARAM wParam, LPARAM lParam) {
 		RefreshControls();
 		return 0;
 	case WM_COMMAND:
-		if (HIWORD(wParam) == BN_CLICKED) HandleCommand(LOWORD(wParam));
+		if (HIWORD(wParam) == EN_CHANGE && LOWORD(wParam) == InventorySearch) {
+			wchar_t query[256]{};
+			GetWindowTextW(controls_[25], query, static_cast<int>(std::size(query)));
+			inventorySearchQuery_ = ToNarrow(query);
+			selectedInventoryIndex_ = -1;
+			inventoryPage_ = 0;
+			if (!refreshPosted_) {
+				refreshPosted_ = true;
+				PostMessageW(window_, RefreshControlsMessage, 0, 0);
+			}
+		} else if (HIWORD(wParam) == BN_CLICKED) HandleCommand(LOWORD(wParam));
 		return 0;
 	case WM_DRAWITEM: {
 		const auto* draw = reinterpret_cast<const DRAWITEMSTRUCT*>(lParam);
@@ -845,6 +896,78 @@ void Win32UI::Paint(HDC deviceContext) {
 		if (item != nullptr) DrawTextLine(deviceContext, 105, y, ToWide(item->getName()), RarityColor(item->getRarity()), 14);
 		else DrawTextLine(deviceContext, 105, y, L"--", Muted, 14);
 		y += 25;
+	}
+
+	if (view_ == View::Inventory) {
+		const int left = 395;
+		const int right = client.right - 20;
+		const int top = 20;
+		const int bottom = client.bottom - 20;
+		const int split = left + (right - left) * 56 / 100;
+		const int detailLeft = split + 16;
+		DrawPanel(deviceContext, {left, top, split, bottom}, L"INVENTORY");
+		DrawPanel(deviceContext, {detailLeft, top, right, bottom}, L"ITEM INFORMATION");
+		DrawTextLine(deviceContext, left + 20, top + 30, L"Search items", Muted, 18);
+		DrawTextLine(deviceContext, left + 20, top + 134, L"Select an item", Muted, 18);
+		DrawTextLine(deviceContext, detailLeft + 20, top + 50, L"Choose an item to inspect its complete effects.", Muted, 18);
+		if (selectedInventoryIndex_ >= 0 && selectedInventoryIndex_ < static_cast<int>(inventoryEntryItems_.size())) {
+			const Item* selected = inventoryEntryItems_[selectedInventoryIndex_];
+			const std::string description = inventoryEntryDescriptions_[selectedInventoryIndex_];
+			const int detailX = detailLeft + 20;
+			int detailY = top + 92;
+			DrawTextLine(deviceContext, detailX, detailY, ToWide(selected == nullptr ? "Clue" : selected->getName()),
+				selected == nullptr ? Muted : RarityColor(selected->getRarity()), 22, true);
+			detailY += 32;
+			if (selected == nullptr) {
+				DrawTextLine(deviceContext, detailX, detailY, ToWide(description), Text, 18);
+			} else {
+				std::wstring type = L"Type: ";
+				switch (selected->getCategory()) {
+				case ItemCategory::Equippable:
+					switch (selected->getSlot()) {
+					case EquipSlot::Head: type += L"Head"; break;
+					case EquipSlot::Torso: type += L"Torso"; break;
+					case EquipSlot::Boots: type += L"Boots"; break;
+					case EquipSlot::Hand: type += L"Hands"; break;
+					case EquipSlot::Accessory: type += L"Accessory"; break;
+					default: type += L"Equipment"; break;
+					}
+					break;
+				case ItemCategory::Consumable: type += L"Consumable"; break;
+				case ItemCategory::Clue: type += L"Clue"; break;
+				case ItemCategory::Crux: type += L"Crux"; break;
+				default: type += L"Item"; break;
+				}
+				DrawTextLine(deviceContext, detailX, detailY, type, Muted, 18);
+				detailY += 28;
+				const Stats& stats = selected->getStats();
+				auto drawStat = [&](const wchar_t* label, int value) {
+					if (value == 0) return;
+					DrawTextLine(deviceContext, detailX, detailY, std::wstring(label) + L"  " + std::to_wstring(value), Text, 18);
+					detailY += 24;
+				};
+				drawStat(L"HP", stats.hp); drawStat(L"DEF", stats.def); drawStat(L"SPD", stats.spd); drawStat(L"ATK", stats.atk);
+				drawStat(L"Accuracy", stats.acc); drawStat(L"Resistance", stats.res); drawStat(L"Crit rate", stats.critRate);
+				drawStat(L"Crit damage", stats.critDamage); drawStat(L"Evasion", stats.evasion);
+				drawStat(L"Healing potency", stats.healingPotency); drawStat(L"Healing received", stats.healingReceived);
+				drawStat(L"Barrier potency", stats.barrierPotency); drawStat(L"DOT potency", stats.dotPotency);
+				drawStat(L"Lifesteal", stats.lifesteal); drawStat(L"Debuff reduction", stats.debuffDurationReduction);
+				if (!selected->getPassive().empty()) {
+					DrawTextLine(deviceContext, detailX, detailY, L"Passive: " + ToWide(selected->getPassive()), Shimmer, 17);
+					detailY += 24;
+				}
+				if (!selected->getUniqueEffect().empty()) {
+					DrawTextLine(deviceContext, detailX, detailY, L"Effect: " + ToWide(selected->getUniqueEffect()), Shimmer, 17);
+					detailY += 24;
+				}
+				if (!selected->getSetName().empty()) {
+					DrawTextLine(deviceContext, detailX, detailY, L"Set: " + ToWide(selected->getSetName()), Brass, 17);
+					detailY += 24;
+					DrawTextLine(deviceContext, detailX, detailY, L"Set bonus: " + ToWide(selected->getSetPassive()), Brass, 17);
+				}
+			}
+		}
+		return;
 	}
 
 	const int eventTop = client.bottom > 500 ? static_cast<int>(client.bottom) - 380 : 120;

@@ -33,6 +33,11 @@ void SetSlotRules(ItemDefinition& item, EquipSlot slot, const std::string& mainS
 	}
 }
 
+int MainStatValue(Rarity rarity, int value) {
+	const int multiplier = rarity == Rarity::Artifact ? 3 : rarity == Rarity::Legendary ? 2 : 1;
+	return value * multiplier;
+}
+
 int SubstatValue(Rarity rarity) {
 	switch (rarity) {
 	case Rarity::Common: return 2;
@@ -63,11 +68,12 @@ void AddEquippables(std::vector<ItemDefinition>& result, EquipSlot slot, const c
 		item.rarity = rarity;
 		item.slot = slot;
 		item.mainStat = resolvedMainStat;
-		if (resolvedMainStat == "hp") item.stats.hp = value;
-		else if (resolvedMainStat == "def") item.stats.def = value;
-		else if (resolvedMainStat == "spd") item.stats.spd = value;
-		else if (resolvedMainStat == "atk") item.stats.atk = value;
-		else if (resolvedMainStat == "acc") item.stats.acc = value;
+		const int scaledValue = MainStatValue(rarity, value);
+		if (resolvedMainStat == "hp") item.stats.hp = scaledValue;
+		else if (resolvedMainStat == "def") item.stats.def = scaledValue;
+		else if (resolvedMainStat == "spd") item.stats.spd = scaledValue;
+		else if (resolvedMainStat == "atk") item.stats.atk = scaledValue;
+		else if (resolvedMainStat == "acc") item.stats.acc = scaledValue;
 		const int substat = SubstatValue(rarity);
 		if (slot == EquipSlot::Head) {
 			if (resolvedMainStat == "acc") item.stats.critRate = rarity >= Rarity::Rare ? substat : 0;
@@ -89,7 +95,13 @@ void AddEquippables(std::vector<ItemDefinition>& result, EquipSlot slot, const c
 			else if (name.find("choir") != std::string::npos || name.find("rosary") != std::string::npos) item.stats.healingPotency = substat;
 			else item.stats.barrierPotency = substat;
 		}
-		if (rarity == Rarity::Epic) {
+		if (rarity == Rarity::Artifact) {
+			if (slot == EquipSlot::Head) { item.passive = "Critical hits reveal enemies and restore 8% HP"; item.stats.critRate += 8; item.stats.critDamage += 20; }
+			else if (slot == EquipSlot::Torso) { item.passive = "Reduce incoming damage by 12% and gain a barrier after taking damage"; item.stats.res += 10; item.stats.barrierPotency += 18; }
+			else if (slot == EquipSlot::Hand) { item.passive = "Attacks apply a stacking mark and deal bonus damage over time"; item.stats.dotPotency += 18; item.stats.lifesteal += 6; }
+			else if (slot == EquipSlot::Boots) { item.passive = "After three actions, gain a bonus action and evade the next hit"; item.stats.evasion += 10; item.stats.spd += 4; }
+			else if (slot == EquipSlot::Accessory) { item.passive = "Shimmer skills amplify all rolled stats for two turns"; item.stats.acc += 8; item.stats.healingPotency += 15; }
+		} else if (rarity == Rarity::Epic) {
 			if (slot == EquipSlot::Head) { item.passive = "Crit rate +5%"; item.stats.critRate += 5; }
 			else if (slot == EquipSlot::Torso) { item.passive = "Healing received +10%"; item.stats.healingReceived += 10; }
 			else if (slot == EquipSlot::Hand) { item.passive = "DOT potency +10%"; item.stats.dotPotency += 10; }

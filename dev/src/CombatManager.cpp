@@ -92,6 +92,15 @@ void CombatManager::PrepareTurn(Player& player, Enemy& enemy) {
     while (!playerTurn_ && player.isAlive() && enemy.isAlive() && enemyGauge_ >= 1000) enemyTurn(player, enemy);
 }
 
+void CombatManager::ResumeAfterRespawn(Player& player, Enemy& enemy) {
+    if (!enemy.isAlive()) return;
+    playerGauge_ = 1000;
+    enemyGauge_ = 0;
+    playerTurn_ = true;
+    consumableUsedThisTurn_ = false;
+    AddEvent(CombatEvent::Kind::Info, player.getName() + " returns from the fountain and may act.");
+}
+
 void CombatManager::BeginEncounter(Enemy& enemy) {
     if (activeEnemy_ == &enemy) return;
     activeEnemy_ = &enemy;
@@ -173,7 +182,7 @@ bool CombatManager::resolve(CombatAction action, Player& player, Enemy& enemy,
         const std::string effect = skill->getEffect();
         const int enemyHealthBefore = enemy.getHP();
         const int playerHealthBefore = player.getHP();
-        AddEvent(CombatEvent::Kind::Shimmer, player.getName() + " invokes a Shimmer resonance.");
+        AddEvent(CombatEvent::Kind::Shimmer, player.getName() + " uses Shimmer skill " + skill->getName() + ". Effect: " + effect + ".");
         skill->apply(player, enemy);
 
         const int dealt = enemyHealthBefore - enemy.getHP();
@@ -186,6 +195,11 @@ bool CombatManager::resolve(CombatAction action, Player& player, Enemy& enemy,
         if (effect.find("mark") != std::string::npos && enemy.HasStatus(StatusType::VerdigrisMark)) AddEvent(CombatEvent::Kind::Debuff, enemy.getName() + " is marked by Shimmer.");
         if (effect == "stat_boost") AddEvent(CombatEvent::Kind::Info, player.getName() + " gains a major Shimmer stat increase.");
         if (effect == "extra_turn") AddEvent(CombatEvent::Kind::Info, player.getName() + " accelerates the next combat action.");
+        if (dealt == 0 && healed == 0 && effect.find("barrier") == std::string::npos &&
+            effect.find("stun") == std::string::npos && effect.find("burn") == std::string::npos &&
+            effect.find("mark") == std::string::npos && effect != "stat_boost" && effect != "extra_turn") {
+            AddEvent(CombatEvent::Kind::Info, "Shimmer effect resolved: " + effect + ".");
+        }
         skill->ResetCooldown();
         if (!enemy.isAlive() && progression != nullptr) {
             progression->GrantXP(enemy.getXPReward());

@@ -9,11 +9,12 @@
 
 class Player {
 public:
-    Player(const std::string& name = "Adelaide", int maxHp = 20, int maxSp = 10);
+    Player(const std::string& name = "Adelaide", int maxHp = 100, int maxSp = 10);
     ~Player();
 
     void takeDamage(int amount);
     void heal(int amount);
+    void RestoreHealth(int amount);
     bool isAlive() const;
 
     const std::string& getName() const;

@@ -60,6 +60,10 @@ void Player::heal(int amount) {
     if (hp_ > maxHp_) hp_ = maxHp_;
 }
 
+void Player::RestoreHealth(int amount) {
+    hp_ = (std::max)(0, (std::min)(maxHp_, amount));
+}
+
 bool Player::isAlive() const { return hp_ > 0; }
 const std::string& Player::getName() const { return name_; }
 void Player::SetName(const std::string& name) {
@@ -109,11 +113,12 @@ void Player::increaseDefense(int amount) {
 void Player::SetLevelStats(int level) {
     const int levelOffset = (std::max)(0, level - 1);
     const int previousMaxHp = maxHp_;
-    baseStats_.hp = 20 + levelOffset * 5;
+    baseStats_.hp = 100 + levelOffset * 25;
     baseStats_.def = 10 + levelOffset * 10;
     baseStats_.atk = 20 + levelOffset * 15;
     baseStats_.spd = 10;
     RecalculateStats();
+    maxHp_ = totalStats_.hp;
     hp_ += maxHp_ - previousMaxHp;
     if (hp_ > maxHp_) hp_ = maxHp_;
 }

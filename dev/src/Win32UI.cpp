@@ -838,12 +838,10 @@ void Win32UI::HandleCommand(int controlId) {
 		if (activeEnemy_ == nullptr) ChangeView(View::Skills);
 	} else if (controlId == ButtonAttack) {
 		if (combatDefeatRecovery_) {
-			player_.heal(player_.getMaxHP());
+			player_.RestoreHealth((std::max)(1, player_.getMaxHP() * 10 / 100));
 			combatDefeatRecovery_ = false;
 			statusMessage_ = "Respawned at the fountain with 10% HP. Continue the battle.";
-			const int recoveryHP = (std::max)(1, player_.getMaxHP() * 10 / 100);
-			player_.takeDamage((std::max)(0, player_.getHP() - recoveryHP));
-			if (activeEnemy_ != nullptr && activeEnemy_->isAlive()) combat_.PrepareTurn(player_, *activeEnemy_);
+			if (activeEnemy_ != nullptr && activeEnemy_->isAlive()) combat_.ResumeAfterRespawn(player_, *activeEnemy_);
 			else ShowDefeatRecovery();
 		} else if (player_.isAlive()) PerformCombatAction(CombatAction::Attack);
 	} else if (controlId == ButtonItem) {

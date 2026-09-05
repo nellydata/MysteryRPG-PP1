@@ -364,16 +364,20 @@ void Win32UI::HandleCommand(int controlId) {
 				player_.ToggleEquip(item);
 				AddLog(std::string(equipped == &item ? "Unequipped " : "Equipped ") + item.getName() + ".");
 			} else if (item.getCategory() == ItemCategory::Consumable) {
-				if (player_.UseConsumable(item.getName())) {
-					AddLog("Used " + item.getName() + ": " + item.getDescription());
-					statusMessage_ = item.getDescription();
+				const std::string itemName = item.getName();
+				const std::string itemDescription = item.getDescription();
+				if (player_.UseConsumable(itemName)) {
+					AddLog("Used " + itemName + ": " + itemDescription);
+					statusMessage_ = itemDescription;
 				}
 				else AddLog("That consumable cannot be used right now.");
 			} else if (item.getCategory() == ItemCategory::Crux) {
-				if (progression_.UnlockCrux(item.getName())) {
-					player_.GetInventory().RemoveItem(item.getName());
-					AddLog("Crux activated: " + item.getName() + ". " + item.getDescription());
-					statusMessage_ = "Crux activated: " + item.getDescription();
+				const std::string itemName = item.getName();
+				const std::string itemDescription = item.getDescription();
+				if (progression_.UnlockCrux(itemName)) {
+					player_.GetInventory().RemoveItem(itemName);
+					AddLog("Crux activated: " + itemName + ". " + itemDescription);
+					statusMessage_ = "Crux activated: " + itemDescription;
 				} else AddLog("The conditions for that crux are not met.");
 			} else {
 				AddLog("That item has no usable action here.");

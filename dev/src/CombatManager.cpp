@@ -40,6 +40,14 @@ int InterrogationChance(const Enemy& enemy, int playerLevel) {
     chance += std::min(playerLevel - 1, 5) * 3;
     return std::max(10, std::min(chance, 85));
 }
+
+void AccumulateGaugesUntilReady(int& playerGauge, int& enemyGauge,
+                                int playerSpeed, int enemySpeed) {
+    while (playerGauge < 1000 && enemyGauge < 1000) {
+        playerGauge += (std::max)(1, playerSpeed);
+        enemyGauge += (std::max)(1, enemySpeed);
+    }
+}
 }
 
 CombatManager::CombatManager()
@@ -63,13 +71,10 @@ void CombatManager::AddEvent(CombatEvent::Kind kind, const std::string& message,
 void CombatManager::PrepareTurn(Player& player, Enemy& enemy) {
     if (!enemy.isAlive()) return;
     if (turnNumber_ == 0 && playerGauge_ == 0 && enemyGauge_ == 0) {
-        while (playerGauge_ < 1000 && enemyGauge_ < 1000) {
-            playerGauge_ += (std::max)(1, player.getSpeed());
-            enemyGauge_ += (std::max)(1, enemy.getSpeed());
-        }
+        AccumulateGaugesUntilReady(playerGauge_, enemyGauge_, player.getSpeed(), enemy.getSpeed());
         playerTurn_ = playerGauge_ >= 1000;
     }
-    while (!playerTurn_ && player.isAlive() && enemy.isAlive()) enemyTurn(player, enemy);
+    while (!playerTurn_ && player.isAlive() && enemy.isAlive() && enemyGauge_ >= 1000) enemyTurn(player, enemy);
 }
 
 void CombatManager::BeginEncounter(Enemy& enemy) {
@@ -92,10 +97,7 @@ bool CombatManager::resolve(CombatAction action, Player& player, Enemy& enemy,
     BeginEncounter(enemy);
     blocked_ = false;
     if (turnNumber_ == 0 && playerGauge_ == 0 && enemyGauge_ == 0) {
-        while (playerGauge_ < 1000 && enemyGauge_ < 1000) {
-            playerGauge_ += (std::max)(1, player.getSpeed());
-            enemyGauge_ += (std::max)(1, enemy.getSpeed());
-        }
+        AccumulateGaugesUntilReady(playerGauge_, enemyGauge_, player.getSpeed(), enemy.getSpeed());
         playerTurn_ = playerGauge_ >= 1000;
     }
 
@@ -130,8 +132,8 @@ bool CombatManager::resolve(CombatAction action, Player& player, Enemy& enemy,
             progression->GrantXP(enemy.getXPReward());
             progression->CheckLevelUp(player);
         }
-        if (enemy.isAlive()) playerTurn_ = false;
         playerGauge_ -= 1000;
+        playerTurn_ = enemy.isAlive() && playerGauge_ >= 1000;
         return true;
     }
     case CombatAction::Shimmer:
@@ -178,6 +180,12 @@ bool CombatManager::UseConsumable(const std::string& itemName, Player& player, E
 void CombatManager::enemyTurn(Player& player, Enemy& enemy) {
     if (!enemy.isAlive()) return;
 
+    if (enemyGauge_ < 1000) {
+        AccumulateGaugesUntilReady(playerGauge_, enemyGauge_, player.getSpeed(), enemy.getSpeed());
+        playerTurn_ = playerGauge_ >= 1000;
+        if (playerTurn_) return;
+    }
+
     AddEvent(CombatEvent::Kind::Turn, enemy.getName() + "'s turn.");
     consumableUsedThisTurn_ = false;
 
@@ -185,10 +193,7 @@ void CombatManager::enemyTurn(Player& player, Enemy& enemy) {
         std::cout << enemy.getName() << " loses its turn to the stun.\n";
         enemyGauge_ -= 1000;
         playerTurn_ = false;
-        while (playerGauge_ < 1000 && enemyGauge_ < 1000) {
-            playerGauge_ += (std::max)(1, player.getSpeed());
-            enemyGauge_ += (std::max)(1, enemy.getSpeed());
-        }
+        AccumulateGaugesUntilReady(playerGauge_, enemyGauge_, player.getSpeed(), enemy.getSpeed());
         playerTurn_ = playerGauge_ >= 1000;
         return;
     }
@@ -208,10 +213,7 @@ void CombatManager::enemyTurn(Player& player, Enemy& enemy) {
     if (defaultSkill_ != nullptr) defaultSkill_->TickCooldown();
     enemyGauge_ -= 1000;
     playerTurn_ = false;
-    while (playerGauge_ < 1000 && enemyGauge_ < 1000) {
-        playerGauge_ += (std::max)(1, player.getSpeed());
-        enemyGauge_ += (std::max)(1, enemy.getSpeed());
-    }
+    AccumulateGaugesUntilReady(playerGauge_, enemyGauge_, player.getSpeed(), enemy.getSpeed());
     playerTurn_ = playerGauge_ >= 1000;
 }
 

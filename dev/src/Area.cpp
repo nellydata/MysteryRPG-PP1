@@ -71,6 +71,10 @@ void Area::removeDeadEnemies() {
         }), enemies_.end());
 }
 
+void Area::ClearEnemies() {
+    enemies_.clear();
+}
+
 void Area::AddInteractable(const std::string& interactable) {
     if (!interactable.empty()) interactables_.push_back(interactable);
 }

@@ -295,10 +295,36 @@ void Win32UI::RefreshControls() {
 		ShowWindow(controls_[34], SW_SHOW);
 		ShowWindow(controls_[35], SW_SHOW);
 	} else if (view_ == View::Combat) {
-		ShowWindow(controls_[24], SW_SHOW);
-		ShowWindow(controls_[31], SW_SHOW);
-		ShowWindow(controls_[26], SW_SHOW);
-		ShowWindow(controls_[27], SW_SHOW);
+		if (combatDefeatRecovery_) {
+			SetWindowTextW(controls_[24], L"RESPAWN (10% HP)");
+			SetWindowTextW(controls_[31], L"END BATTLE (FULL HP)");
+			ShowWindow(controls_[24], SW_SHOW);
+			ShowWindow(controls_[31], SW_SHOW);
+		} else if (combatItemSelection_) {
+			combatItemNames_.clear();
+			for (const auto& item : player_.GetInventory().GetItems()) {
+				if (item->getCategory() != ItemCategory::Consumable ||
+					player_.GetInventory().GetQuantity(item->getName()) <= 0) continue;
+				bool duplicate = false;
+				for (const auto& name : combatItemNames_) if (name == item->getName()) duplicate = true;
+				if (!duplicate && combatItemNames_.size() < 12) combatItemNames_.push_back(item->getName());
+			}
+			for (std::size_t index = 0; index < combatItemNames_.size(); ++index) {
+				const Item* item = player_.FindItem(combatItemNames_[index]);
+				if (item == nullptr) continue;
+				SetWindowTextW(controls_[8 + index],
+					(FormatDisplayText(item->getName()) + L"\n" + ToWide(CompactConsumableSummary(*item))).c_str());
+				ShowWindow(controls_[8 + index], SW_SHOW);
+			}
+			ShowWindow(controls_[21], SW_SHOW);
+		} else {
+			SetWindowTextW(controls_[24], L"ATTACK");
+			SetWindowTextW(controls_[31], L"ITEM");
+			ShowWindow(controls_[24], SW_SHOW);
+			ShowWindow(controls_[31], SW_SHOW);
+			ShowWindow(controls_[26], SW_SHOW);
+			ShowWindow(controls_[27], SW_SHOW);
+		}
 	} else {
 		ShowWindow(controls_[21], SW_SHOW);
 	}
@@ -357,7 +383,7 @@ void Win32UI::LayoutControls(int width, int height) {
 	}
 	for (int i = 0; i < 12; ++i) {
 		MoveWindow(controls_[8 + i], center + (i % 4) * (inventoryWidth + inventoryGap),
-				   132 + (i / 4) * 48, inventoryWidth, 38, TRUE);
+					132 + (i / 4) * 68, inventoryWidth, 58, TRUE);
 	}
 	MoveWindow(controls_[20], center, roomActionY, buttonWidth, buttonHeight, TRUE);
 	MoveWindow(controls_[21], center + buttonWidth + 20, roomActionY, buttonWidth, buttonHeight, TRUE);
@@ -459,6 +485,18 @@ void Win32UI::ShowCombatItems() {
 	}
 }
 
+std::string Win32UI::CompactConsumableSummary(const Item& item) const {
+	const std::string& effect = item.getEffect();
+	if (effect.find("restore_20") != std::string::npos) return "+20% HP";
+	if (effect.find("restore_35") != std::string::npos) return "+35% HP";
+	if (effect.find("restore_50") != std::string::npos) return "+50% HP";
+	if (effect == "remove_all_debuffs") return "Cleanse all debuffs";
+	if (effect == "remove_burn_and_poison") return "Remove Burn and Poison";
+	if (effect.find("deal_flat_50") != std::string::npos) return "Inflict 50 damage";
+	if (effect.find("apply_burn") != std::string::npos) return "Inflict Burn for 3 turns";
+	return item.getDescription();
+}
+
 void Win32UI::HandleCommand(int controlId) {
 	if (handlingCommand_) return;
 	handlingCommand_ = true;
@@ -499,11 +537,21 @@ void Win32UI::HandleCommand(int controlId) {
 			if (index < static_cast<int>(interactables.size())) Inspect(index);
 		}
 	} else if (controlId >= InventoryButtonBase && controlId < InventoryButtonBase + 12) {
+		if (view_ == View::Combat && combatItemSelection_) {
+			const int index = controlId - InventoryButtonBase;
+			if (index < static_cast<int>(combatItemNames_.size())) {
+				if (combat_.UseConsumable(combatItemNames_[index], player_, *activeEnemy_))
+					statusMessage_ = "Consumable used without ending the turn.";
+				else statusMessage_ = "That consumable is unavailable.";
+				combatItemSelection_ = false;
+			}
+		} else {
 		const int index = inventoryPage_ * 12 + controlId - InventoryButtonBase;
 		if (index < static_cast<int>(inventoryEntryItems_.size())) {
 			selectedInventoryIndex_ = index;
 			statusMessage_ = inventoryEntryItems_[index] == nullptr ? "Clue selected." :
 				inventoryEntryItems_[index]->getName() + " selected.";
+		}
 		}
 	} else if (controlId == ButtonInventoryPrevious) {
 		if (inventoryPage_ > 0) --inventoryPage_;
@@ -516,7 +564,8 @@ void Win32UI::HandleCommand(int controlId) {
 		if (view_ == View::Room && selectedRoom_ >= 0 &&
 			selectedRoom_ < static_cast<int>(mapManager_.GetRooms().size())) SearchRoom();
 	} else if (controlId == ButtonBack) {
-		view_ = View::Floor;
+		if (view_ == View::Combat && combatItemSelection_) combatItemSelection_ = false;
+		else view_ = View::Floor;
 	} else if (controlId == ButtonMap) {
 		view_ = View::Map;
 	} else if (controlId == ButtonInventory) {
@@ -561,9 +610,20 @@ void Win32UI::HandleCommand(int controlId) {
 	} else if (controlId == ButtonSkills) {
 		view_ = View::Skills;
 	} else if (controlId == ButtonAttack) {
-		PerformCombatAction(CombatAction::Attack);
+		if (combatDefeatRecovery_) {
+			player_.heal((std::max)(1, player_.getMaxHP() * 10 / 100));
+			combatDefeatRecovery_ = false;
+			statusMessage_ = "Respawned at the fountain with 10% HP. Continue the battle.";
+		} else PerformCombatAction(CombatAction::Attack);
 	} else if (controlId == ButtonItem) {
-		ShowCombatItems();
+		if (combatDefeatRecovery_) {
+			player_.heal(player_.getMaxHP());
+			combatDefeatRecovery_ = false;
+			activeEnemy_ = nullptr;
+			combat_.ClearEvents();
+			view_ = View::Floor;
+			statusMessage_ = "Battle ended. You returned to the main floor with full HP.";
+		} else ShowCombatItems();
 	} else if (controlId == ButtonShimmer) {
 		PerformCombatAction(CombatAction::Shimmer);
 	} else if (controlId == ButtonFlee) {
@@ -632,6 +692,21 @@ void Win32UI::SearchRoom() {
 	const bool cluesComplete = area.HasAllClues();
 	const int bossThreshold = 18;
 	const int enemyThreshold = cluesComplete ? 70 : 50;
+	if (activeEnemy_ == nullptr && roll >= 90) {
+		const int damage = (std::max)(1, player_.getMaxHP() * 5 / 100);
+		player_.takeDamage(damage);
+		AddLog("Investigation: environmental hazard caused " + std::to_string(damage) + " damage.");
+		return;
+	}
+	if (activeEnemy_ == nullptr && roll >= 84) {
+		player_.heal((std::max)(1, player_.getMaxHP() * 10 / 100));
+		AddLog("Investigation: a Shimmer surge restored 10% HP.");
+		return;
+	}
+	if (activeEnemy_ == nullptr && roll >= 78) {
+		AddLog("Investigation: a Shimmer anomaly rippled through the room.");
+		return;
+	}
 	if (activeEnemy_ == nullptr && area.getName() == "Entrance Hall" && cluesComplete && area.HasAllItems() && !area.HasBossBeenDefeated() && roll < bossThreshold) {
 		area.MarkBossEncountered();
 		const int enemyLevel = progression_.GetLevel() + 5;
@@ -642,6 +717,10 @@ void Win32UI::SearchRoom() {
 		combat_.PrepareTurn(player_, *activeEnemy_);
 		view_ = View::Combat;
 		AddLog("Search: the Guard of the Catacombs emerges.");
+		return;
+	}
+	if (activeEnemy_ == nullptr && roll >= 50 && roll < 55) {
+		AddLog("Investigation: the search revealed nothing unusual.");
 		return;
 	}
 	if (activeEnemy_ == nullptr && area.HasAllClues() && area.HasAllItems() && area.HasBossBeenDefeated()) {
@@ -663,6 +742,9 @@ void Win32UI::SearchRoom() {
 		activeEnemy_ = area.getFirstAliveEnemy();
 		if (activeEnemy_ == nullptr || !activeEnemy_->isAlive()) {
 			activeEnemy_ = nullptr;
+		if (selectedRoom_ >= 0 && selectedRoom_ < static_cast<int>(mapManager_.GetRooms().size()))
+			mapManager_.GetRooms()[selectedRoom_].removeDeadEnemies();
+		combat_.ClearEvents();
 			view_ = View::Room;
 			return;
 		}
@@ -730,6 +812,7 @@ void Win32UI::PerformCombatAction(CombatAction action) {
 	if (action == CombatAction::Flee) {
 		AddLog(player_.getName() + " withdrew from combat.");
 		statusMessage_ = "Battle ended: " + player_.getName() + " fled.";
+		mapManager_.GetRooms()[selectedRoom_].ClearEnemies();
 		activeEnemy_ = nullptr;
 		view_ = View::Room;
 		return;
@@ -776,13 +859,10 @@ void Win32UI::PerformCombatAction(CombatAction action) {
 	while (!combat_.IsPlayerTurn() && activeEnemy_->isAlive() && player_.isAlive())
 		combat_.enemyTurn(player_, *activeEnemy_);
 	statusMessage_.clear();
-	if (!player_.isAlive()) AddLog(player_.getName() + " has fallen.");
+	if (!player_.isAlive()) AddLog(player_.getName() + " has fallen. Choose respawn or end battle.");
 	if (!player_.isAlive()) {
-		player_.heal(player_.getMaxHP());
-		selectedRoom_ = 0;
-		AddLog(player_.getName() + " returned to the Entrance Hall fountain and was fully restored.");
-		activeEnemy_ = nullptr;
-		view_ = View::Room;
+		combatDefeatRecovery_ = true;
+		statusMessage_ = "Defeated at the fountain. Respawn with 10% HP or end the battle.";
 	}
 }
 
@@ -973,11 +1053,13 @@ void Win32UI::Paint(HDC deviceContext) {
 	DrawRainbowText(deviceContext, 42, 110, ToWide(player_.getName()), 19, true);
 	DrawTextLine(deviceContext, 250, 110, L"LEVEL " + std::to_wstring(progression_.GetLevel()), Text, 19, true);
 	DrawTextLine(deviceContext, 42, 150, L"HP", Muted); DrawTextLine(deviceContext, 150, 150, std::to_wstring(player_.getHP()) + L" / " + std::to_wstring(player_.getMaxHP()), Text);
-	DrawTextLine(deviceContext, 42, 182, L"DEF   " + std::to_wstring(player_.getDefense()) + L"     SPD   " + std::to_wstring(player_.getSpeed()), Text);
-	DrawTextLine(deviceContext, 42, 214, L"ATK   " + std::to_wstring(player_.getAttack()) + L"     ACC   " + std::to_wstring(player_.getDisplayedAccuracy()) + L"%", Text);
-	DrawTextLine(deviceContext, 42, 246, L"RES   " + std::to_wstring(player_.getDisplayedResistance()) + L"%    CRIT  " + std::to_wstring(player_.getDisplayedCritRate()) + L"% / " + std::to_wstring(player_.getCritDamage()) + L"%", Text, 15);
-	DrawTextLine(deviceContext, 42, 290, L"STATUS", Brass, 17, true);
-	int y = 320;
+	DrawTextLine(deviceContext, 42, 182, L"XP", Muted); DrawTextLine(deviceContext, 150, 182,
+		std::to_wstring(progression_.GetXP()) + L" / " + std::to_wstring(progression_.GetXPToNextLevel()), Text);
+	DrawTextLine(deviceContext, 42, 214, L"DEF   " + std::to_wstring(player_.getDefense()) + L"     SPD   " + std::to_wstring(player_.getSpeed()), Text);
+	DrawTextLine(deviceContext, 42, 246, L"ATK   " + std::to_wstring(player_.getAttack()) + L"     ACC   " + std::to_wstring(player_.getDisplayedAccuracy()) + L"%", Text);
+	DrawTextLine(deviceContext, 42, 278, L"RES   " + std::to_wstring(player_.getDisplayedResistance()) + L"%    CRIT  " + std::to_wstring(player_.getDisplayedCritRate()) + L"% / " + std::to_wstring(player_.getCritDamage()) + L"%", Text, 15);
+	DrawTextLine(deviceContext, 42, 318, L"STATUS", Brass, 17, true);
+	int y = 348;
 	for (const auto& status : player_.GetStatuses()) {
 		DrawTextLine(deviceContext, 48, y, StatusName(status.type) + L" (" + std::to_wstring(status.turns) + L")", Danger, 15);
 		y += 25;

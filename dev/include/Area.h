@@ -27,6 +27,7 @@ public:
 
     Enemy* getFirstAliveEnemy();
     void removeDeadEnemies();
+    void ClearEnemies();
 
     void AddInteractable(const std::string& interactable);
     void SetNPC(bool hasNPC);

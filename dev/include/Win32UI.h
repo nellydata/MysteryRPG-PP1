@@ -31,6 +31,7 @@ private:
 	static constexpr int ButtonItem = 501;
 	static constexpr int ButtonShimmer = 502;
 	static constexpr int ButtonFlee = 503;
+	static constexpr int ButtonRespawn = 507;
 	static constexpr int ButtonQuit = 504;
 	static constexpr int ButtonInventory = 505;
 	static constexpr int ButtonSort = 506;
@@ -61,6 +62,7 @@ private:
 	void SearchRoom();
 	void PerformCombatAction(CombatAction action);
 	void ShowCombatItems();
+	std::string CompactConsumableSummary(const Item& item) const;
 	void AddLog(const std::string& message);
 	void InitializePlayer();
 	void InitializeCompletionState();
@@ -106,4 +108,7 @@ private:
 	bool refreshingControls_ = false;
 	bool handlingCommand_ = false;
 	bool refreshPosted_ = false;
+	bool combatItemSelection_ = false;
+	bool combatDefeatRecovery_ = false;
+	std::vector<std::string> combatItemNames_;
 };

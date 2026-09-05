@@ -403,9 +403,10 @@ void Win32UI::RefreshControls() {
 		} else if (combatSkillSelection_) {
 			equippedSkillNames_ = progression_.GetEquippedShimmerSkills();
 			for (std::size_t index = 0; index < equippedSkillNames_.size() && index < 12; ++index) {
-				SetWindowTextW(controls_[8 + index], FormatDisplayText(equippedSkillNames_[index]).c_str());
-				ShowWindow(controls_[8 + index], SW_SHOW);
+				SetWindowTextW(controls_[36 + index], FormatDisplayText(equippedSkillNames_[index]).c_str());
+				ShowWindow(controls_[36 + index], SW_SHOW);
 			}
+			SetWindowTextW(controls_[21], L"CANCEL");
 			ShowWindow(controls_[21], SW_SHOW);
 		} else {
 			targetEnemies_.clear();
@@ -428,6 +429,7 @@ void Win32UI::RefreshControls() {
 			ShowWindow(controls_[27], SW_SHOW);
 		}
 	} else {
+			SetWindowTextW(controls_[21], L"Back");
 		ShowWindow(controls_[21], SW_SHOW);
 	}
 	Invalidate();
@@ -470,6 +472,41 @@ void Win32UI::LayoutControls(int width, int height) {
 		MoveWindow(controls_[21], detailLeft + 20 + (actionWidth + gridGap) * 2, actionY, actionWidth, 44, TRUE);
 		MoveWindow(controls_[34], detailLeft + 20, bottom - 58, 70, 40, TRUE);
 		MoveWindow(controls_[35], right - 90, bottom - 58, 70, 40, TRUE);
+		return;
+	}
+	if (view_ == View::Combat && (combatItemSelection_ || combatSkillSelection_)) {
+		const int combatButtonWidth = (std::max)(120, (panelRight - center - 48) / 5);
+		const int combatButtonGap = 10;
+		const int combatButtonY = actionY;
+		for (int i = 0; i < 12; ++i) {
+			MoveWindow(controls_[8 + i], center + (i % 5) * (combatButtonWidth + combatButtonGap),
+				combatButtonY + (i / 5) * 50, combatButtonWidth, 42, TRUE);
+			MoveWindow(controls_[36 + i], center + (i % 5) * (combatButtonWidth + combatButtonGap),
+				combatButtonY + (i / 5) * 50, combatButtonWidth, 42, TRUE);
+		}
+		MoveWindow(controls_[21], center, combatButtonY + 160, 180, 42, TRUE);
+		return;
+	}
+	if (view_ == View::Skills) {
+		const int left = (std::min)(395, (std::max)(20, width / 3));
+		const int right = (std::max)(left + 240, width - 20);
+		const int top = 20;
+		const int bottom = height - 20;
+		const int split = left + (right - left) * 48 / 100;
+		const int detailLeft = split + 16;
+		const int listWidth = split - left;
+		const int gridGap = 10;
+		const int gridWidth = (std::max)(90, (listWidth - 40 - gridGap) / 2);
+		const int skillButtonHeight = 54;
+		for (int i = 0; i < 15; ++i) {
+			MoveWindow(controls_[36 + i], left + 20 + (i % 2) * (gridWidth + gridGap),
+				top + 125 + (i / 2) * (skillButtonHeight + gridGap), gridWidth, skillButtonHeight, TRUE);
+		}
+		const int actionWidth = (right - detailLeft - 40 - gridGap * 2) / 3;
+		const int actionY = bottom - 64;
+		MoveWindow(controls_[33], detailLeft + 20, actionY, actionWidth, 44, TRUE);
+		MoveWindow(controls_[30], detailLeft + 20 + actionWidth + gridGap, actionY, actionWidth, 44, TRUE);
+		MoveWindow(controls_[21], detailLeft + 20 + (actionWidth + gridGap) * 2, actionY, actionWidth, 44, TRUE);
 		return;
 	}
 
@@ -722,14 +759,18 @@ void Win32UI::HandleCommand(int controlId) {
 			return;
 		}
 		if (view_ == View::Combat && combatItemSelection_) combatItemSelection_ = false;
+		else if (view_ == View::Combat && combatSkillSelection_) {
+			combatSkillSelection_ = false;
+			selectedCombatSkillName_.clear();
+		}
 		else if (!viewHistory_.empty()) {
 			view_ = viewHistory_.back();
 			viewHistory_.pop_back();
 		} else view_ = View::Floor;
 	} else if (controlId == ButtonMap) {
-		if (player_.isAlive() && !combatDefeatRecovery_) ChangeView(View::Map);
+		if (view_ != View::Combat && player_.isAlive() && !combatDefeatRecovery_) ChangeView(View::Map);
 	} else if (controlId == ButtonInventory) {
-		if (player_.isAlive() && !combatDefeatRecovery_) ChangeView(View::Inventory);
+		if (view_ != View::Combat && player_.isAlive() && !combatDefeatRecovery_) ChangeView(View::Inventory);
 	} else if (controlId == ButtonSort) {
 		if (view_ == View::Skills) ShowSkillMenu();
 		else ShowInventoryMenu();

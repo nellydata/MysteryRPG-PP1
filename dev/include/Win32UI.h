@@ -35,8 +35,11 @@ private:
 
 	static LRESULT CALLBACK WindowProcedure(HWND window, UINT message,
 											 WPARAM wParam, LPARAM lParam);
+	static LRESULT CALLBACK NameProcedure(HWND window, UINT message,
+										  WPARAM wParam, LPARAM lParam);
 	LRESULT HandleMessage(UINT message, WPARAM wParam, LPARAM lParam);
 
+	void PromptForName(HINSTANCE instance);
 	void CreateWindowShell(HINSTANCE instance);
 	void CreateControls();
 	void RefreshControls();
@@ -55,9 +58,12 @@ private:
 	void DrawTextLine(HDC deviceContext, int x, int y, const std::wstring& text,
 					  COLORREF color, int size = 18, bool bold = false) const;
 	std::wstring ToWide(const std::string& text) const;
+	std::string ToNarrow(const std::wstring& text) const;
 	std::wstring StatusName(StatusType type) const;
 
 	HWND window_;
+	HWND nameWindow_;
+	HWND nameEdit_;
 	HWND controls_[32];
 	HFONT font_;
 	HFONT headingFont_;

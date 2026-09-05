@@ -1,4 +1,4 @@
-# Micare
+# Micare - Cathedral of Lies
 
 Micare is a console-based noir roguelike RPG written in C++17. Adelaide explores a cathedral overtaken by the Shimmer, discovers clues and items, encounters NPCs, and fights enemies while progressing through Floor 1.
 
@@ -66,7 +66,7 @@ Set `MICARE_NO_COLOR=1` for plain output. Set `MICARE_DEVELOPER_MODE=1` to revea
 
 ## Desktop UI
 
-The normal build launches the native Windows UI. Its layout uses the reference-inspired hierarchy of a persistent character/equipment panel, a central gameplay viewport, an event log, and action buttons:
+The normal build launches **Micare - Cathedral of Lies** with a name prompt before the native Windows UI opens. The entered investigator name is shown throughout the character panel, combat turn order, and gameplay messages. Its layout uses the reference-inspired hierarchy of a persistent character/equipment panel, a central gameplay viewport, an event log, and action buttons:
 
 - Room buttons enter Floor I locations.
 - Investigation buttons inspect individual objects and immediately update the clue log.

@@ -24,6 +24,9 @@ void Player::heal(int amount) {
 
 bool Player::isAlive() const { return hp_ > 0; }
 const std::string& Player::getName() const { return name_; }
+void Player::SetName(const std::string& name) {
+    if (!name.empty()) name_ = name;
+}
 int Player::getHP() const { return hp_; }
 int Player::getMaxHP() const { return maxHp_; }
 int Player::getAttack() const { return totalStats_.atk; }

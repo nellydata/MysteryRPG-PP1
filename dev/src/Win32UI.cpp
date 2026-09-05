@@ -58,7 +58,7 @@ bool EnvironmentEquals(const char* name, const char* expected) {
 }
 
 Win32UI::Win32UI()
-	: window_(nullptr), controls_{}, font_(nullptr), headingFont_(nullptr),
+	: window_(nullptr), nameWindow_(nullptr), nameEdit_(nullptr), controls_{}, font_(nullptr), headingFont_(nullptr),
 	  view_(View::Floor), selectedRoom_(0), player_("Adelaide", 30, 10),
 	  mapManager_(), combat_(), progression_(), activeEnemy_(nullptr) {
 	InitializePlayer();
@@ -76,6 +76,7 @@ bool Win32UI::ConsoleModeRequested() {
 
 int Win32UI::Run() {
 	HINSTANCE instance = GetModuleHandleW(nullptr);
+	PromptForName(instance);
 	CreateWindowShell(instance);
 	if (window_ == nullptr) return 1;
 
@@ -85,6 +86,35 @@ int Win32UI::Run() {
 		DispatchMessageW(&message);
 	}
 	return static_cast<int>(message.wParam);
+}
+
+void Win32UI::PromptForName(HINSTANCE instance) {
+	const wchar_t* className = L"MicareNamePrompt";
+	WNDCLASSW promptClass{};
+	promptClass.hInstance = instance;
+	promptClass.lpfnWndProc = NameProcedure;
+	promptClass.lpszClassName = className;
+	promptClass.hCursor = LoadCursorW(nullptr, IDC_ARROW);
+	promptClass.hbrBackground = reinterpret_cast<HBRUSH>(COLOR_WINDOW + 1);
+	RegisterClassW(&promptClass);
+
+	nameWindow_ = CreateWindowExW(WS_EX_DLGMODALFRAME | WS_EX_TOPMOST, className,
+								  L"Micare - Cathedral of Lies", WS_CAPTION | WS_SYSMENU,
+								  CW_USEDEFAULT, CW_USEDEFAULT, 480, 190, nullptr, nullptr,
+								  instance, this);
+	if (nameWindow_ == nullptr) {
+		player_.SetName("Investigator");
+		return;
+	}
+	ShowWindow(nameWindow_, SW_SHOW);
+	UpdateWindow(nameWindow_);
+
+	MSG message{};
+	while (IsWindow(nameWindow_) && GetMessageW(&message, nullptr, 0, 0) > 0) {
+		TranslateMessage(&message);
+		DispatchMessageW(&message);
+	}
+	if (player_.getName() == "Adelaide") player_.SetName("Investigator");
 }
 
 void Win32UI::CreateWindowShell(HINSTANCE instance) {
@@ -97,7 +127,7 @@ void Win32UI::CreateWindowShell(HINSTANCE instance) {
 	windowClass.hbrBackground = CreateSolidBrush(Background);
 	RegisterClassW(&windowClass);
 
-	window_ = CreateWindowExW(0, className, L"Micare - Cathedral of Shimmer",
+	window_ = CreateWindowExW(0, className, L"Micare - Cathedral of Lies",
 							  WS_OVERLAPPEDWINDOW | WS_VISIBLE, CW_USEDEFAULT, CW_USEDEFAULT,
 							  1280, 820, nullptr, nullptr, instance, this);
 }
@@ -173,24 +203,29 @@ void Win32UI::RefreshControls() {
 }
 
 void Win32UI::LayoutControls(int width, int height) {
-	const int left = 35;
-	const int panelWidth = 330;
-	const int center = 400;
-	const int buttonWidth = 190;
+	const int center = 425;
+	const int buttonWidth = 200;
 	const int buttonHeight = 42;
 
-	for (int i = 0; i < 4; ++i) MoveWindow(controls_[i], left, 175 + i * 50, panelWidth - 50, 38, TRUE);
-	for (int i = 0; i < 4; ++i) MoveWindow(controls_[4 + i], center, 480 + i * 48, buttonWidth, buttonHeight, TRUE);
-	for (int i = 0; i < 12; ++i) MoveWindow(controls_[8 + i], center + (i % 3) * 215,
-													 170 + (i / 3) * 48, 200, 38, TRUE);
-	MoveWindow(controls_[20], center, 480, buttonWidth, buttonHeight, TRUE);
-	MoveWindow(controls_[21], center + 215, 480, buttonWidth, buttonHeight, TRUE);
+	for (int i = 0; i < 4; ++i) {
+		MoveWindow(controls_[i], center + (i % 2) * 225, 170 + (i / 2) * 58,
+				   buttonWidth, buttonHeight, TRUE);
+	}
+	for (int i = 0; i < 4; ++i) {
+		MoveWindow(controls_[4 + i], center + 450, 170 + i * 52, 250, buttonHeight, TRUE);
+	}
+	for (int i = 0; i < 12; ++i) {
+		MoveWindow(controls_[8 + i], center + (i % 3) * 215,
+				   170 + (i / 3) * 48, 200, 38, TRUE);
+	}
+	MoveWindow(controls_[20], center, height - 155, buttonWidth, buttonHeight, TRUE);
+	MoveWindow(controls_[21], center + 215, height - 155, buttonWidth, buttonHeight, TRUE);
 	MoveWindow(controls_[22], width - 240, 40, 180, buttonHeight, TRUE);
 	MoveWindow(controls_[23], width - 240, 92, 180, buttonHeight, TRUE);
-	MoveWindow(controls_[24], center, height - 90, 150, 44, TRUE);
-	MoveWindow(controls_[25], center + 165, height - 90, 150, 44, TRUE);
-	MoveWindow(controls_[26], center + 330, height - 90, 150, 44, TRUE);
-	MoveWindow(controls_[27], center + 495, height - 90, 150, 44, TRUE);
+	MoveWindow(controls_[24], center, height - 155, 150, 44, TRUE);
+	MoveWindow(controls_[25], center + 165, height - 155, 150, 44, TRUE);
+	MoveWindow(controls_[26], center + 330, height - 155, 150, 44, TRUE);
+	MoveWindow(controls_[27], center + 495, height - 155, 150, 44, TRUE);
 	MoveWindow(controls_[28], width - 240, height - 90, 180, 44, TRUE);
 }
 
@@ -325,6 +360,55 @@ void Win32UI::Invalidate() {
 	InvalidateRect(window_, nullptr, TRUE);
 }
 
+LRESULT CALLBACK Win32UI::NameProcedure(HWND window, UINT message, WPARAM wParam, LPARAM lParam) {
+	Win32UI* ui = reinterpret_cast<Win32UI*>(GetWindowLongPtrW(window, GWLP_USERDATA));
+	if (message == WM_NCCREATE) {
+		const auto* create = reinterpret_cast<CREATESTRUCTW*>(lParam);
+		ui = static_cast<Win32UI*>(create->lpCreateParams);
+		SetWindowLongPtrW(window, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(ui));
+		ui->nameWindow_ = window;
+	}
+	if (ui == nullptr) return DefWindowProcW(window, message, wParam, lParam);
+
+	switch (message) {
+	case WM_CREATE:
+		CreateWindowW(L"STATIC", L"What should the investigator be called?",
+					  WS_CHILD | WS_VISIBLE, 24, 22, 410, 24, window, nullptr,
+					  GetModuleHandleW(nullptr), nullptr);
+		ui->nameEdit_ = CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", L"",
+										WS_CHILD | WS_VISIBLE | WS_TABSTOP | ES_AUTOHSCROLL,
+										24, 58, 410, 34, window, nullptr,
+										GetModuleHandleW(nullptr), nullptr);
+		CreateWindowW(L"BUTTON", L"Begin Investigation", WS_CHILD | WS_VISIBLE | WS_TABSTOP,
+					  24, 108, 190, 36, window, reinterpret_cast<HMENU>(1),
+					  GetModuleHandleW(nullptr), nullptr);
+		SetFocus(ui->nameEdit_);
+		return 0;
+	case WM_COMMAND:
+		if (LOWORD(wParam) == 1 && HIWORD(wParam) == BN_CLICKED) {
+			const int length = GetWindowTextLengthW(ui->nameEdit_);
+			std::wstring name(static_cast<std::size_t>(length + 1), L'\0');
+			if (length > 0) GetWindowTextW(ui->nameEdit_, name.data(), length + 1);
+			if (!name.empty() && name.back() == L'\0') name.pop_back();
+			if (name.empty()) name = L"Investigator";
+			ui->player_.SetName(ui->ToNarrow(name));
+			DestroyWindow(window);
+			return 0;
+		}
+		break;
+	case WM_CLOSE:
+		ui->player_.SetName("Investigator");
+		DestroyWindow(window);
+		return 0;
+	case WM_DESTROY:
+		ui->nameWindow_ = nullptr;
+		return 0;
+	default:
+		break;
+	}
+	return DefWindowProcW(window, message, wParam, lParam);
+}
+
 LRESULT CALLBACK Win32UI::WindowProcedure(HWND window, UINT message, WPARAM wParam, LPARAM lParam) {
 	Win32UI* ui = reinterpret_cast<Win32UI*>(GetWindowLongPtrW(window, GWLP_USERDATA));
 	if (message == WM_NCCREATE) {
@@ -370,7 +454,7 @@ void Win32UI::Paint(HDC deviceContext) {
 	FillRect(deviceContext, &client, background);
 	DeleteObject(background);
 
-	DrawPanel(deviceContext, {20, 20, 365, client.bottom - 20}, L"ADELAIDE // CHARACTER");
+	DrawPanel(deviceContext, {20, 20, 365, client.bottom - 20}, ToWide(player_.getName()) + L" // CHARACTER");
 	DrawTextLine(deviceContext, 42, 65, L"MICARE", Brass, 28, true);
 	DrawTextLine(deviceContext, 42, 110, ToWide(player_.getName()) + L"   LEVEL " + std::to_wstring(progression_.GetLevel()), Text, 19, true);
 	DrawTextLine(deviceContext, 42, 150, L"HP", Muted); DrawTextLine(deviceContext, 150, 150, std::to_wstring(player_.getHP()) + L" / " + std::to_wstring(player_.getMaxHP()), Text);
@@ -400,11 +484,8 @@ void Win32UI::Paint(HDC deviceContext) {
 		DrawTextLine(deviceContext, 425, contentY, L"FLOOR I // THE CATHEDRAL", Shimmer, 25, true);
 		DrawTextLine(deviceContext, 425, contentY + 45, L"Choose a room or open a panel using the buttons.", Muted);
 		contentY += 100;
-		for (std::size_t i = 0; i < mapManager_.GetRooms().size(); ++i) {
-			const Area& room = mapManager_.GetRooms()[i];
-			DrawTextLine(deviceContext, 430, contentY, std::to_wstring(i + 1) + L"  " + ToWide(room.getName()), Text, 19);
-			contentY += 35;
-		}
+		DrawTextLine(deviceContext, 425, contentY, L"Select a room from the navigation buttons.", Text, 19);
+		DrawTextLine(deviceContext, 425, contentY + 38, L"Map and Shimmer Skills stay available in the upper-right.", Muted, 16);
 	} else if (view_ == View::Room) {
 		const Area& room = mapManager_.GetRooms()[selectedRoom_];
 		DrawTextLine(deviceContext, 425, contentY, ToWide(room.getName()), Shimmer, 25, true);
@@ -419,7 +500,7 @@ void Win32UI::Paint(HDC deviceContext) {
 		DrawTextLine(deviceContext, 425, contentY + 48, L"HP  " + std::to_wstring(activeEnemy_->getHP()) + L" / " + std::to_wstring(activeEnemy_->getMaxHP()), Text, 20);
 		DrawTextLine(deviceContext, 425, contentY + 84, L"ATK " + std::to_wstring(activeEnemy_->getAtk()) + L"   DEF " + std::to_wstring(activeEnemy_->getDefense()) + L"   SPD " + std::to_wstring(activeEnemy_->getSpeed()), Muted, 17);
 		DrawTextLine(deviceContext, 425, contentY + 145, L"Turn order", Brass, 18, true);
-		DrawTextLine(deviceContext, 425, contentY + 180, L"ADELAIDE  >  " + ToWide(activeEnemy_->getName()), Text, 18);
+		DrawTextLine(deviceContext, 425, contentY + 180, ToWide(player_.getName()) + L"  >  " + ToWide(activeEnemy_->getName()), Text, 18);
 	} else if (view_ == View::Inventory) {
 		DrawTextLine(deviceContext, 425, contentY, L"INVENTORY // CLICK AN ITEM TO EQUIP OR USE", Shimmer, 23, true);
 		contentY += 55;
@@ -480,6 +561,15 @@ std::wstring Win32UI::ToWide(const std::string& text) const {
 	std::wstring result(static_cast<std::size_t>(length), L'\0');
 	MultiByteToWideChar(CP_UTF8, 0, text.c_str(), -1, result.data(), length);
 	if (!result.empty() && result.back() == L'\0') result.pop_back();
+	return result;
+}
+
+std::string Win32UI::ToNarrow(const std::wstring& text) const {
+	if (text.empty()) return {};
+	const int length = WideCharToMultiByte(CP_UTF8, 0, text.c_str(), -1, nullptr, 0, nullptr, nullptr);
+	std::string result(static_cast<std::size_t>(length), '\0');
+	WideCharToMultiByte(CP_UTF8, 0, text.c_str(), -1, result.data(), length, nullptr, nullptr);
+	if (!result.empty() && result.back() == '\0') result.pop_back();
 	return result;
 }
 

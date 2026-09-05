@@ -17,6 +17,7 @@ public:
     bool isAlive() const;
 
     const std::string& getName() const;
+    void SetName(const std::string& name);
     int getHP() const;
     int getMaxHP() const;
     int getAttack() const;

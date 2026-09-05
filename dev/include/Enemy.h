@@ -22,6 +22,7 @@ public:
     int getResistance() const;
     int getEvasion() const;
     bool HasStatus(StatusType type) const;
+    const std::vector<StatusEffect>& GetStatuses() const;
     bool ApplyStatus(const StatusEffect& status, int accuracy = 100);
     void ProcessStatuses();
     void ClearStatuses();

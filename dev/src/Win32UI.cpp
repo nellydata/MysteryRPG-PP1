@@ -18,7 +18,7 @@ constexpr COLORREF Muted = RGB(175, 175, 175);
 constexpr COLORREF Brass = RGB(220, 220, 220);
 constexpr COLORREF Verdigris = RGB(190, 190, 190);
 constexpr COLORREF Shimmer = RGB(245, 245, 245);
-constexpr COLORREF Danger = RGB(210, 210, 210);
+constexpr COLORREF Danger = RGB(235, 75, 95);
 
 unsigned RoomSeed(const std::string& roomName) {
 	unsigned seed = 2166136261u;
@@ -27,6 +27,13 @@ unsigned RoomSeed(const std::string& roomName) {
 		seed *= 16777619u;
 	}
 	return seed;
+}
+
+std::string ReplaceTokens(std::string value) {
+	for (char& character : value) {
+		if (character == '_') character = ' ';
+	}
+	return value;
 }
 
 COLORREF RarityColor(Rarity rarity) {
@@ -74,6 +81,20 @@ bool EnvironmentEquals(const char* name, const char* expected) {
 	std::free(value);
 	return result;
 }
+}
+
+std::wstring Win32UI::FormatDisplayText(const std::string& text) const {
+	std::string formatted = ReplaceTokens(text);
+	bool capitalize = true;
+	for (char& character : formatted) {
+		if (capitalize && std::isalpha(static_cast<unsigned char>(character))) {
+			character = static_cast<char>(std::toupper(static_cast<unsigned char>(character)));
+			capitalize = false;
+		} else if (character == ' ' || character == '-' || character == '/') {
+			capitalize = true;
+		}
+	}
+	return ToWide(formatted);
 }
 
 Win32UI::Win32UI()
@@ -261,7 +282,7 @@ void Win32UI::RefreshControls() {
 			if (entry < static_cast<int>(inventoryEntryItems_.size())) {
 				const Item* item = inventoryEntryItems_[entry];
 				const std::string label = item == nullptr ? "Clue" : item->getName();
-				SetWindowTextW(controls_[8 + button], ToWide(label).c_str());
+				SetWindowTextW(controls_[8 + button], FormatDisplayText(label).c_str());
 				ShowWindow(controls_[8 + button], SW_SHOW);
 			}
 		}
@@ -305,11 +326,12 @@ void Win32UI::LayoutControls(int width, int height) {
 		const int detailWidth = right - detailLeft;
 		const int gridGap = 12;
 		const int gridWidth = (std::max)(50, (listWidth - 40 - gridGap * 3) / 4);
+		const int itemButtonHeight = 58;
 		MoveWindow(controls_[25], left + 20, top + 48, listWidth - 40, 38, TRUE);
 		MoveWindow(controls_[30], left + 20, top + 92, listWidth - 40, 40, TRUE);
 		for (int i = 0; i < 12; ++i) {
 			MoveWindow(controls_[8 + i], left + 20 + (i % 4) * (gridWidth + gridGap),
-				top + 150 + (i / 4) * 52, gridWidth, (std::min)(42, (std::max)(28, height / 18)), TRUE);
+				top + 150 + (i / 4) * (itemButtonHeight + gridGap), gridWidth, itemButtonHeight, TRUE);
 		}
 		const int actionWidth = (detailWidth - 40 - gridGap * 2) / 3;
 		const int actionY = bottom - 112;
@@ -697,9 +719,12 @@ void Win32UI::PerformCombatAction(CombatAction action) {
 	}
 	while (!combat_.IsPlayerTurn() && activeEnemy_->isAlive() && player_.isAlive())
 		combat_.enemyTurn(player_, *activeEnemy_);
-	statusMessage_ = player_.isAlive() ? "The enemy acted. " + player_.getName() + "'s turn." : player_.getName() + " has fallen.";
+	statusMessage_.clear();
 	if (!player_.isAlive()) AddLog(player_.getName() + " has fallen.");
 	if (!player_.isAlive()) {
+		player_.heal(player_.getMaxHP());
+		selectedRoom_ = 0;
+		AddLog(player_.getName() + " returned to the Entrance Hall fountain and was fully restored.");
 		activeEnemy_ = nullptr;
 		view_ = View::Room;
 	}
@@ -847,18 +872,20 @@ LRESULT Win32UI::HandleMessage(UINT message, WPARAM wParam, LPARAM lParam) {
 			wchar_t label[128]{};
 			GetWindowTextW(draw->hwndItem, label, 128);
 			SetBkMode(draw->hDC, TRANSPARENT);
+			HFONT oldFont = static_cast<HFONT>(SelectObject(draw->hDC, font_));
 			if (inventoryButton) {
 				const int itemIndex = inventoryPage_ * 12 + draw->CtlID - InventoryButtonBase;
 				const Item* item = itemIndex < static_cast<int>(inventoryEntryItems_.size())
 					? inventoryEntryItems_[itemIndex] : nullptr;
 				SetTextColor(draw->hDC, item == nullptr ? Muted : RarityColor(item->getRarity()));
 				DrawTextW(draw->hDC, label, -1, const_cast<RECT*>(&draw->rcItem),
-					DT_CENTER | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
+					DT_CENTER | DT_VCENTER | DT_WORDBREAK | DT_NOPREFIX);
 			} else {
 				SetTextColor(draw->hDC, Text);
 				DrawTextW(draw->hDC, label, -1, const_cast<RECT*>(&draw->rcItem),
-					DT_CENTER | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
+					DT_CENTER | DT_VCENTER | DT_WORDBREAK | DT_NOPREFIX);
 			}
+			SelectObject(draw->hDC, oldFont);
 			return 1;
 		}
 		break;
@@ -906,7 +933,7 @@ void Win32UI::Paint(HDC deviceContext) {
 	for (const auto& slot : slots) {
 		const Item* item = player_.GetEquipped(slot.first);
 		DrawTextLine(deviceContext, 48, y, std::wstring(slot.second) + L": ", Muted, 14);
-		if (item != nullptr) DrawTextLine(deviceContext, 105, y, ToWide(item->getName()), RarityColor(item->getRarity()), 14);
+		if (item != nullptr) DrawTextLine(deviceContext, 105, y, FormatDisplayText(item->getName()), RarityColor(item->getRarity()), 14, false, 235);
 		else DrawTextLine(deviceContext, 105, y, L"--", Muted, 14);
 		y += 25;
 	}
@@ -928,11 +955,11 @@ void Win32UI::Paint(HDC deviceContext) {
 			const std::string description = inventoryEntryDescriptions_[selectedInventoryIndex_];
 			const int detailX = detailLeft + 20;
 			int detailY = top + 92;
-			DrawTextLine(deviceContext, detailX, detailY, ToWide(selected == nullptr ? "Clue" : selected->getName()),
-				selected == nullptr ? Muted : RarityColor(selected->getRarity()), 22, true);
-			detailY += 32;
+			const int detailWidth = right - detailX - 20;
+			detailY += DrawTextLine(deviceContext, detailX, detailY, FormatDisplayText(selected == nullptr ? "Clue" : selected->getName()),
+				selected == nullptr ? Muted : RarityColor(selected->getRarity()), 22, true, detailWidth) + 10;
 			if (selected == nullptr) {
-				DrawTextLine(deviceContext, detailX, detailY, ToWide(description), Text, 18);
+				DrawTextLine(deviceContext, detailX, detailY, FormatDisplayText(description), Text, 18, false, detailWidth);
 			} else {
 				std::wstring type = L"Type: ";
 				switch (selected->getCategory()) {
@@ -951,17 +978,14 @@ void Win32UI::Paint(HDC deviceContext) {
 				case ItemCategory::Crux: type += L"Crux"; break;
 				default: type += L"Item"; break;
 				}
-				DrawTextLine(deviceContext, detailX, detailY, type, Muted, 18);
-				detailY += 28;
+				detailY += DrawTextLine(deviceContext, detailX, detailY, type, Muted, 18, false, detailWidth) + 8;
 				if (!selected->getDescription().empty()) {
-					DrawTextLine(deviceContext, detailX, detailY, ToWide(selected->getDescription()), Text, 18);
-					detailY += 28;
+					detailY += DrawTextLine(deviceContext, detailX, detailY, FormatDisplayText(selected->getDescription()), Text, 18, false, detailWidth) + 8;
 				}
 				const Stats& stats = selected->getStats();
 				auto drawStat = [&](const wchar_t* label, int value) {
 					if (value == 0) return;
-					DrawTextLine(deviceContext, detailX, detailY, std::wstring(label) + L"  " + std::to_wstring(value), Text, 18);
-					detailY += 24;
+					detailY += DrawTextLine(deviceContext, detailX, detailY, std::wstring(label) + L"  " + std::to_wstring(value), Text, 18, false, detailWidth) + 6;
 				};
 				drawStat(L"HP", stats.hp); drawStat(L"DEF", stats.def); drawStat(L"SPD", stats.spd); drawStat(L"ATK", stats.atk);
 				drawStat(L"Accuracy", stats.acc); drawStat(L"Resistance", stats.res); drawStat(L"Crit rate", stats.critRate);
@@ -970,20 +994,17 @@ void Win32UI::Paint(HDC deviceContext) {
 				drawStat(L"Barrier potency", stats.barrierPotency); drawStat(L"DOT potency", stats.dotPotency);
 				drawStat(L"Lifesteal", stats.lifesteal); drawStat(L"Debuff reduction", stats.debuffDurationReduction);
 				if (selected->getCategory() == ItemCategory::Consumable && !selected->getEffect().empty()) {
-					DrawTextLine(deviceContext, detailX, detailY, L"Use: " + ToWide(selected->getEffect()), Shimmer, 17);
-					detailY += 24;
+					detailY += DrawTextLine(deviceContext, detailX, detailY, L"Use: " + FormatDisplayText(selected->getEffect()), Shimmer, 17, false, detailWidth) + 6;
 				}
 				std::string effect = selected->getEffect();
 				if (!selected->getPassive().empty()) effect += (effect.empty() ? "" : " ") + selected->getPassive();
 				if (!selected->getUniqueEffect().empty()) effect += (effect.empty() ? "" : " ") + selected->getUniqueEffect();
 				if (!effect.empty()) {
-					DrawTextLine(deviceContext, detailX, detailY, L"Effect: " + ToWide(effect), Shimmer, 17);
-					detailY += 24;
+					detailY += DrawTextLine(deviceContext, detailX, detailY, L"Effect: " + FormatDisplayText(effect), Shimmer, 17, false, detailWidth) + 6;
 				}
 				if (!selected->getSetName().empty()) {
-					DrawTextLine(deviceContext, detailX, detailY, L"Set: " + ToWide(selected->getSetName()), Brass, 17);
-					detailY += 24;
-					DrawTextLine(deviceContext, detailX, detailY, L"Set bonus: " + ToWide(selected->getSetPassive()), Brass, 17);
+					detailY += DrawTextLine(deviceContext, detailX, detailY, L"Set: " + FormatDisplayText(selected->getSetName()), Brass, 17, false, detailWidth) + 6;
+					DrawTextLine(deviceContext, detailX, detailY, L"Set bonus: " + FormatDisplayText(selected->getSetPassive()), Brass, 17, false, detailWidth);
 				}
 			}
 		}
@@ -1021,9 +1042,25 @@ void Win32UI::Paint(HDC deviceContext) {
 		DrawTextLine(deviceContext, 425, contentY, L"HOSTILE: " + ToWide(activeEnemy_->getName()), Danger, 26, true);
 		DrawTextLine(deviceContext, 425, contentY + 48, L"HP  " + std::to_wstring(activeEnemy_->getHP()) + L" / " + std::to_wstring(activeEnemy_->getMaxHP()), Text, 20);
 		DrawTextLine(deviceContext, 425, contentY + 84, L"ATK " + std::to_wstring(activeEnemy_->getAtk()) + L"   DEF " + std::to_wstring(activeEnemy_->getDefense()) + L"   SPD " + std::to_wstring(activeEnemy_->getSpeed()), Muted, 17);
-		DrawTextLine(deviceContext, 425, contentY + 145, L"Turn order", Brass, 18, true);
-		DrawTextLine(deviceContext, 425, contentY + 180, ToWide(player_.getName()) + L"  >  " + ToWide(activeEnemy_->getName()), Text, 18);
-		if (!statusMessage_.empty()) DrawTextLine(deviceContext, 425, contentY + 225, ToWide(statusMessage_), Shimmer, 16);
+		DrawTextLine(deviceContext, 425, contentY + 145, L"Battle event log", Brass, 18, true);
+		int eventY = contentY + 180;
+		const auto& events = combat_.GetEvents();
+		const int firstEvent = events.size() > 10 ? static_cast<int>(events.size()) - 10 : 0;
+		for (int index = firstEvent; index < static_cast<int>(events.size()); ++index) {
+			const auto& event = events[static_cast<std::size_t>(index)];
+			COLORREF eventColor = Text;
+			if (event.kind == CombatManager::CombatEvent::Kind::Damage) eventColor = Danger;
+			else if (event.kind == CombatManager::CombatEvent::Kind::Heal) eventColor = RGB(90, 210, 110);
+			else if (event.kind == CombatManager::CombatEvent::Kind::Shield) eventColor = RGB(90, 160, 245);
+			else if (event.kind == CombatManager::CombatEvent::Kind::Status) eventColor = Shimmer;
+			const std::wstring symbol = event.kind == CombatManager::CombatEvent::Kind::Status ? L"◆ " :
+				event.kind == CombatManager::CombatEvent::Kind::Damage ? L"⚔ " :
+				event.kind == CombatManager::CombatEvent::Kind::Heal ? L"✚ " :
+				event.kind == CombatManager::CombatEvent::Kind::Shield ? L"▣ " : L"• ";
+			eventY += DrawTextLine(deviceContext, 425, eventY, symbol + FormatDisplayText(event.message), eventColor, 16, false,
+				client.right - 449) + 5;
+			if (eventY > eventTop - 30) break;
+		}
 	} else if (view_ == View::Map) {
 		DrawTextLine(deviceContext, 425, contentY, L"FLOOR I // MAP", Shimmer, 25, true);
 		int mapY = contentY + 55;
@@ -1084,8 +1121,8 @@ void Win32UI::DrawPanel(HDC deviceContext, RECT bounds, const std::wstring& titl
 	DrawTextLine(deviceContext, bounds.left + 18, bounds.top + 14, title, Brass, 17, true);
 }
 
-void Win32UI::DrawTextLine(HDC deviceContext, int x, int y, const std::wstring& text,
-						   COLORREF color, int size, bool bold) const {
+int Win32UI::DrawTextLine(HDC deviceContext, int x, int y, const std::wstring& text,
+						  COLORREF color, int size, bool bold, int maxWidth) const {
 	HFONT selected = CreateFontW(size, 0, 0, 0, bold ? FW_SEMIBOLD : FW_NORMAL, FALSE, FALSE, FALSE,
 								 DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
 								  CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, L"IM FELL English");
@@ -1094,13 +1131,16 @@ void Win32UI::DrawTextLine(HDC deviceContext, int x, int y, const std::wstring& 
 	SetBkMode(deviceContext, TRANSPARENT);
 	RECT client{};
 	GetClientRect(window_, &client);
-	const int right = client.right > x + 1 ? static_cast<int>(client.right) - 24 : x + 1;
-	const int bottom = client.bottom < y + size + 10 ? static_cast<int>(client.bottom) - 8 : y + size + 10;
-	RECT textBounds{x, y, right, bottom};
-	DrawTextW(deviceContext, text.c_str(), static_cast<int>(text.size()), &textBounds,
-			  DT_SINGLELINE | DT_NOPREFIX | DT_END_ELLIPSIS | DT_VCENTER);
+	const int right = maxWidth > 0 ? x + maxWidth : (client.right > x + 1 ? static_cast<int>(client.right) - 24 : x + 1);
+	RECT textBounds{x, y, right, static_cast<int>(client.bottom)};
+	const int height = DrawTextW(deviceContext, text.c_str(), static_cast<int>(text.size()), &textBounds,
+			  DT_NOPREFIX | DT_WORDBREAK | DT_CALCRECT);
+	RECT drawBounds{x, y, right, y + (height > 0 ? height : size + 4)};
+	DrawTextW(deviceContext, text.c_str(), static_cast<int>(text.size()), &drawBounds,
+			  DT_NOPREFIX | DT_WORDBREAK);
 	SelectObject(deviceContext, oldFont);
 	DeleteObject(selected);
+	return height > 0 ? height : size + 4;
 }
 
 std::wstring Win32UI::ToWide(const std::string& text) const {

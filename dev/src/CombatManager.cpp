@@ -52,6 +52,13 @@ CombatManager::~CombatManager() = default;
 
 const ShimmerSkill* CombatManager::GetDefaultSkill() const { return defaultSkill_.get(); }
 
+const std::vector<CombatManager::CombatEvent>& CombatManager::GetEvents() const { return events_; }
+void CombatManager::ClearEvents() { events_.clear(); }
+void CombatManager::AddEvent(CombatEvent::Kind kind, const std::string& message, int value) {
+    events_.push_back({kind, message, value});
+    if (events_.size() > 40) events_.erase(events_.begin());
+}
+
 void CombatManager::PrepareTurn(Player& player, Enemy& enemy) {
     if (!enemy.isAlive()) return;
     if (turnNumber_ == 0 && playerGauge_ == 0 && enemyGauge_ == 0) {
@@ -74,6 +81,8 @@ void CombatManager::BeginEncounter(Enemy& enemy) {
     playerTurn_ = false;
     weaknessExposed_ = false;
     interrogationAttempts_ = 0;
+    events_.clear();
+    AddEvent(CombatEvent::Kind::Info, "Combat begins against " + enemy.getName() + ".");
 }
 
 bool CombatManager::resolve(CombatAction action, Player& player, Enemy& enemy,
@@ -93,6 +102,7 @@ bool CombatManager::resolve(CombatAction action, Player& player, Enemy& enemy,
     if (!player.isAlive() || !enemy.isAlive()) return false;
     if (!playerTurn_) return false;
     ++turnNumber_;
+    AddEvent(CombatEvent::Kind::Turn, player.getName() + "'s turn.");
 
     switch (action) {
     case CombatAction::Attack: {
@@ -100,6 +110,7 @@ bool CombatManager::resolve(CombatAction action, Player& player, Enemy& enemy,
         if (roll < static_cast<unsigned>(enemy.getEvasion())) {
             std::cout << player.getName() << " attacks " << enemy.getName() << ", but the strike is evaded.\n";
             playerTurn_ = false;
+            AddEvent(CombatEvent::Kind::Info, player.getName() + "'s attack was evaded.");
             return true;
         }
         const bool critical = roll < static_cast<unsigned>((std::min)(100, player.getCritRate()));
@@ -110,6 +121,7 @@ bool CombatManager::resolve(CombatAction action, Player& player, Enemy& enemy,
             static_cast<double>(rawDamage) * 100.0 / (100.0 + enemy.getDefense())))
             + (weaknessExposed_ ? 2 : 0));
         enemy.takeDamage(damage);
+        AddEvent(CombatEvent::Kind::Damage, player.getName() + " inflicted " + std::to_string(damage) + " damage!", damage);
         std::cout << "Adelaide attacks " << enemy.getName()
                   << " for " << damage << (critical ? " critical" : "") << " damage.\n";
         if (!enemy.isAlive() && progression != nullptr) {
@@ -121,24 +133,61 @@ bool CombatManager::resolve(CombatAction action, Player& player, Enemy& enemy,
         return true;
     }
     case CombatAction::Shimmer:
+    {
         if (skill == nullptr) skill = defaultSkill_.get();
         if (skill == nullptr || !skill->IsReady()) {
             std::cout << "The Shimmer is not available yet.\n";
             return false;
         }
+        const int enemyHpBefore = enemy.getHP();
+        const int playerHpBefore = player.getHP();
+        const bool enemyHadStun = enemy.HasStatus(StatusType::Stun);
+        const bool playerHadBarrier = player.HasStatus(StatusType::Barrier);
+        const std::size_t enemyStatusCount = enemy.GetStatuses().size();
+        const std::size_t playerStatusCount = player.GetStatuses().size();
         skill->apply(player, enemy);
+        const int damage = enemyHpBefore - enemy.getHP();
+        const int healing = player.getHP() - playerHpBefore;
+        if (damage > 0) AddEvent(CombatEvent::Kind::Damage, player.getName() + " inflicted " + std::to_string(damage) + " damage!", damage);
+        if (healing > 0) AddEvent(CombatEvent::Kind::Heal, player.getName() + " healed for " + std::to_string(healing) + ".", healing);
+        auto statusName = [](StatusType type) {
+            switch (type) {
+            case StatusType::Stun: return std::string("Stun");
+            case StatusType::Bleed: return std::string("Bleed");
+            case StatusType::Burn: return std::string("Burn");
+            case StatusType::Poison: return std::string("Poison");
+            case StatusType::Slow: return std::string("Slow");
+            case StatusType::VerdigrisMark: return std::string("Verdigris mark");
+            default: return std::string("Status");
+            }
+        };
+        if (enemy.GetStatuses().size() > enemyStatusCount) {
+            const auto& status = enemy.GetStatuses().back();
+            AddEvent(CombatEvent::Kind::Status, enemy.getName() + " is affected by " + statusName(status.type) +
+                " for " + std::to_string(status.turns) + " turns!");
+        }
+        if (player.GetStatuses().size() > playerStatusCount) {
+            const auto& status = player.GetStatuses().back();
+            AddEvent(CombatEvent::Kind::Status, player.getName() + " is affected by " + statusName(status.type) +
+                " for " + std::to_string(status.turns) + " turns!");
+        }
+        if (!playerHadBarrier && player.HasStatus(StatusType::Barrier)) AddEvent(CombatEvent::Kind::Shield, player.getName() + " gained a shield.");
         skill->ResetCooldown();
         if (enemy.isAlive()) playerTurn_ = false;
         playerGauge_ -= 1000;
         return true;
+    }
     case CombatAction::Interrogate: {
         const bool result = interrogate(player, enemy, progression);
         if (result && enemy.isAlive()) playerTurn_ = false;
+        if (result) AddEvent(CombatEvent::Kind::Info, player.getName() + " interrogated " + enemy.getName() + ".");
         return result;
     }
     case CombatAction::ExposeWeakness:
         weaknessExposed_ = true;
+        AddEvent(CombatEvent::Kind::Info, enemy.getName() + "'s weakness was exposed.");
         playerTurn_ = false;
+        AddEvent(CombatEvent::Kind::Status, enemy.getName() + " is stunned and loses its turn!");
         std::cout << "A weakness in " << enemy.getName() << " is exposed.\n";
         return true;
     case CombatAction::Flee:
@@ -151,6 +200,8 @@ bool CombatManager::resolve(CombatAction action, Player& player, Enemy& enemy,
 
 void CombatManager::enemyTurn(Player& player, Enemy& enemy) {
     if (!enemy.isAlive()) return;
+
+    AddEvent(CombatEvent::Kind::Turn, enemy.getName() + "'s turn.");
 
     if (enemy.HasStatus(StatusType::Stun)) {
         std::cout << enemy.getName() << " loses its turn to the stun.\n";
@@ -167,12 +218,14 @@ void CombatManager::enemyTurn(Player& player, Enemy& enemy) {
         player.ClearStatuses();
         std::cout << "The Shimmer barrier negates the attack.\n";
         playerTurn_ = true;
+        AddEvent(CombatEvent::Kind::Shield, player.getName() + "'s shield blocked the attack.");
         return;
     }
     const int attackDamage = enemy.getAtk();
     const int damage = std::max(0, static_cast<int>(std::lround(
         static_cast<double>(attackDamage) * 100.0 / (100.0 + player.getDefense()))));
     player.takeDamage(damage);
+    AddEvent(CombatEvent::Kind::Damage, enemy.getName() + " inflicted " + std::to_string(damage) + " damage!", damage);
     std::cout << enemy.getName() << " attacks for " << damage << " damage.\n";
     if (defaultSkill_ != nullptr) defaultSkill_->TickCooldown();
     enemyGauge_ -= 1000;

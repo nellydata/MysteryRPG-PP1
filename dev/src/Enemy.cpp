@@ -13,6 +13,8 @@ Enemy::Enemy(const std::string& name, int hp, int atk, int xpReward, int level)
 	speed_ = baseSpeed + static_cast<int>(growth * (std::max)(0, level_ - 1));
 }
 
+const std::vector<StatusEffect>& Enemy::GetStatuses() const { return statuses_; }
+
 Enemy::~Enemy() = default;
 
 void Enemy::takeDamage(int amount) {

@@ -66,13 +66,15 @@ private:
 
 	void Paint(HDC deviceContext);
 	void DrawPanel(HDC deviceContext, RECT bounds, const std::wstring& title);
-	void DrawTextLine(HDC deviceContext, int x, int y, const std::wstring& text,
-					  COLORREF color, int size = 18, bool bold = false) const;
+	int DrawTextLine(HDC deviceContext, int x, int y, const std::wstring& text,
+					 COLORREF color, int size = 18, bool bold = false, int maxWidth = 0) const;
 	void DrawRainbowText(HDC deviceContext, int x, int y, const std::wstring& text,
 					 int size = 18, bool bold = false) const;
 	std::wstring ToWide(const std::string& text) const;
+	std::wstring FormatDisplayText(const std::string& text) const;
 	std::string ToNarrow(const std::wstring& text) const;
 	std::wstring StatusName(StatusType type) const;
+	std::wstring CombatStatusSymbol(const std::string& message) const;
 
 	HWND window_;
 	HWND nameWindow_;

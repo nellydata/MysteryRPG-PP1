@@ -1,6 +1,8 @@
 #pragma once
 
 #include <memory>
+#include <string>
+#include <vector>
 
 class Player;
 class Enemy;
@@ -18,6 +20,12 @@ enum class CombatAction {
 
 class CombatManager {
 public:
+    struct CombatEvent {
+        enum class Kind { Turn, Damage, Heal, Shield, Status, Info };
+        Kind kind;
+        std::string message;
+        int value = 0;
+    };
     CombatManager();
     ~CombatManager();
 
@@ -29,6 +37,8 @@ public:
     void enemyTurn(Player& player, Enemy& enemy);
     const ShimmerSkill* GetDefaultSkill() const;
     bool IsPlayerTurn() const;
+    const std::vector<CombatEvent>& GetEvents() const;
+    void ClearEvents();
 
 private:
     bool interrogate(Player& player, Enemy& enemy,
@@ -43,4 +53,7 @@ private:
     int enemyGauge_;
     Enemy* activeEnemy_;
     std::unique_ptr<ShimmerSkill> defaultSkill_;
+    std::vector<CombatEvent> events_;
+
+    void AddEvent(CombatEvent::Kind kind, const std::string& message, int value = 0);
 };

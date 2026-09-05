@@ -10,9 +10,9 @@ public:
 		: ShimmerSkill(name, cooldown, description, effect) {}
 
 	void apply(Player& player, Enemy& enemy) override {
-		if (effect_ == "damage_reveal") enemy.takeDamage(player.getAttack());
+		if (effect_ == "damage_reveal") enemy.takeDamage(player.getAttack() * 250 / 100);
 		else if (effect_ == "damage_burn") {
-			enemy.takeDamage(player.getAttack());
+			enemy.takeDamage(player.getAttack() * 220 / 100);
 			enemy.ApplyStatus({StatusType::Burn, 3, 0, player.getAttack(), player.getDotPotency()}, player.getAccuracy());
 		} else if (effect_ == "damage_mark") {
 			enemy.ApplyStatus({StatusType::VerdigrisMark, 3, player.getAttack() / 2, player.getAttack()}, player.getAccuracy());
@@ -22,16 +22,16 @@ public:
 		} else if (effect_ == "barrier") {
 			player.ApplyStatus({StatusType::Barrier, 1, 1, 0});
 		} else if (effect_ == "damage_stun") {
-			enemy.takeDamage(player.getAttack());
+			enemy.takeDamage(player.getAttack() * 240 / 100);
 			enemy.ApplyStatus({StatusType::Stun, 1, 0, player.getAttack()}, player.getAccuracy());
 		} else if (effect_ == "damage") {
-			enemy.takeDamage(player.getAttack() * 2);
+			enemy.takeDamage(player.getAttack() * 3);
 		} else if (effect_ == "defense_break") {
 			enemy.ApplyStatus({StatusType::VerdigrisMark, 3, 0, player.getAttack()}, player.getAccuracy());
 		} else if (effect_ == "extra_turn") {
 			player.ApplyStatus({StatusType::HealOverTime, 1, 0, 0});
 		} else if (effect_ == "stat_boost") {
-			player.ModifyStats({0, 0, 1, 0, 10, 10, 0, 0});
+			player.ModifyStats({0, 0, 50, 0, 50, 50, 0, 0});
 		}
 	}
 

@@ -10,7 +10,7 @@ EnemySkillDefinition Skill(const char* name, const char* effect, int multiplier,
 
 std::vector<EnemyDefinition> BuildCatalogue() {
 	return {
-		{"Devotee Acolyte", EnemyFaction::Devotee, EnemyTier::Basic, 800, 60, 40, 50, 35,
+		{"Devotee Acolyte", EnemyFaction::Devotee, EnemyTier::Basic, 800, 24, 40, 50, 35,
 			{Skill("Purify Lash", "cleanse_self", 100, 2), Skill("Weak Prayer", "heal_self", 0, 3)}, "Sanctity Logic", 75, 20, 0},
 		{"Devotee Penitent", EnemyFaction::Devotee, EnemyTier::Rare, 1200, 90, 60, 75, 55,
 			{Skill("Blood Offering", "bleed", 140, 3, 2), Skill("Pain Conversion", "attack_up", 0, 4, 2)}, "Sanctity Logic", 20, 60, 10},
@@ -20,7 +20,7 @@ std::vector<EnemyDefinition> BuildCatalogue() {
 			{Skill("Ascetic Strike", "accuracy_down", 180, 3, 2), Skill("Choir Mend", "heal_resistance", 0, 5, 2)}, "Sanctity Logic", 10, 70, 20},
 		{"Benediction Sister", EnemyFaction::Devotee, EnemyTier::Epic, 2000, 110, 120, 115, 90,
 			{Skill("Blessed Flame", "burn", 0, 4, 2), Skill("Benediction", "dot_reduction", 0, 5, 2)}, "Sanctity Logic", 10, 70, 20},
-		{"Automata Unit-01", EnemyFaction::Automata, EnemyTier::Basic, 900, 70, 50, 60, 40,
+		{"Automata Unit-01", EnemyFaction::Automata, EnemyTier::Basic, 900, 28, 50, 60, 40,
 			{Skill("Precision Shot", "accuracy_up", 110, 2, 2), Skill("Recalibrate", "extra_turn", 0, 3)}, "Precision Logic", 75, 20, 0},
 		{"Automata Sharpsight", EnemyFaction::Automata, EnemyTier::Rare, 1400, 110, 70, 85, 60,
 			{Skill("Sharpsight Beam", "crit_up", 150, 3, 2), Skill("Target Lock", "accuracy_floor", 0, 4, 2)}, "Precision Logic", 20, 60, 10},
@@ -30,7 +30,7 @@ std::vector<EnemyDefinition> BuildCatalogue() {
 			{Skill("Vanguard Slash", "crit_damage_up", 200, 4, 2), Skill("Reinforce", "barrier", 0, 5)}, "Precision Logic", 10, 70, 20},
 		{"Automata Oracle Unit", EnemyFaction::Automata, EnemyTier::Epic, 2400, 160, 130, 120, 105,
 			{Skill("Oracle Strike", "guaranteed_crit", 260, 5), Skill("Predictive Matrix", "accuracy_floor", 0, 6, 2)}, "Precision Logic", 10, 70, 20},
-		{"Verdigris Thrall", EnemyFaction::Verdigris, EnemyTier::Basic, 850, 65, 45, 40, 35,
+		{"Verdigris Thrall", EnemyFaction::Verdigris, EnemyTier::Basic, 850, 26, 45, 40, 35,
 			{Skill("Toxic Swipe", "poison", 0, 2, 1), Skill("Rotting Chant", "dot_up", 0, 3, 2)}, "Corruption Logic", 75, 20, 0},
 		{"Verdigris Rotbearer", EnemyFaction::Verdigris, EnemyTier::Rare, 1300, 100, 70, 70, 55,
 			{Skill("Rotburst", "poison", 0, 4, 3), Skill("Toxic Blessing", "dot_up", 0, 5, 2)}, "Corruption Logic", 20, 60, 10},

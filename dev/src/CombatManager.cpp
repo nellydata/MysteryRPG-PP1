@@ -174,27 +174,19 @@ bool CombatManager::resolve(CombatAction action, Player& player, Enemy& enemy,
         const int enemyHealthBefore = enemy.getHP();
         const int playerHealthBefore = player.getHP();
         AddEvent(CombatEvent::Kind::Shimmer, player.getName() + " invokes a Shimmer resonance.");
-
-        if (effect.find("heal") != std::string::npos || effect.find("restore") != std::string::npos) {
-            const int healAmount = (std::max)(1, player.getMaxHP() * 20 / 100);
-            player.heal(healAmount);
-        }
-        if (effect.find("barrier") != std::string::npos || effect.find("shield") != std::string::npos) {
-            player.ApplyStatus({StatusType::Barrier, 1, 0, 0});
-            AddEvent(CombatEvent::Kind::Shield, player.getName() + " gains a barrier.");
-        }
-        if (effect.find("damage") != std::string::npos || effect.find("strike") != std::string::npos ||
-            effect.find("attack") != std::string::npos || effect.find("burn") != std::string::npos) {
-            const int rawDamage = (std::max)(1, player.getAttack() * 130 / 100);
-            const int shimmerDamage = std::max(1, static_cast<int>(std::lround(
-                static_cast<double>(rawDamage) * 100.0 / (100.0 + enemy.getDefense()))));
-            enemy.takeDamage(shimmerDamage);
-        }
+        skill->apply(player, enemy);
 
         const int dealt = enemyHealthBefore - enemy.getHP();
         const int healed = player.getHP() - playerHealthBefore;
         if (dealt > 0) AddEvent(CombatEvent::Kind::Damage, "Shimmer dealt " + std::to_string(dealt) + " damage.", dealt);
         if (healed > 0) AddEvent(CombatEvent::Kind::Heal, "Shimmer restored " + std::to_string(healed) + " HP.", healed);
+        if (effect.find("barrier") != std::string::npos) AddEvent(CombatEvent::Kind::Shield, player.getName() + " gains a Shimmer barrier.");
+        if (effect.find("stun") != std::string::npos && enemy.HasStatus(StatusType::Stun)) AddEvent(CombatEvent::Kind::Debuff, enemy.getName() + " is stunned by Shimmer.");
+        if (effect.find("burn") != std::string::npos && enemy.HasStatus(StatusType::Burn)) AddEvent(CombatEvent::Kind::Debuff, enemy.getName() + " suffers Burn from Shimmer.");
+        if (effect.find("mark") != std::string::npos && enemy.HasStatus(StatusType::VerdigrisMark)) AddEvent(CombatEvent::Kind::Debuff, enemy.getName() + " is marked by Shimmer.");
+        if (effect == "stat_boost") AddEvent(CombatEvent::Kind::Info, player.getName() + " gains a major Shimmer stat increase.");
+        if (effect == "extra_turn") AddEvent(CombatEvent::Kind::Info, player.getName() + " accelerates the next combat action.");
+        skill->ResetCooldown();
         if (!enemy.isAlive() && progression != nullptr) {
             progression->GrantXP(enemy.getXPReward());
             progression->CheckLevelUp(player);
@@ -260,8 +252,8 @@ void CombatManager::enemyTurn(Player& player, Enemy& enemy) {
             ? (std::max)(1, enemy.getAtk() * skill.multiplier / 100)
             : 0;
         if (damage > 0) {
-            player.takeDamage((std::max)(0, static_cast<int>(std::lround(
-                static_cast<double>(damage) * 100.0 / (100.0 + player.getDefense())))));
+            player.takeDamage((std::max)(1, static_cast<int>(std::lround(
+                static_cast<double>(damage) * 70.0 / (100.0 + player.getDefense())))));
             AddEvent(CombatEvent::Kind::Skill, enemy.getName() + " uses " + skill.name + ". " + enemy.getName() + " dealt " + std::to_string(damage) +
                 " damage to " + player.getName() + " with " + skill.name + ".", damage);
         }
@@ -315,8 +307,8 @@ void CombatManager::enemyTurn(Player& player, Enemy& enemy) {
         return;
     }
     const int attackDamage = enemy.getAtk();
-    const int damage = std::max(0, static_cast<int>(std::lround(
-        static_cast<double>(attackDamage) * 100.0 / (100.0 + player.getDefense()))));
+    const int damage = (std::max)(1, static_cast<int>(std::lround(
+        static_cast<double>(attackDamage) * 70.0 / (100.0 + player.getDefense()))));
     player.takeDamage(damage);
     AddEvent(CombatEvent::Kind::Attack, enemy.getName() + " uses Basic Attack and inflicted " + std::to_string(damage) + " damage!", damage);
     if (!player.isAlive()) AddEvent(CombatEvent::Kind::Death, player.getName() + " has fallen.");

@@ -77,6 +77,17 @@ COLORREF RarityColor(Rarity rarity) {
 	return RGB(245, 245, 245);
 }
 
+COLORREF EnemyTierColor(EnemyTier tier) {
+	switch (tier) {
+	case EnemyTier::Basic: return RGB(225, 225, 225);
+	case EnemyTier::Rare: return RGB(90, 145, 230);
+	case EnemyTier::Epic: return RGB(175, 100, 235);
+	case EnemyTier::Elite: return RGB(235, 175, 55);
+	case EnemyTier::Boss: return RGB(235, 75, 95);
+	}
+	return Text;
+}
+
 int SpawnChance(EnemySpawnCondition condition) {
 	switch (condition) {
 	case EnemySpawnCondition::None: return 0;
@@ -827,12 +838,13 @@ void Win32UI::HandleCommand(int controlId) {
 		if (activeEnemy_ == nullptr) ChangeView(View::Skills);
 	} else if (controlId == ButtonAttack) {
 		if (combatDefeatRecovery_) {
-			player_.heal((std::max)(1, player_.getMaxHP() * 10 / 100));
+			player_.heal(player_.getMaxHP());
 			combatDefeatRecovery_ = false;
 			statusMessage_ = "Respawned at the fountain with 10% HP. Continue the battle.";
-			LeaveCombat();
-			view_ = View::Room;
-			statusMessage_ += " Investigate again for a fresh encounter.";
+			const int recoveryHP = (std::max)(1, player_.getMaxHP() * 10 / 100);
+			player_.takeDamage((std::max)(0, player_.getHP() - recoveryHP));
+			if (activeEnemy_ != nullptr && activeEnemy_->isAlive()) combat_.PrepareTurn(player_, *activeEnemy_);
+			else ShowDefeatRecovery();
 		} else if (player_.isAlive()) PerformCombatAction(CombatAction::Attack);
 	} else if (controlId == ButtonItem) {
 		if (combatDefeatRecovery_) {
@@ -1061,6 +1073,10 @@ void Win32UI::SearchRoom() {
 }
 
 void Win32UI::PerformCombatAction(CombatAction action) {
+	if (!player_.isAlive()) {
+		ShowDefeatRecovery();
+		return;
+	}
 	if (selectedRoom_ < 0 || selectedRoom_ >= static_cast<int>(mapManager_.GetRooms().size()) ||
 		activeEnemy_ == nullptr || !activeEnemy_->isAlive()) {
 		player_.ClearStatuses();
@@ -1499,7 +1515,7 @@ void Win32UI::Paint(HDC deviceContext) {
 			contentY += 34;
 		}
 	} else if (view_ == View::Combat && activeEnemy_ != nullptr) {
-		DrawTextLine(deviceContext, 425, contentY, L"HOSTILE: " + ToWide(activeEnemy_->getName()), Danger, 26, true);
+		DrawTextLine(deviceContext, 425, contentY, ToWide(activeEnemy_->getName()), EnemyTierColor(activeEnemy_->getTier()), 26, true);
 		if (targetEnemies_.size() > 1) DrawTextLine(deviceContext, 425, contentY + 25, L"Select a living target before acting.", Muted, 15);
 		DrawTextLine(deviceContext, 425, contentY + 48, L"HP  " + std::to_wstring(activeEnemy_->getHP()) + L" / " + std::to_wstring(activeEnemy_->getMaxHP()), Text, 20);
 		DrawTextLine(deviceContext, 425, contentY + 84, L"ATK " + std::to_wstring(activeEnemy_->getAtk()) + L"   DEF " + std::to_wstring(activeEnemy_->getDefense()) + L"   SPD " + std::to_wstring(activeEnemy_->getSpeed()), Muted, 17);

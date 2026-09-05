@@ -16,6 +16,7 @@ public:
 	const std::string& getName() const;
 	int getCost() const;
 	int getCooldown() const;
+	int getRemainingCooldown() const;
 	bool IsReady() const;
 	void TickCooldown();
 	void ResetCooldown();

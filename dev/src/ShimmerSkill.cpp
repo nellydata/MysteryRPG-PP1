@@ -48,6 +48,7 @@ ShimmerSkill::~ShimmerSkill() = default;
 const std::string& ShimmerSkill::getName() const { return name_; }
 int ShimmerSkill::getCost() const { return cooldown_; }
 int ShimmerSkill::getCooldown() const { return cooldown_; }
+int ShimmerSkill::getRemainingCooldown() const { return remainingCooldown_; }
 bool ShimmerSkill::IsReady() const { return remainingCooldown_ == 0; }
 void ShimmerSkill::TickCooldown() { if (remainingCooldown_ > 0) --remainingCooldown_; }
 void ShimmerSkill::ResetCooldown() { remainingCooldown_ = cooldown_; }

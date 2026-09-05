@@ -4,6 +4,7 @@
 #include "Boss.h"
 #include "CombatManager.h"
 #include "ContentCatalog.h"
+#include "ConsoleUI.h"
 #include "Enemy.h"
 #include "Item.h"
 #include "Nun.h"
@@ -40,53 +41,38 @@ void SpawnEnemy(Area& area, unsigned seed) {
     }
 }
 
-void PrintStatus(const Player& player, const ProgressionManager& progression) {
-    std::cout << "Status: HP " << player.getHP() << "/" << player.getMaxHP()
-              << " | Attack " << player.getAttack()
-              << " | Defense " << player.getDefense()
-              << " | Level " << progression.GetLevel()
-              << " | XP " << progression.GetXP() << "\n";
-}
-
-void InspectEnvironment(Area& area, Player& player, ProgressionManager& progression) {
+void InspectEnvironment(Area& area, Player& player, ProgressionManager& progression,
+                        ConsoleUI& ui) {
     const auto& interactables = area.GetInteractables();
-    std::cout << "What do you inspect?\n";
-    for (std::size_t index = 0; index < interactables.size(); ++index) {
-        std::cout << index + 1 << ". " << interactables[index] << "\n";
-    }
-    std::cout << "0. Back\n> ";
-
-    int choice = 0;
-    if (!(std::cin >> choice)) {
-        std::cin.clear();
-        std::cin.ignore(10000, '\n');
-        std::cout << "That is not a valid choice.\n";
-        return;
-    }
+    std::cout << "\nObjects:\n";
+    for (std::size_t index = 0; index < interactables.size(); ++index)
+        std::cout << "  " << index + 1 << ". " << interactables[index] << "\n";
+    const int choice = ui.Prompt("Choose an object to inspect, or 0 to return.", 0,
+                                 static_cast<int>(interactables.size()));
     if (choice == 0) return;
     if (choice < 1 || choice > static_cast<int>(interactables.size())) {
-        std::cout << "That is not a valid interactable.\n";
+        ui.ShowMessage("That is not a valid interactable.");
         return;
     }
 
     const std::string& object = interactables[choice - 1];
     std::cout << "You inspect the " << object << ".\n";
     if (object == "Figure in the shadows" && area.HasNPC()) {
-        std::cout << "You see an NPC here. Interaction system coming soon.\n";
+        ui.ShowMessage("You see an NPC here. Interaction system coming soon.");
     }
     if (area.ConsumeClue()) {
-        std::cout << "You uncover a clue hidden in the details.\n";
+        ui.ShowMessage("You uncover a clue hidden in the details.");
         player.AddClue({"A fragment recovered from the " + object + "."});
         progression.GrantXP(10);
         progression.CheckLevelUp(player);
     } else {
-        std::cout << "Nothing new is revealed.\n";
+        ui.ShowMessage("Nothing new is revealed.");
     }
 }
 
 void SearchRoom(Area& area, Player& player) {
     if (!area.ConsumeItem()) {
-        std::cout << "You find nothing useful.\n";
+        std::cout << "\nYou find nothing useful.\n";
         return;
     }
 
@@ -108,7 +94,7 @@ void SearchRoom(Area& area, Player& player) {
             }
         }
     }
-    std::cout << "You found something useful. It was added to your inventory.\n";
+    std::cout << "\nYou found something useful. It was added to your inventory.\n";
 }
 }
 
@@ -117,31 +103,20 @@ EncounterManager::EncounterManager() = default;
 bool EncounterManager::Explore(Area& area, Player& player,
                                ProgressionManager& progression,
                                CombatManager& combat) {
+    ConsoleUI ui;
     const unsigned seed = RoomSeed(area.getName());
     if (!area.hasEnemies()
         && static_cast<int>(seed % 100) < SpawnChance(area.GetSpawnCondition())) {
         SpawnEnemy(area, seed);
-        std::cout << "\nA hostile presence emerges from the room.\n"
-                  << "Combat begins.\n";
+        ui.ShowMessage("A hostile presence emerges from the room. Combat begins.");
     }
 
     while (player.isAlive()) {
         Enemy* enemy = area.getFirstAliveEnemy();
         if (enemy != nullptr) {
             combat.BeginEncounter(*enemy);
-            std::cout << "\nCombat with " << enemy->getName() << ".\n";
-            PrintStatus(player, progression);
-            std::cout << "Enemy HP: " << enemy->getHP() << "/" << enemy->getMaxHP() << "\n"
-                      << "1. Attack\n2. Block\n3. Shimmer\n"
-                      << "4. Interrogate\n5. Expose Weakness\n6. Flee\n> ";
-
-            int choice = 0;
-            if (!(std::cin >> choice)) {
-                std::cin.clear();
-                std::cin.ignore(10000, '\n');
-                std::cout << "Enter a combat choice from 1 to 6.\n";
-                continue;
-            }
+            ui.RenderCombat(player, progression, *enemy, combat);
+            const int choice = ui.Prompt("Choose a combat action.", 1, 6);
 
             if (choice == 6) {
                 combat.resolve(CombatAction::Flee, player, *enemy);
@@ -169,24 +144,20 @@ bool EncounterManager::Explore(Area& area, Player& player,
             continue;
         }
 
-        std::cout << "\n" << area.getName() << "\n";
-        PrintStatus(player, progression);
-        std::cout << "1. Inspect environment\n2. Search room\n"
-                  << "3. Open inventory\n0. Leave room\n> ";
-
-        int choice = 0;
-        if (!(std::cin >> choice)) {
-            std::cin.clear();
-            std::cin.ignore(10000, '\n');
-            std::cout << "Enter one of the displayed choices.\n";
-            continue;
-        }
+        ui.RenderRoom(area, player, progression);
+        const int choice = ui.Prompt("Choose an exploration action.", 0, 4);
         switch (choice) {
-        case 1: InspectEnvironment(area, player, progression); break;
+        case 1: InspectEnvironment(area, player, progression, ui); break;
         case 2: SearchRoom(area, player); break;
-        case 3: player.PrintInventory(); break;
+        case 3:
+            ui.ShowInventory(player);
+            ui.Prompt("Press 0 to return.", 0, 0);
+            break;
+        case 4:
+            ui.ShowMessage("The floor map is etched into the cathedral ledger. Return to the room selection to view it.");
+            break;
         case 0: return true;
-        default: std::cout << "That action is not available.\n"; break;
+        default: ui.ShowMessage("That action is not available."); break;
         }
     }
 

@@ -2,6 +2,7 @@
 #include "Area.h"
 #include "CombatManager.h"
 #include "ContentCatalog.h"
+#include "ConsoleUI.h"
 #include "EncounterManager.h"
 #include "MapManager.h"
 #include "Player.h"
@@ -21,24 +22,13 @@ void AddNamedItem(Player& player, const std::vector<ItemDefinition>& definitions
 }
 }
 
-namespace {
-void PrintStatus(const Player& player, const ProgressionManager& progression) {
-    std::cout << "Status: HP " << player.getHP() << "/" << player.getMaxHP()
-              << " | Attack " << player.getAttack()
-              << " | Defense " << player.getDefense()
-              << " | Speed " << player.getSpeed()
-              << " | Crit " << player.getCritRate() << "%"
-              << " | Level " << progression.GetLevel()
-              << " | XP " << progression.GetXP() << "\n";
-}
-}
-
 void GameManager::Run() {
     Player player("Adelaide", 30, 10);
     MapManager mapManager;
     CombatManager combat;
     EncounterManager encounterManager;
     ProgressionManager progression;
+    ConsoleUI ui;
     const auto equipment = BuildEquippableCatalog();
     const auto consumables = BuildConsumableCatalog();
     const auto clues = BuildClueCatalog();
@@ -51,47 +41,52 @@ void GameManager::Run() {
     AddNamedItem(player, cruxItems, "first_nuns_diary");
     if (Item* hand = player.FindItem("plain_rosary")) player.Equip(*hand);
 
-    std::cout << "MICARE\n"
-              << "The cathedral is silent except for the pulse of the Shimmer.\n";
-
     while (player.isAlive()) {
-        std::cout << "\n";
-        PrintStatus(player, progression);
-        std::cout << "Choose a room:\n";
         const auto& rooms = mapManager.GetRooms();
-        for (std::size_t index = 0; index < rooms.size(); ++index) {
-            std::cout << index + 1 << ". " << rooms[index].getName() << "\n";
-        }
-        std::cout << "5. Open inventory\n0. Leave the cathedral\n> ";
-
-        int choice = 0;
-        if (!(std::cin >> choice)) {
-            if (std::cin.eof()) break;
-            std::cin.clear();
-            std::cin.ignore(10000, '\n');
-            std::cout << "Enter one of the displayed choices.\n";
+        ui.RenderDashboard(player, progression, rooms, "Select a destination or panel.");
+        const int choice = ui.Prompt("Select a destination or panel.", 0,
+                                     ui.IsDeveloperMode() ? 8 : 7);
+        if (choice == -1) {
+            ui.ShowMessage("Enter one of the displayed choices.");
+            ui.Prompt("Press 0 to continue.", 0, 0);
             continue;
         }
         if (choice == 0) break;
         if (choice == 5) {
-            player.PrintInventory();
+            ui.ShowInventory(player);
+            ui.Prompt("Press 0 to return.", 0, 0);
+            continue;
+        }
+        if (choice == 6) {
+            ui.ShowShimmerSkills(combat);
+            ui.Prompt("Press 0 to return.", 0, 0);
+            continue;
+        }
+        if (choice == 7) {
+            ui.ShowMap(rooms);
+            ui.Prompt("Press 0 to return.", 0, 0);
+            continue;
+        }
+        if (choice == 8 && ui.IsDeveloperMode()) {
+            ui.ShowDeveloperPanel();
+            ui.Prompt("Press 0 to return.", 0, 0);
             continue;
         }
         if (choice < 1 || choice > static_cast<int>(rooms.size())) {
-            std::cout << "That room is not available.\n";
+            ui.ShowMessage("That room is not available.");
+            ui.Prompt("Press 0 to continue.", 0, 0);
             continue;
         }
 
         Area& selectedRoom = mapManager.SelectRoom(choice - 1);
-        mapManager.DescribeRoom(selectedRoom);
         encounterManager.Explore(selectedRoom, player, progression, combat);
     }
 
-    std::cout << "\n";
-    PrintStatus(player, progression);
+    ui.Clear();
+    ui.RenderDashboard(player, progression, mapManager.GetRooms(), "SESSION COMPLETE");
     if (!player.isAlive()) {
-        std::cout << "The Shimmer claims Adelaide.\n";
+        ui.ShowMessage("The Shimmer claims Adelaide.");
     } else {
-        std::cout << "Adelaide leaves the cathedral for now.\n";
+        ui.ShowMessage("Adelaide leaves the cathedral for now.");
     }
 }

@@ -25,6 +25,12 @@
     <ClInclude Include="dev\include\GameplayTypes.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="dev\include\ConsoleUI.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="dev\include\Win32UI.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="dev\include\Area.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -76,6 +82,12 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dev\src\ContentCatalog.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="dev\src\ConsoleUI.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="dev\src\Win32UI.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="dev\src\Area.cpp">
@@ -131,4 +143,6 @@
     </ClCompile>
   </ItemGroup>
 </Project>
+
+
 

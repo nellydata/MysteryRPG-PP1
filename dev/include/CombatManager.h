@@ -26,6 +26,7 @@ public:
                  ShimmerSkill* skill = nullptr,
                  ProgressionManager* progression = nullptr);
     void enemyTurn(Player& player, Enemy& enemy);
+    const ShimmerSkill* GetDefaultSkill() const;
 
 private:
     bool interrogate(Player& player, Enemy& enemy,

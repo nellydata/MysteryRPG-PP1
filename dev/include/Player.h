@@ -47,6 +47,8 @@ public:
     void ModifyStats(const Stats& delta);
     const Inventory& GetInventory() const;
     Item* FindItem(const std::string& itemName);
+    const std::vector<StatusEffect>& GetStatuses() const;
+    const Item* GetEquipped(EquipSlot slot) const;
 
 private:
     std::string name_;

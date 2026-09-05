@@ -162,6 +162,11 @@ void Player::ModifyStats(const Stats& delta) {
 
 const Inventory& Player::GetInventory() const { return inventory_; }
 Item* Player::FindItem(const std::string& itemName) { return inventory_.FindItem(itemName); }
+const std::vector<StatusEffect>& Player::GetStatuses() const { return statuses_; }
+const Item* Player::GetEquipped(EquipSlot slot) const {
+    if (slot == EquipSlot::None) return nullptr;
+    return equipped_[static_cast<int>(slot)];
+}
 
 void Player::RecalculateStats() {
     totalStats_ = baseStats_;

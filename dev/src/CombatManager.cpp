@@ -16,6 +16,7 @@ unsigned InterrogationRoll(const Enemy& enemy, int playerLevel, int attempt) {
         value ^= character;
         value *= 16777619u;
     }
+
     value ^= static_cast<unsigned>(enemy.getHP() * 31 + playerLevel * 17 + attempt * 13);
     return value % 100;
 }
@@ -46,6 +47,8 @@ CombatManager::CombatManager()
       defaultSkill_(ShimmerSkill::Create("Pulsus Luminis")) {}
 
 CombatManager::~CombatManager() = default;
+
+const ShimmerSkill* CombatManager::GetDefaultSkill() const { return defaultSkill_.get(); }
 
 void CombatManager::BeginEncounter(Enemy& enemy) {
     if (activeEnemy_ == &enemy) return;

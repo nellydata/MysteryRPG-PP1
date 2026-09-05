@@ -5,7 +5,7 @@
 
 Player::Player(const std::string& name, int maxHp, int maxSp)
     : name_(name), hp_(maxHp), maxHp_(maxHp), sp_(maxSp), maxSp_(maxSp),
-      baseStats_{maxHp, 0, 5, 6, 0, 0, 5, 150},
+      baseStats_{maxHp, 10, 10, 20, 0, 0, 5, 150},
       totalStats_(baseStats_), equipped_{nullptr, nullptr, nullptr, nullptr} {}
 
 Player::~Player() = default;
@@ -65,6 +65,18 @@ void Player::increaseAttack(int amount) {
 
 void Player::increaseDefense(int amount) {
     if (amount > 0) { baseStats_.def += amount; RecalculateStats(); }
+}
+
+void Player::SetLevelStats(int level) {
+    const int levelOffset = (std::max)(0, level - 1);
+    const int previousMaxHp = maxHp_;
+    baseStats_.hp = 20 + levelOffset * 5;
+    baseStats_.def = 10 + levelOffset * 10;
+    baseStats_.atk = 20 + levelOffset * 15;
+    baseStats_.spd = 10;
+    RecalculateStats();
+    hp_ += maxHp_ - previousMaxHp;
+    if (hp_ > maxHp_) hp_ = maxHp_;
 }
 
 void Player::spendSP(int amount) {

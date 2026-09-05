@@ -54,6 +54,7 @@ public:
     void SetBossDefeated(bool defeated);
     bool HasBossBeenEncountered() const;
     void MarkBossEncountered();
+    void SetCleared(bool cleared);
 
 private:
     std::string name_;

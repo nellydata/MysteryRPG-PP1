@@ -37,6 +37,8 @@ private:
 	static constexpr int ButtonLock = 507;
 	static constexpr int ButtonDiscard = 508;
 	static constexpr int ButtonEquip = 509;
+	static constexpr int ButtonInventoryPrevious = 510;
+	static constexpr int ButtonInventoryNext = 511;
 
 	static LRESULT CALLBACK WindowProcedure(HWND window, UINT message,
 											 WPARAM wParam, LPARAM lParam);
@@ -56,12 +58,15 @@ private:
 	void PerformCombatAction(CombatAction action);
 	void AddLog(const std::string& message);
 	void InitializePlayer();
+	void InitializeCompletionState();
 	void Invalidate();
 
 	void Paint(HDC deviceContext);
 	void DrawPanel(HDC deviceContext, RECT bounds, const std::wstring& title);
 	void DrawTextLine(HDC deviceContext, int x, int y, const std::wstring& text,
 					  COLORREF color, int size = 18, bool bold = false) const;
+	void DrawRainbowText(HDC deviceContext, int x, int y, const std::wstring& text,
+					 int size = 18, bool bold = false) const;
 	std::wstring ToWide(const std::string& text) const;
 	std::string ToNarrow(const std::wstring& text) const;
 	std::wstring StatusName(StatusType type) const;
@@ -69,7 +74,7 @@ private:
 	HWND window_;
 	HWND nameWindow_;
 	HWND nameEdit_;
-	HWND controls_[34];
+	HWND controls_[36];
 	HFONT font_;
 	HFONT headingFont_;
 	View view_;
@@ -83,4 +88,8 @@ private:
 	InventorySort inventorySort_ = InventorySort::RecentlyObtained;
 	std::vector<int> visibleRoomIndices_;
 	int selectedInventoryIndex_ = -1;
+	bool completionMode_ = false;
+	std::vector<Item*> inventoryEntryItems_;
+	std::vector<std::string> inventoryEntryDescriptions_;
+	int inventoryPage_ = 0;
 };

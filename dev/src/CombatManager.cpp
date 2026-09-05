@@ -2,6 +2,7 @@
 #include "Enemy.h"
 #include "Player.h"
 #include "ProgressionManager.h"
+#include <cmath>
 #include "ShimmerSkill.h"
 #include <algorithm>
 #include <iostream>
@@ -76,9 +77,9 @@ bool CombatManager::resolve(CombatAction action, Player& player, Enemy& enemy,
         const int rawDamage = critical
             ? player.getAttack() * player.getCritDamage() / 100
             : player.getAttack();
-        const int defenseReduction = std::max(0, std::min(90, enemy.getDefense()));
-        const int damage = std::max(1, rawDamage * (100 - defenseReduction) / 100)
-            + (weaknessExposed_ ? 2 : 0);
+        const int damage = std::max(1, static_cast<int>(std::lround(
+            static_cast<double>(rawDamage) * 100.0 / (100.0 + enemy.getDefense())))
+            + (weaknessExposed_ ? 2 : 0));
         enemy.takeDamage(damage);
         std::cout << "Adelaide attacks " << enemy.getName()
                   << " for " << damage << (critical ? " critical" : "") << " damage.\n";
@@ -128,8 +129,8 @@ void CombatManager::enemyTurn(Player& player, Enemy& enemy) {
         return;
     }
     const int attackDamage = blocked_ ? enemy.getAtk() / 2 : enemy.getAtk();
-    const int defenseReduction = std::max(0, std::min(90, player.getDefense()));
-    const int damage = std::max(0, attackDamage * (100 - defenseReduction) / 100);
+    const int damage = std::max(0, static_cast<int>(std::lround(
+        static_cast<double>(attackDamage) * 100.0 / (100.0 + player.getDefense()))));
     player.takeDamage(damage);
     blocked_ = false;
     std::cout << enemy.getName() << " attacks for " << damage << " damage.\n";

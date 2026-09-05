@@ -9,7 +9,7 @@
 
 class Player {
 public:
-    Player(const std::string& name = "Adelaide", int maxHp = 30, int maxSp = 10);
+    Player(const std::string& name = "Adelaide", int maxHp = 20, int maxSp = 10);
     ~Player();
 
     void takeDamage(int amount);
@@ -34,6 +34,7 @@ public:
     void increaseMaxHP(int amount);
     void increaseAttack(int amount);
     void increaseDefense(int amount);
+    void SetLevelStats(int level);
     void spendSP(int amount);
     void gainSP(int amount);
     void AddItem(std::unique_ptr<Item> item);

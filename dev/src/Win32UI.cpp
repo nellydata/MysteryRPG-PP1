@@ -8,15 +8,15 @@
 #include <cstdio>
 
 namespace {
-constexpr COLORREF Background = RGB(22, 17, 25);
-constexpr COLORREF Panel = RGB(37, 27, 38);
-constexpr COLORREF PanelEdge = RGB(137, 103, 105);
-constexpr COLORREF Text = RGB(235, 224, 211);
-constexpr COLORREF Muted = RGB(173, 151, 151);
-constexpr COLORREF Brass = RGB(213, 163, 92);
-constexpr COLORREF Verdigris = RGB(120, 188, 166);
-constexpr COLORREF Shimmer = RGB(190, 170, 255);
-constexpr COLORREF Danger = RGB(220, 105, 95);
+constexpr COLORREF Background = RGB(24, 24, 24);
+constexpr COLORREF Panel = RGB(35, 35, 35);
+constexpr COLORREF PanelEdge = RGB(155, 155, 155);
+constexpr COLORREF Text = RGB(235, 235, 235);
+constexpr COLORREF Muted = RGB(175, 175, 175);
+constexpr COLORREF Brass = RGB(220, 220, 220);
+constexpr COLORREF Verdigris = RGB(190, 190, 190);
+constexpr COLORREF Shimmer = RGB(245, 245, 245);
+constexpr COLORREF Danger = RGB(210, 210, 210);
 
 unsigned RoomSeed(const std::string& roomName) {
 	unsigned seed = 2166136261u;
@@ -25,6 +25,18 @@ unsigned RoomSeed(const std::string& roomName) {
 		seed *= 16777619u;
 	}
 	return seed;
+}
+
+COLORREF RarityColor(Rarity rarity) {
+	switch (rarity) {
+	case Rarity::Common: return RGB(225, 225, 225);
+	case Rarity::Uncommon: return RGB(90, 190, 120);
+	case Rarity::Rare: return RGB(90, 145, 230);
+	case Rarity::Epic: return RGB(175, 100, 235);
+	case Rarity::Legendary: return RGB(235, 175, 55);
+	case Rarity::Artifact: return RGB(235, 75, 95);
+	}
+	return RGB(245, 245, 245);
 }
 
 int SpawnChance(EnemySpawnCondition condition) {
@@ -59,7 +71,7 @@ bool EnvironmentEquals(const char* name, const char* expected) {
 
 Win32UI::Win32UI()
 	: window_(nullptr), nameWindow_(nullptr), nameEdit_(nullptr), controls_{}, font_(nullptr), headingFont_(nullptr),
-	  view_(View::Floor), selectedRoom_(0), player_("Adelaide", 30, 10),
+	  view_(View::Floor), selectedRoom_(0), player_("Adelaide", 20, 10),
 	  mapManager_(), combat_(), progression_(), activeEnemy_(nullptr) {
 	InitializePlayer();
 	AddLog("The cathedral is silent except for the pulse of the Shimmer.");
@@ -77,6 +89,7 @@ bool Win32UI::ConsoleModeRequested() {
 int Win32UI::Run() {
 	HINSTANCE instance = GetModuleHandleW(nullptr);
 	PromptForName(instance);
+	if (completionMode_) InitializeCompletionState();
 	CreateWindowShell(instance);
 	if (window_ == nullptr) return 1;
 
@@ -103,7 +116,7 @@ void Win32UI::PromptForName(HINSTANCE instance) {
 								  CW_USEDEFAULT, CW_USEDEFAULT, 480, 190, nullptr, nullptr,
 								  instance, this);
 	if (nameWindow_ == nullptr) {
-		player_.SetName("Investigator");
+		player_.SetName("Adelaide");
 		return;
 	}
 	ShowWindow(nameWindow_, SW_SHOW);
@@ -114,7 +127,6 @@ void Win32UI::PromptForName(HINSTANCE instance) {
 		TranslateMessage(&message);
 		DispatchMessageW(&message);
 	}
-	if (player_.getName() == "Adelaide") player_.SetName("Investigator");
 }
 
 void Win32UI::CreateWindowShell(HINSTANCE instance) {
@@ -165,7 +177,9 @@ void Win32UI::CreateControls() {
 	createButton(30, ButtonSort, L"Sort");
 	createButton(31, ButtonLock, L"Lock / unlock");
 	createButton(32, ButtonDiscard, L"Discard");
-	createButton(33, ButtonEquip, L"Equip / unequip");
+	createButton(33, ButtonEquip, L"Use");
+	createButton(34, ButtonInventoryPrevious, L"<");
+	createButton(35, ButtonInventoryNext, L">");
 	RefreshControls();
 }
 
@@ -201,13 +215,30 @@ void Win32UI::RefreshControls() {
 		ShowWindow(controls_[21], SW_SHOW);
 		ShowWindow(controls_[22], SW_SHOW);
 	} else if (view_ == View::Inventory) {
+		inventoryEntryItems_.clear();
+		inventoryEntryDescriptions_.clear();
 		const auto items = player_.GetInventory().GetSortedItems(inventorySort_);
-		int buttonIndex = 0;
 		for (const auto* item : items) {
-			for (int quantity = 0; quantity < player_.GetInventory().GetQuantity(item->getName()) && buttonIndex < 12; ++quantity) {
-				SetWindowTextW(controls_[8 + buttonIndex], ToWide(item->getName()).c_str());
-				ShowWindow(controls_[8 + buttonIndex], SW_SHOW);
-				++buttonIndex;
+			for (int quantity = 0; quantity < player_.GetInventory().GetQuantity(item->getName()); ++quantity) {
+				inventoryEntryItems_.push_back(const_cast<Item*>(item));
+				inventoryEntryDescriptions_.push_back(item->getDescription());
+			}
+		}
+		for (const auto& clue : player_.GetInventory().GetClues()) {
+			inventoryEntryItems_.push_back(nullptr);
+			inventoryEntryDescriptions_.push_back(clue.description);
+		}
+		const int pageSize = 12;
+		const int pageCount = (static_cast<int>(inventoryEntryItems_.size()) + pageSize - 1) / pageSize;
+		if (inventoryPage_ >= pageCount && pageCount > 0) inventoryPage_ = pageCount - 1;
+		const int firstEntry = inventoryPage_ * pageSize;
+		for (int button = 0; button < pageSize; ++button) {
+			const int entry = firstEntry + button;
+			if (entry < static_cast<int>(inventoryEntryItems_.size())) {
+				const Item* item = inventoryEntryItems_[entry];
+				const std::string label = item == nullptr ? "Clue" : item->getName();
+				SetWindowTextW(controls_[8 + button], ToWide(label).c_str());
+				ShowWindow(controls_[8 + button], SW_SHOW);
 			}
 		}
 		ShowWindow(controls_[21], SW_SHOW);
@@ -215,6 +246,8 @@ void Win32UI::RefreshControls() {
 		ShowWindow(controls_[31], SW_SHOW);
 		ShowWindow(controls_[32], SW_SHOW);
 		ShowWindow(controls_[33], SW_SHOW);
+		ShowWindow(controls_[34], SW_SHOW);
+		ShowWindow(controls_[35], SW_SHOW);
 	} else if (view_ == View::Combat) {
 		ShowWindow(controls_[24], SW_SHOW);
 		ShowWindow(controls_[25], SW_SHOW);
@@ -232,6 +265,7 @@ void Win32UI::LayoutControls(int width, int height) {
 	const int buttonHeight = 42;
 	const int eventTop = (std::max)(120, height - 260);
 	const int actionY = eventTop + 28;
+	const int inventoryActionY = eventTop + 170;
 	const int safeRight = (std::max)(center + 620, width - 20);
 
 	for (int i = 0; i < 4; ++i) {
@@ -243,8 +277,8 @@ void Win32UI::LayoutControls(int width, int height) {
 				   buttonWidth, buttonHeight, TRUE);
 	}
 	for (int i = 0; i < 12; ++i) {
-		MoveWindow(controls_[8 + i], center + (i % 3) * 215,
-				   125 + (i / 3) * 48, 200, 38, TRUE);
+		MoveWindow(controls_[8 + i], center + (i % 3) * 275,
+				   132 + (i / 3) * 48, 250, 38, TRUE);
 	}
 	MoveWindow(controls_[20], center, actionY + 104, buttonWidth, buttonHeight, TRUE);
 	MoveWindow(controls_[21], center + 215, actionY + 104, buttonWidth, buttonHeight, TRUE);
@@ -253,10 +287,12 @@ void Win32UI::LayoutControls(int width, int height) {
 	MoveWindow(controls_[23], safeRight - 180, 144, 180, buttonHeight, TRUE);
 	MoveWindow(controls_[28], safeRight - 180, 196, 180, buttonHeight, TRUE);
 	for (int i = 0; i < 4; ++i) MoveWindow(controls_[24 + i], center + i * 165, actionY, 150, 44, TRUE);
-	MoveWindow(controls_[30], center, actionY, 180, 42, TRUE);
-	MoveWindow(controls_[31], center + 190, actionY, 180, 42, TRUE);
-	MoveWindow(controls_[32], center + 380, actionY, 180, 42, TRUE);
-	MoveWindow(controls_[33], center + 570, actionY, 180, 42, TRUE);
+	MoveWindow(controls_[30], center, inventoryActionY, 180, 42, TRUE);
+	MoveWindow(controls_[31], center + 190, inventoryActionY, 180, 42, TRUE);
+	MoveWindow(controls_[32], center + 380, inventoryActionY, 180, 42, TRUE);
+	MoveWindow(controls_[33], center + 570, inventoryActionY, 180, 42, TRUE);
+	MoveWindow(controls_[34], center, inventoryActionY + 54, 70, 38, TRUE);
+	MoveWindow(controls_[35], center + 565, inventoryActionY + 54, 70, 38, TRUE);
 }
 
 void Win32UI::HandleCommand(int controlId) {
@@ -266,16 +302,19 @@ void Win32UI::HandleCommand(int controlId) {
 	} else if (controlId >= InspectButtonBase && controlId < InspectButtonBase + 4) {
 		Inspect(controlId - InspectButtonBase);
 	} else if (controlId >= InventoryButtonBase && controlId < InventoryButtonBase + 12) {
-		const int index = controlId - InventoryButtonBase;
-		const auto items = player_.GetInventory().GetSortedItems(inventorySort_);
-		std::vector<Item*> entries;
-		for (Item* item : items)
-			for (int quantity = 0; quantity < player_.GetInventory().GetQuantity(item->getName()); ++quantity)
-				entries.push_back(item);
-		if (index < static_cast<int>(entries.size())) {
+		const int index = inventoryPage_ * 12 + controlId - InventoryButtonBase;
+		if (index < static_cast<int>(inventoryEntryItems_.size())) {
 			selectedInventoryIndex_ = index;
-			AddLog("Selected " + entries[index]->getName() + ". Choose Equip / unequip below.");
+			AddLog(inventoryEntryItems_[index] == nullptr ? "Selected clue. Choose Use below." :
+				"Selected " + inventoryEntryItems_[index]->getName() + ". Choose Use below.");
 		}
+	} else if (controlId == ButtonInventoryPrevious) {
+		if (inventoryPage_ > 0) --inventoryPage_;
+		selectedInventoryIndex_ = -1;
+	} else if (controlId == ButtonInventoryNext) {
+		const int pageCount = (static_cast<int>(inventoryEntryItems_.size()) + 11) / 12;
+		if (inventoryPage_ + 1 < pageCount) ++inventoryPage_;
+		selectedInventoryIndex_ = -1;
 	} else if (controlId == ButtonSearch) {
 		SearchRoom();
 	} else if (controlId == ButtonBack) {
@@ -288,6 +327,7 @@ void Win32UI::HandleCommand(int controlId) {
 		inventorySort_ = inventorySort_ == InventorySort::RecentlyObtained ? InventorySort::Alphabetical
 			: inventorySort_ == InventorySort::Alphabetical ? InventorySort::Amount : InventorySort::RecentlyObtained;
 		selectedInventoryIndex_ = -1;
+		inventoryPage_ = 0;
 	} else if (controlId == ButtonLock || controlId == ButtonDiscard) {
 		const auto items = player_.GetInventory().GetSortedItems(inventorySort_);
 		if (!items.empty()) {
@@ -306,9 +346,21 @@ void Win32UI::HandleCommand(int controlId) {
 				entries.push_back(item);
 		if (selectedInventoryIndex_ >= 0 && selectedInventoryIndex_ < static_cast<int>(entries.size())) {
 			Item& item = *entries[selectedInventoryIndex_];
-			const Item* equipped = player_.GetEquipped(item.getSlot());
-			player_.ToggleEquip(item);
-			AddLog(std::string(equipped == &item ? "Unequipped " : "Equipped ") + item.getName() + ".");
+			if (item.isEquippable()) {
+				const Item* equipped = player_.GetEquipped(item.getSlot());
+				player_.ToggleEquip(item);
+				AddLog(std::string(equipped == &item ? "Unequipped " : "Equipped ") + item.getName() + ".");
+			} else if (item.getCategory() == ItemCategory::Consumable) {
+				if (player_.UseConsumable(item.getName())) AddLog("Used " + item.getName() + ".");
+				else AddLog("That consumable cannot be used right now.");
+			} else if (item.getCategory() == ItemCategory::Crux) {
+				if (progression_.UnlockCrux(item.getName())) {
+					player_.GetInventory().RemoveItem(item.getName());
+					AddLog("Crux activated: " + item.getName() + ".");
+				} else AddLog("The conditions for that crux are not met.");
+			} else {
+				AddLog("That item has no usable action here.");
+			}
 		}
 	} else if (controlId == ButtonSkills) {
 		view_ = View::Skills;
@@ -325,6 +377,20 @@ void Win32UI::HandleCommand(int controlId) {
 		return;
 	}
 	RefreshControls();
+}
+
+void Win32UI::InitializeCompletionState() {
+	progression_.SetMaxLevel(player_);
+	for (auto& room : mapManager_.GetRooms()) room.SetCleared(true);
+	for (const auto& definition : BuildEquippableCatalog()) player_.AddItem(std::make_unique<Item>(definition));
+	for (const auto& definition : BuildConsumableCatalog()) player_.AddItem(std::make_unique<Item>(definition));
+	for (const auto& definition : BuildClueCatalog()) player_.AddItem(std::make_unique<Item>(definition));
+	for (const auto& definition : BuildCruxCatalog()) player_.AddItem(std::make_unique<Item>(definition));
+	for (const auto& definition : BuildEquippableCatalog()) {
+		if (definition.rarity == Rarity::Artifact) {
+			if (Item* item = player_.FindItem(definition.name)) player_.ToggleEquip(*item);
+		}
+	}
 }
 
 void Win32UI::EnterRoom(int roomIndex) {
@@ -378,6 +444,27 @@ void Win32UI::SearchRoom() {
 	Area& area = mapManager_.GetRooms()[selectedRoom_];
 	area.RecordSearch();
 	const unsigned searchSeed = RoomSeed(area.getName()) + static_cast<unsigned>(area.GetSearchCount() * 31);
+	if (activeEnemy_ == nullptr && area.IsFullySearched() && area.HasBossBeenDefeated()) {
+		const unsigned roll = searchSeed % 100;
+		if (roll < 10) {
+			const int enemyLevel = progression_.GetLevel() + 5;
+			area.addEnemy(std::make_unique<Enemy>("Cathedral Boss", 70 + enemyLevel * 8,
+				20 + enemyLevel * 3, 200, enemyLevel));
+			AddLog("Search: the defeated boss returns in a stronger form.");
+		} else if (roll < 60) {
+			const int enemyLevel = (std::max)(1, progression_.GetLevel() + static_cast<int>(searchSeed % 6) - 2);
+			area.addEnemy(std::make_unique<Enemy>("Nun", 18 + enemyLevel * 2, 4 + enemyLevel, 15, enemyLevel));
+			AddLog("Search: a Nun emerges from the cleared room.");
+		} else {
+			const int enemyLevel = (std::max)(1, progression_.GetLevel() + static_cast<int>(searchSeed % 6) - 2);
+			area.addEnemy(std::make_unique<Enemy>("Automata", 12 + enemyLevel * 2, 3 + enemyLevel, 15, enemyLevel));
+			AddLog("Search: an Automata stirs in the cleared room.");
+		}
+		activeEnemy_ = area.getFirstAliveEnemy();
+		combat_.BeginEncounter(*activeEnemy_);
+		view_ = View::Combat;
+		return;
+	}
 	if (activeEnemy_ == nullptr && area.IsFullySearched() && !area.HasBossBeenEncountered() &&
 		(searchSeed % 100) < 50) {
 		area.MarkBossEncountered();
@@ -451,6 +538,19 @@ void Win32UI::PerformCombatAction(CombatAction action) {
 				AddLog("The next area is now visible on the map.");
 			}
 		}
+		const int level = activeEnemy_->getLevel();
+		const unsigned dropRoll = RoomSeed(activeEnemy_->getName()) + static_cast<unsigned>(level * 17 + area.GetSearchCount());
+		const bool canDropEpic = wasBoss;
+		if (dropRoll % 100 < (std::min)(80, 10 + level)) {
+			const auto catalog = BuildEquippableCatalog();
+			const int index = static_cast<int>(dropRoll % catalog.size());
+			const bool allowed = canDropEpic ? catalog[index].rarity != Rarity::Legendary && catalog[index].rarity != Rarity::Artifact
+				: catalog[index].rarity == Rarity::Common || catalog[index].rarity == Rarity::Uncommon || catalog[index].rarity == Rarity::Rare;
+			if (allowed) {
+				player_.AddItem(std::make_unique<Item>(catalog[index]));
+				AddLog("Drop: " + catalog[index].name + ".");
+			}
+		}
 		activeEnemy_ = nullptr;
 		view_ = View::Room;
 		return;
@@ -492,16 +592,24 @@ LRESULT CALLBACK Win32UI::NameProcedure(HWND window, UINT message, WPARAM wParam
 
 	switch (message) {
 	case WM_CREATE:
-		CreateWindowW(L"STATIC", L"What should the investigator be called?",
+		{
+			HFONT promptFont = CreateFontW(18, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+				DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY,
+				DEFAULT_PITCH | FF_DONTCARE, L"IM FELL English");
+			HWND promptLabel = CreateWindowW(L"STATIC", L"What should the investigator be called?",
 					  WS_CHILD | WS_VISIBLE, 24, 22, 410, 24, window, nullptr,
 					  GetModuleHandleW(nullptr), nullptr);
+			SendMessageW(promptLabel, WM_SETFONT, reinterpret_cast<WPARAM>(promptFont), TRUE);
 		ui->nameEdit_ = CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", L"",
 										WS_CHILD | WS_VISIBLE | WS_TABSTOP | ES_AUTOHSCROLL,
 										24, 58, 410, 34, window, nullptr,
 										GetModuleHandleW(nullptr), nullptr);
-		CreateWindowW(L"BUTTON", L"Begin Investigation", WS_CHILD | WS_VISIBLE | WS_TABSTOP,
+		SendMessageW(ui->nameEdit_, WM_SETFONT, reinterpret_cast<WPARAM>(promptFont), TRUE);
+		HWND beginButton = CreateWindowW(L"BUTTON", L"Begin Investigation", WS_CHILD | WS_VISIBLE | WS_TABSTOP,
 					  24, 108, 190, 36, window, reinterpret_cast<HMENU>(1),
 					  GetModuleHandleW(nullptr), nullptr);
+		SendMessageW(beginButton, WM_SETFONT, reinterpret_cast<WPARAM>(promptFont), TRUE);
+		}
 		SetFocus(ui->nameEdit_);
 		return 0;
 	case WM_COMMAND:
@@ -510,14 +618,18 @@ LRESULT CALLBACK Win32UI::NameProcedure(HWND window, UINT message, WPARAM wParam
 			std::wstring name(static_cast<std::size_t>(length + 1), L'\0');
 			if (length > 0) GetWindowTextW(ui->nameEdit_, name.data(), length + 1);
 			if (!name.empty() && name.back() == L'\0') name.pop_back();
-			if (name.empty()) name = L"Investigator";
+			if (name.empty()) {
+				name = L"Adelaide";
+				ui->completionMode_ = true;
+			}
 			ui->player_.SetName(ui->ToNarrow(name));
 			DestroyWindow(window);
 			return 0;
 		}
 		break;
 	case WM_CLOSE:
-		ui->player_.SetName("Investigator");
+		ui->player_.SetName("Adelaide");
+		ui->completionMode_ = true;
 		DestroyWindow(window);
 		return 0;
 	case WM_DESTROY:
@@ -554,19 +666,28 @@ LRESULT Win32UI::HandleMessage(UINT message, WPARAM wParam, LPARAM lParam) {
 		return 0;
 	case WM_DRAWITEM: {
 		const auto* draw = reinterpret_cast<const DRAWITEMSTRUCT*>(lParam);
-		if (draw != nullptr && draw->CtlType == ODT_BUTTON && draw->CtlID >= RoomButtonBase &&
-			draw->CtlID < RoomButtonBase + 4) {
+		if (draw != nullptr && draw->CtlType == ODT_BUTTON &&
+			((draw->CtlID >= RoomButtonBase && draw->CtlID < RoomButtonBase + 4) ||
+			 (draw->CtlID >= InventoryButtonBase && draw->CtlID < InventoryButtonBase + 12))) {
+			const bool inventoryButton = draw->CtlID >= InventoryButtonBase;
 			const int buttonIndex = draw->CtlID - RoomButtonBase;
-			const bool complete = buttonIndex < static_cast<int>(visibleRoomIndices_.size()) &&
+			const bool complete = !inventoryButton && buttonIndex < static_cast<int>(visibleRoomIndices_.size()) &&
 				mapManager_.GetRooms()[visibleRoomIndices_[buttonIndex]].IsFullySearched();
-			HBRUSH brush = CreateSolidBrush((draw->itemState & ODS_SELECTED) ? RGB(210, 205, 198) : RGB(245, 242, 238));
+			HBRUSH brush = CreateSolidBrush(((draw->itemState & ODS_SELECTED) != 0) ? RGB(210, 205, 198) : RGB(245, 242, 238));
 			FillRect(draw->hDC, &draw->rcItem, brush);
 			DeleteObject(brush);
 			FrameRect(draw->hDC, &draw->rcItem, reinterpret_cast<HBRUSH>(GetStockObject(GRAY_BRUSH)));
 			wchar_t label[128]{};
 			GetWindowTextW(draw->hwndItem, label, 128);
 			SetBkMode(draw->hDC, TRANSPARENT);
-			if (!complete) {
+			if (inventoryButton) {
+				const int itemIndex = inventoryPage_ * 12 + draw->CtlID - InventoryButtonBase;
+				const Item* item = itemIndex < static_cast<int>(inventoryEntryItems_.size())
+					? inventoryEntryItems_[itemIndex] : nullptr;
+				SetTextColor(draw->hDC, item == nullptr ? Muted : RarityColor(item->getRarity()));
+				DrawTextW(draw->hDC, label, -1, const_cast<RECT*>(&draw->rcItem),
+					DT_CENTER | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
+			} else if (!complete) {
 				SetTextColor(draw->hDC, RGB(35, 30, 35));
 				DrawTextW(draw->hDC, label, -1, const_cast<RECT*>(&draw->rcItem), DT_CENTER | DT_VCENTER | DT_SINGLELINE);
 			} else {
@@ -607,7 +728,8 @@ void Win32UI::Paint(HDC deviceContext) {
 
 	DrawPanel(deviceContext, {20, 20, 365, client.bottom - 20}, ToWide(player_.getName()) + L" // CHARACTER");
 	DrawTextLine(deviceContext, 42, 65, L"MICARE", Brass, 28, true);
-	DrawTextLine(deviceContext, 42, 110, ToWide(player_.getName()) + L"   LEVEL " + std::to_wstring(progression_.GetLevel()), Text, 19, true);
+	DrawRainbowText(deviceContext, 42, 110, ToWide(player_.getName()), 19, true);
+	DrawTextLine(deviceContext, 250, 110, L"LEVEL " + std::to_wstring(progression_.GetLevel()), Text, 19, true);
 	DrawTextLine(deviceContext, 42, 150, L"HP", Muted); DrawTextLine(deviceContext, 150, 150, std::to_wstring(player_.getHP()) + L" / " + std::to_wstring(player_.getMaxHP()), Text);
 	DrawTextLine(deviceContext, 42, 182, L"DEF   " + std::to_wstring(player_.getDefense()) + L"     SPD   " + std::to_wstring(player_.getSpeed()), Text);
 	DrawTextLine(deviceContext, 42, 214, L"ATK   " + std::to_wstring(player_.getAttack()) + L"     ACC   " + std::to_wstring(player_.getAccuracy()) + L"%", Text);
@@ -624,7 +746,9 @@ void Win32UI::Paint(HDC deviceContext) {
 	y = 460;
 	for (const auto& slot : slots) {
 		const Item* item = player_.GetEquipped(slot.first);
-		DrawTextLine(deviceContext, 48, y, std::wstring(slot.second) + L": " + (item == nullptr ? L"--" : ToWide(item->getName())), Text, 14);
+		DrawTextLine(deviceContext, 48, y, std::wstring(slot.second) + L": ", Muted, 14);
+		if (item != nullptr) DrawTextLine(deviceContext, 105, y, ToWide(item->getName()), RarityColor(item->getRarity()), 14);
+		else DrawTextLine(deviceContext, 105, y, L"--", Muted, 14);
 		y += 25;
 	}
 
@@ -655,7 +779,21 @@ void Win32UI::Paint(HDC deviceContext) {
 		DrawTextLine(deviceContext, 425, contentY + 180, ToWide(player_.getName()) + L"  >  " + ToWide(activeEnemy_->getName()), Text, 18);
 	} else if (view_ == View::Inventory) {
 		DrawTextLine(deviceContext, 425, contentY, L"INVENTORY // SELECT AN ITEM, THEN EQUIP", Shimmer, 23, true);
-		DrawTextLine(deviceContext, 425, contentY + 42, L"Each button represents one held item.", Muted, 16);
+		DrawTextLine(deviceContext, 425, contentY + 42, L"Select an item to view its details below.", Muted, 16);
+		if (selectedInventoryIndex_ >= 0 && selectedInventoryIndex_ < static_cast<int>(inventoryEntryItems_.size())) {
+			const Item* selected = inventoryEntryItems_[selectedInventoryIndex_];
+			const std::string description = inventoryEntryDescriptions_[selectedInventoryIndex_];
+			const Rarity rarity = selected == nullptr ? Rarity::Common : selected->getRarity();
+			DrawTextLine(deviceContext, 425, eventTop + 42, ToWide(selected == nullptr ? "Clue" : selected->getName()), RarityColor(rarity), 20, true);
+			DrawTextLine(deviceContext, 425, eventTop + 78, ToWide(description), Text, 16);
+			if (selected != nullptr) {
+				const Stats& stats = selected->getStats();
+				DrawTextLine(deviceContext, 425, eventTop + 116,
+					L"ATK " + std::to_wstring(stats.atk) + L"   DEF " + std::to_wstring(stats.def) +
+					L"   HP " + std::to_wstring(stats.hp) + L"   SPD " + std::to_wstring(stats.spd),
+					Muted, 16);
+			}
+		}
 	} else if (view_ == View::Map) {
 		DrawTextLine(deviceContext, 425, contentY, L"FLOOR I // MAP", Shimmer, 25, true);
 		int mapY = contentY + 55;
@@ -672,12 +810,35 @@ void Win32UI::Paint(HDC deviceContext) {
 		for (const auto& skill : skills) { DrawTextLine(deviceContext, 440, contentY, skill, Text, 18); contentY += 34; }
 	}
 
-	DrawPanel(deviceContext, {395, eventTop, client.right - 20, client.bottom - 20}, L"EVENT LOG");
-	int logY = eventTop + 38;
-	const int start = (std::max)(0, static_cast<int>(log_.size()) - 3);
-	for (int i = start; i < static_cast<int>(log_.size()); ++i) {
-		DrawTextLine(deviceContext, 420, logY, ToWide(log_[i]), Muted, 14);
-		logY += 22;
+	if (view_ == View::Floor) {
+		DrawPanel(deviceContext, {395, eventTop, client.right - 20, client.bottom - 20}, L"EVENT LOG");
+		int logY = eventTop + 38;
+		const int start = (std::max)(0, static_cast<int>(log_.size()) - 3);
+		for (int i = start; i < static_cast<int>(log_.size()); ++i) {
+			DrawTextLine(deviceContext, 420, logY, ToWide(log_[i]), Muted, 14);
+			logY += 22;
+		}
+	} else if (view_ == View::Inventory) {
+		DrawPanel(deviceContext, {395, eventTop, client.right - 20, client.bottom - 20}, L"ITEM INFORMATION");
+	}
+}
+
+void Win32UI::DrawRainbowText(HDC deviceContext, int x, int y, const std::wstring& text,
+							 int size, bool bold) const {
+	const COLORREF colors[] = {RGB(220, 60, 70), RGB(220, 130, 45), RGB(205, 190, 50), RGB(60, 165, 95), RGB(65, 125, 220), RGB(150, 75, 190)};
+	int offset = x;
+	for (std::size_t index = 0; index < text.size(); ++index) {
+		const std::wstring character(1, text[index]);
+		DrawTextLine(deviceContext, offset, y, character, colors[index % 6], size, bold);
+		HFONT measureFont = CreateFontW(size, 0, 0, 0, bold ? FW_BOLD : FW_NORMAL, FALSE, FALSE, FALSE,
+			DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY,
+			DEFAULT_PITCH | FF_DONTCARE, L"IM FELL English");
+		HFONT oldFont = static_cast<HFONT>(SelectObject(deviceContext, measureFont));
+		SIZE characterSize{};
+		GetTextExtentPoint32W(deviceContext, character.c_str(), 1, &characterSize);
+		SelectObject(deviceContext, oldFont);
+		DeleteObject(measureFont);
+		offset += characterSize.cx;
 	}
 }
 
@@ -699,7 +860,7 @@ void Win32UI::DrawTextLine(HDC deviceContext, int x, int y, const std::wstring& 
 						   COLORREF color, int size, bool bold) const {
 	HFONT selected = CreateFontW(size, 0, 0, 0, bold ? FW_SEMIBOLD : FW_NORMAL, FALSE, FALSE, FALSE,
 								 DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
-								 CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, L"Segoe UI");
+								  CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, L"IM FELL English");
 	HGDIOBJ oldFont = SelectObject(deviceContext, selected);
 	SetTextColor(deviceContext, color);
 	SetBkMode(deviceContext, TRANSPARENT);

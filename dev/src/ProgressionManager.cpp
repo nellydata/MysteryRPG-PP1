@@ -15,13 +15,12 @@ bool ProgressionManager::CheckLevelUp(Player& player) {
     while (xp_ >= xpToNextLevel_) {
         xp_ -= xpToNextLevel_;
         ++level_;
-        player.increaseMaxHP(5);
-        player.increaseDefense(1);
-        player.heal(5);
+        player.SetLevelStats(level_);
+        xpToNextLevel_ = static_cast<int>(xpToNextLevel_ * 1.10f + 0.5f);
         leveledUp = true;
 
         std::cout << "Level up! Adelaide is now level " << level_ << ".\n"
-                   << "Max HP +5, Defense +1, HP restored +5.\n";
+                   << "Max HP +5, Defense +10, Attack +15.\n";
     }
 
     return leveledUp;
@@ -29,6 +28,14 @@ bool ProgressionManager::CheckLevelUp(Player& player) {
 
 int ProgressionManager::GetLevel() const { return level_; }
 int ProgressionManager::GetXP() const { return xp_; }
+int ProgressionManager::GetXPToNextLevel() const { return xpToNextLevel_; }
+void ProgressionManager::SetMaxLevel(Player& player) {
+    level_ = 100;
+    xp_ = 0;
+    xpToNextLevel_ = 0;
+    player.SetLevelStats(level_);
+    player.heal(player.getMaxHP());
+}
 
 bool ProgressionManager::UnlockCrux(const std::string& itemName) {
     return !itemName.empty() && cruxItems_.insert(itemName).second;

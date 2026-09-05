@@ -39,6 +39,14 @@ bool Area::HasBossBeenDefeated() const { return bossDefeated_; }
 void Area::SetBossDefeated(bool defeated) { bossDefeated_ = defeated; }
 bool Area::HasBossBeenEncountered() const { return bossEncountered_; }
 void Area::MarkBossEncountered() { bossEncountered_ = true; }
+void Area::SetCleared(bool cleared) {
+    if (!cleared) return;
+    unlocked_ = true;
+    visibleInteractables_ = interactables_;
+    discoveredNPC_ = hasNPC_;
+    bossDefeated_ = true;
+    bossEncountered_ = false;
+}
 
 bool Area::hasEnemies() const {
     for (const auto& enemy : enemies_) {

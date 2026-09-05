@@ -51,8 +51,11 @@ A `.gitignore` file keeps generated files, IDE settings, operating-system metada
 The milestone established a multi-file C++17 console project under `dev/include` and `dev/src`. It includes a deterministic Floor 1 map, room interaction, enemy encounters, combat actions, progression, item storage, clue storage, and a main game loop.
 
 ## Reference Links
-- [Microsoft PowerShell documentation](https://learn.microsoft.com/powershell/)
+- [Markdown syntax](https://guides.github.com/features/mastering-markdown/)
+- [Git Commands cheat sheet](https://education.github.com/git-cheat-sheet-education.pdf)
+- [Git Handbook](https://guides.github.com/introduction/git-handbook/)
 - [Git documentation](https://git-scm.com/docs)
-- [GitHub Git handbook](https://guides.github.com/introduction/git-handbook/)
-- [GitHub documentation about Git](https://docs.github.com/en/get-started/using-git/about-git)
+- [About Git on GitHub Docs](https://docs.github.com/en/get-started/using-git/about-git)
+- [Ignoring files on GitHub](https://help.github.com/articles/ignoring-files/)
 - [Microsoft Learn .gitignore guide](https://learn.microsoft.com/visualstudio/version-control/gitignore?view=vs-2022)
+- [Microsoft PowerShell documentation](https://learn.microsoft.com/powershell/)

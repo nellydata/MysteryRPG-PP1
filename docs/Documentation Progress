@@ -86,47 +86,34 @@ Spent ~1 hour wrangling scaffolding and resolving small issues to ensure everyth
 
 
 9/4
-Unified JSONC Specification  
-Consolidated game rules, stats, rarities, items, skills, and systems into a single authoritative design document.
+•	Implemented native Win32 UI for Micare - Cathedral of Lies.
+•	Added player name entry and used the chosen name in the UI, combat messages, and event logs.
+•	Added Floor, Map, Room, Inventory, Skills, and Combat views.
+•	Added deterministic Floor 1 rooms and room progression.
+•	Added room interaction buttons and investigation/search behavior.
+•	Added deterministic enemy spawning and combat encounters.
+•	Added Attack, Shimmer, and Flee combat actions.
+•	Removed the Block button.
+•	Added combat turn handling and enemy response logic.
+•	Added battle completion messages with XP and item drop information.
+•	Added inventory item selection and item information display.
+•	Added inventory sorting, paging, locking, discarding, equipping, and consumable use.
+•	Added rarity-based item text colors.
+•	Added status messages for room, inventory, and combat actions.
 
-Core Stat Ecosystem  
-Defined primary/secondary stats, scaling rules, crit behavior, and how equipment aggregates into final player stats.
+9/5
 
-Debuff & Status Framework  
-Established stun, bleed, burn, poison, and HoT effects with formulas and turn‑based processing.
-
-Rarity & Item Architecture  
-Set up rarity tiers, substat counts, artifact passives, and the full 128‑item equippable catalog.
-
-Equipment Slot System  
-Formalized head/torso/boots/hand slots with fixed main stats and consistent naming conventions.
-
-Consumables, Clues, Crux Items  
-Added data‑driven definitions for healing, buffs, puzzle tools, story‑critical items, and exploration utilities.
-
-Shimmer Skill System (Latin Display Names)  
-Designed cooldown‑based abilities with combat and environmental effects, mapped to Latin naming for presentation.
-
-Combat System Expansion  
-Turn order, crits, damage formulas, debuff accuracy/resistance, cooldowns, and deterministic console behavior.
-
-Progression & Meta‑Progression  
-Level scaling, crux‑based unlocks, shimmer‑based exploration upgrades, and player growth hooks.
-
-Exploration & Encounter Integration  
-Room themes, procedural rules, encounter triggers, and item/skill interactions with the environment.
-
-Developer Mode Hooks  
-Debug commands, item spawning, teleportation, and artifact access for testing.
+•	Improved room, inventory, combat, and navigation button alignment.
+•	Fixed inventory controls overlapping or extending outside the window.
+•	Fixed room interaction buttons overlapping the Back button.
+•	Fixed navigation buttons being positioned below or outside the visible panel.
+•	Fixed stacked or overlapping text rendering in the UI.
+•	Fixed combat and room interactions appearing to freeze the executable.
+•	Root cause of the freeze was an infinite level-up loop caused by xpToNextLevel_ being set to 0 in completion mode.
+•	Added a level-100 cap and a defensive nonzero XP-threshold check.
+•	Added deferred UI refresh handling to reduce Win32 command/refresh re-entry issues.
+•	Added guards for invalid rooms, stale enemies, and repeated command handling.
+•	Fixed the executable build successfully after the changes.
 
 
-Current issues:
-•	Flee currently returns the player to the map rather than directly to the room interaction menu.
-•	Shimmer has no concrete usable skill yet.
-•	NPCs still use placeholder messaging.
-•	Inventory displays items and clues, but item usage is intentionally not implemented.
-•	Interrogation success was not observed in this particular test run because the deterministic rolls produced failures.
-•	Level-up behavior was not reached through the normal room rewards.
-•	Room clues are generic: the first inspected object in a room may reveal the room’s clue regardless of which object logically contains it.
-•	Enemy spawn conditions are deterministic based on room identity, so a room will always produce the same spawn result each time it is first entered.
-•	The game does not yet have a full multi-room progression or victory condition.
+

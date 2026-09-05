@@ -84,6 +84,42 @@ Spent ~1 hour wrangling scaffolding and resolving small issues to ensure everyth
 •	Progression remains minimal and fixed-threshold.
 •	The current system is ready for later clue persistence, dialogue, item usage, and map progression features.
 
+
+9/4
+Unified JSONC Specification  
+Consolidated game rules, stats, rarities, items, skills, and systems into a single authoritative design document.
+
+Core Stat Ecosystem  
+Defined primary/secondary stats, scaling rules, crit behavior, and how equipment aggregates into final player stats.
+
+Debuff & Status Framework  
+Established stun, bleed, burn, poison, and HoT effects with formulas and turn‑based processing.
+
+Rarity & Item Architecture  
+Set up rarity tiers, substat counts, artifact passives, and the full 128‑item equippable catalog.
+
+Equipment Slot System  
+Formalized head/torso/boots/hand slots with fixed main stats and consistent naming conventions.
+
+Consumables, Clues, Crux Items  
+Added data‑driven definitions for healing, buffs, puzzle tools, story‑critical items, and exploration utilities.
+
+Shimmer Skill System (Latin Display Names)  
+Designed cooldown‑based abilities with combat and environmental effects, mapped to Latin naming for presentation.
+
+Combat System Expansion  
+Turn order, crits, damage formulas, debuff accuracy/resistance, cooldowns, and deterministic console behavior.
+
+Progression & Meta‑Progression  
+Level scaling, crux‑based unlocks, shimmer‑based exploration upgrades, and player growth hooks.
+
+Exploration & Encounter Integration  
+Room themes, procedural rules, encounter triggers, and item/skill interactions with the environment.
+
+Developer Mode Hooks  
+Debug commands, item spawning, teleportation, and artifact access for testing.
+
+
 Current issues:
 •	Flee currently returns the player to the map rather than directly to the room interaction menu.
 •	Shimmer has no concrete usable skill yet.

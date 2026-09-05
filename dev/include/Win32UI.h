@@ -28,7 +28,6 @@ private:
 	static constexpr int ButtonMap = 402;
 	static constexpr int ButtonSkills = 403;
 	static constexpr int ButtonAttack = 500;
-	static constexpr int ButtonBlock = 501;
 	static constexpr int ButtonShimmer = 502;
 	static constexpr int ButtonFlee = 503;
 	static constexpr int ButtonQuit = 504;
@@ -39,6 +38,7 @@ private:
 	static constexpr int ButtonEquip = 509;
 	static constexpr int ButtonInventoryPrevious = 510;
 	static constexpr int ButtonInventoryNext = 511;
+	static constexpr UINT RefreshControlsMessage = WM_APP + 1;
 
 	static LRESULT CALLBACK WindowProcedure(HWND window, UINT message,
 											 WPARAM wParam, LPARAM lParam);
@@ -85,6 +85,7 @@ private:
 	ProgressionManager progression_;
 	Enemy* activeEnemy_;
 	std::vector<std::string> log_;
+	std::string statusMessage_;
 	InventorySort inventorySort_ = InventorySort::RecentlyObtained;
 	std::vector<int> visibleRoomIndices_;
 	int selectedInventoryIndex_ = -1;
@@ -92,4 +93,7 @@ private:
 	std::vector<Item*> inventoryEntryItems_;
 	std::vector<std::string> inventoryEntryDescriptions_;
 	int inventoryPage_ = 0;
+	bool refreshingControls_ = false;
+	bool handlingCommand_ = false;
+	bool refreshPosted_ = false;
 };

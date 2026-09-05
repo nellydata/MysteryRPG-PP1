@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <cstdlib>
 #include <cstdio>
+#include <array>
 
 namespace {
 constexpr COLORREF Background = RGB(24, 24, 24);
@@ -117,6 +118,7 @@ void Win32UI::PromptForName(HINSTANCE instance) {
 								  instance, this);
 	if (nameWindow_ == nullptr) {
 		player_.SetName("Adelaide");
+		completionMode_ = true;
 		return;
 	}
 	ShowWindow(nameWindow_, SW_SHOW);
@@ -153,8 +155,7 @@ void Win32UI::CreateControls() {
 														   CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, L"IM FELL English");
 
 	auto createButton = [&](int index, int id, const wchar_t* text) {
-		const DWORD style = WS_CHILD | WS_TABSTOP | BS_PUSHBUTTON |
-			(index < 4 ? BS_OWNERDRAW : 0);
+		const DWORD style = WS_CHILD | WS_TABSTOP | BS_PUSHBUTTON | BS_OWNERDRAW;
 		controls_[index] = CreateWindowW(L"BUTTON", text, style,
 										 0, 0, 0, 0, window_, reinterpret_cast<HMENU>(id),
 										 GetModuleHandleW(nullptr), nullptr);
@@ -164,12 +165,11 @@ void Win32UI::CreateControls() {
 	for (int i = 0; i < 4; ++i) createButton(i, RoomButtonBase + i, L"Room");
 	for (int i = 0; i < 4; ++i) createButton(4 + i, InspectButtonBase + i, L"Inspect");
 	for (int i = 0; i < 12; ++i) createButton(8 + i, InventoryButtonBase + i, L"Item");
-	createButton(20, ButtonSearch, L"Search room");
+	createButton(20, ButtonSearch, L"Investigate");
 	createButton(21, ButtonBack, L"Back");
 	createButton(22, ButtonMap, L"Map");
-	createButton(23, ButtonSkills, L"Shimmer skills");
+	createButton(23, ButtonSkills, L"Skills");
 	createButton(24, ButtonAttack, L"ATTACK");
-	createButton(25, ButtonBlock, L"BLOCK");
 	createButton(26, ButtonShimmer, L"SHIMMER");
 	createButton(27, ButtonFlee, L"FLEE");
 	createButton(28, ButtonQuit, L"Quit");
@@ -184,7 +184,8 @@ void Win32UI::CreateControls() {
 }
 
 void Win32UI::RefreshControls() {
-	if (controls_[0] == nullptr) return;
+	if (controls_[0] == nullptr || refreshingControls_) return;
+	refreshingControls_ = true;
 	for (HWND control : controls_) if (control != nullptr) ShowWindow(control, SW_HIDE);
 
 	if (view_ == View::Map) {
@@ -206,14 +207,18 @@ void Win32UI::RefreshControls() {
 		ShowWindow(controls_[23], SW_SHOW);
 		ShowWindow(controls_[28], SW_SHOW);
 	} else if (view_ == View::Room && selectedRoom_ >= 0) {
-		const auto& interactables = mapManager_.GetRooms()[selectedRoom_].GetVisibleInteractables();
-		for (std::size_t i = 0; i < interactables.size() && i < 4; ++i) {
-			SetWindowTextW(controls_[4 + i], ToWide(interactables[i]).c_str());
-			ShowWindow(controls_[4 + i], SW_SHOW);
+		if (selectedRoom_ >= static_cast<int>(mapManager_.GetRooms().size())) {
+			view_ = View::Floor;
+		} else {
+			const auto& interactables = mapManager_.GetRooms()[selectedRoom_].GetVisibleInteractables();
+			for (std::size_t i = 0; i < interactables.size() && i < 4; ++i) {
+				SetWindowTextW(controls_[4 + i], ToWide(interactables[i]).c_str());
+				ShowWindow(controls_[4 + i], SW_SHOW);
+			}
+			ShowWindow(controls_[20], SW_SHOW);
+			ShowWindow(controls_[21], SW_SHOW);
+			ShowWindow(controls_[22], SW_SHOW);
 		}
-		ShowWindow(controls_[20], SW_SHOW);
-		ShowWindow(controls_[21], SW_SHOW);
-		ShowWindow(controls_[22], SW_SHOW);
 	} else if (view_ == View::Inventory) {
 		inventoryEntryItems_.clear();
 		inventoryEntryDescriptions_.clear();
@@ -250,13 +255,13 @@ void Win32UI::RefreshControls() {
 		ShowWindow(controls_[35], SW_SHOW);
 	} else if (view_ == View::Combat) {
 		ShowWindow(controls_[24], SW_SHOW);
-		ShowWindow(controls_[25], SW_SHOW);
 		ShowWindow(controls_[26], SW_SHOW);
 		ShowWindow(controls_[27], SW_SHOW);
 	} else {
 		ShowWindow(controls_[21], SW_SHOW);
 	}
 	Invalidate();
+	refreshingControls_ = false;
 }
 
 void Win32UI::LayoutControls(int width, int height) {
@@ -265,7 +270,7 @@ void Win32UI::LayoutControls(int width, int height) {
 	const int buttonHeight = 42;
 	const int eventTop = (std::max)(120, height - 260);
 	const int actionY = eventTop + 28;
-	const int inventoryActionY = eventTop + 170;
+	const int inventoryActionY = eventTop + 190;
 	const int safeRight = (std::max)(center + 620, width - 20);
 
 	for (int i = 0; i < 4; ++i) {
@@ -273,40 +278,51 @@ void Win32UI::LayoutControls(int width, int height) {
 				   buttonWidth, buttonHeight, TRUE);
 	}
 	for (int i = 0; i < 4; ++i) {
-		MoveWindow(controls_[4 + i], center + (i % 2) * 225, actionY + (i / 2) * 50,
-				   buttonWidth, buttonHeight, TRUE);
+		const int column = i % 2;
+		const int row = i / 2;
+		MoveWindow(controls_[4 + i], center + column * 300, actionY + row * 58,
+				   260, buttonHeight, TRUE);
 	}
 	for (int i = 0; i < 12; ++i) {
 		MoveWindow(controls_[8 + i], center + (i % 3) * 275,
 				   132 + (i / 3) * 48, 250, 38, TRUE);
 	}
 	MoveWindow(controls_[20], center, actionY + 104, buttonWidth, buttonHeight, TRUE);
-	MoveWindow(controls_[21], center + 215, actionY + 104, buttonWidth, buttonHeight, TRUE);
+	MoveWindow(controls_[21], center + 300, actionY + 116, 260, buttonHeight, TRUE);
 	MoveWindow(controls_[22], safeRight - 180, 40, 180, buttonHeight, TRUE);
 	MoveWindow(controls_[29], safeRight - 180, 92, 180, buttonHeight, TRUE);
 	MoveWindow(controls_[23], safeRight - 180, 144, 180, buttonHeight, TRUE);
 	MoveWindow(controls_[28], safeRight - 180, 196, 180, buttonHeight, TRUE);
-	for (int i = 0; i < 4; ++i) MoveWindow(controls_[24 + i], center + i * 165, actionY, 150, 44, TRUE);
+	MoveWindow(controls_[24], center, actionY, 180, 44, TRUE);
+	MoveWindow(controls_[26], center + 190, actionY, 180, 44, TRUE);
+	MoveWindow(controls_[27], center + 380, actionY, 180, 44, TRUE);
 	MoveWindow(controls_[30], center, inventoryActionY, 180, 42, TRUE);
 	MoveWindow(controls_[31], center + 190, inventoryActionY, 180, 42, TRUE);
 	MoveWindow(controls_[32], center + 380, inventoryActionY, 180, 42, TRUE);
 	MoveWindow(controls_[33], center + 570, inventoryActionY, 180, 42, TRUE);
-	MoveWindow(controls_[34], center, inventoryActionY + 54, 70, 38, TRUE);
-	MoveWindow(controls_[35], center + 565, inventoryActionY + 54, 70, 38, TRUE);
+	MoveWindow(controls_[34], center, inventoryActionY + 50, 70, 38, TRUE);
+	MoveWindow(controls_[35], center + 565, inventoryActionY + 50, 70, 38, TRUE);
 }
 
 void Win32UI::HandleCommand(int controlId) {
+	if (handlingCommand_) return;
+	handlingCommand_ = true;
 	if (controlId >= RoomButtonBase && controlId < RoomButtonBase + 4) {
 		const int buttonIndex = controlId - RoomButtonBase;
 		if (buttonIndex < static_cast<int>(visibleRoomIndices_.size())) EnterRoom(visibleRoomIndices_[buttonIndex]);
 	} else if (controlId >= InspectButtonBase && controlId < InspectButtonBase + 4) {
-		Inspect(controlId - InspectButtonBase);
+		if (view_ == View::Room && selectedRoom_ >= 0 &&
+			selectedRoom_ < static_cast<int>(mapManager_.GetRooms().size())) {
+			const auto& interactables = mapManager_.GetRooms()[selectedRoom_].GetVisibleInteractables();
+			const int index = controlId - InspectButtonBase;
+			if (index < static_cast<int>(interactables.size())) Inspect(index);
+		}
 	} else if (controlId >= InventoryButtonBase && controlId < InventoryButtonBase + 12) {
 		const int index = inventoryPage_ * 12 + controlId - InventoryButtonBase;
 		if (index < static_cast<int>(inventoryEntryItems_.size())) {
 			selectedInventoryIndex_ = index;
-			AddLog(inventoryEntryItems_[index] == nullptr ? "Selected clue. Choose Use below." :
-				"Selected " + inventoryEntryItems_[index]->getName() + ". Choose Use below.");
+			statusMessage_ = inventoryEntryItems_[index] == nullptr ? "Clue selected." :
+				inventoryEntryItems_[index]->getName() + " selected.";
 		}
 	} else if (controlId == ButtonInventoryPrevious) {
 		if (inventoryPage_ > 0) --inventoryPage_;
@@ -316,7 +332,8 @@ void Win32UI::HandleCommand(int controlId) {
 		if (inventoryPage_ + 1 < pageCount) ++inventoryPage_;
 		selectedInventoryIndex_ = -1;
 	} else if (controlId == ButtonSearch) {
-		SearchRoom();
+		if (view_ == View::Room && selectedRoom_ >= 0 &&
+			selectedRoom_ < static_cast<int>(mapManager_.GetRooms().size())) SearchRoom();
 	} else if (controlId == ButtonBack) {
 		view_ = View::Floor;
 	} else if (controlId == ButtonMap) {
@@ -329,9 +346,9 @@ void Win32UI::HandleCommand(int controlId) {
 		selectedInventoryIndex_ = -1;
 		inventoryPage_ = 0;
 	} else if (controlId == ButtonLock || controlId == ButtonDiscard) {
-		const auto items = player_.GetInventory().GetSortedItems(inventorySort_);
-		if (!items.empty()) {
-			const std::string name = items.front()->getName();
+		if (selectedInventoryIndex_ >= 0 && selectedInventoryIndex_ < static_cast<int>(inventoryEntryItems_.size()) &&
+			inventoryEntryItems_[selectedInventoryIndex_] != nullptr) {
+			const std::string name = inventoryEntryItems_[selectedInventoryIndex_]->getName();
 			if (controlId == ButtonLock) {
 				player_.GetInventory().SetLocked(name, !player_.GetInventory().IsLocked(name));
 				AddLog((player_.GetInventory().IsLocked(name) ? "Locked " : "Unlocked ") + name + ".");
@@ -339,24 +356,24 @@ void Win32UI::HandleCommand(int controlId) {
 			selectedInventoryIndex_ = -1;
 		}
 	} else if (controlId == ButtonEquip) {
-		const auto items = player_.GetInventory().GetSortedItems(inventorySort_);
-		std::vector<Item*> entries;
-		for (Item* item : items)
-			for (int quantity = 0; quantity < player_.GetInventory().GetQuantity(item->getName()); ++quantity)
-				entries.push_back(item);
-		if (selectedInventoryIndex_ >= 0 && selectedInventoryIndex_ < static_cast<int>(entries.size())) {
-			Item& item = *entries[selectedInventoryIndex_];
+		if (selectedInventoryIndex_ >= 0 && selectedInventoryIndex_ < static_cast<int>(inventoryEntryItems_.size()) &&
+			inventoryEntryItems_[selectedInventoryIndex_] != nullptr) {
+			Item& item = *inventoryEntryItems_[selectedInventoryIndex_];
 			if (item.isEquippable()) {
 				const Item* equipped = player_.GetEquipped(item.getSlot());
 				player_.ToggleEquip(item);
 				AddLog(std::string(equipped == &item ? "Unequipped " : "Equipped ") + item.getName() + ".");
 			} else if (item.getCategory() == ItemCategory::Consumable) {
-				if (player_.UseConsumable(item.getName())) AddLog("Used " + item.getName() + ".");
+				if (player_.UseConsumable(item.getName())) {
+					AddLog("Used " + item.getName() + ": " + item.getDescription());
+					statusMessage_ = item.getDescription();
+				}
 				else AddLog("That consumable cannot be used right now.");
 			} else if (item.getCategory() == ItemCategory::Crux) {
 				if (progression_.UnlockCrux(item.getName())) {
 					player_.GetInventory().RemoveItem(item.getName());
-					AddLog("Crux activated: " + item.getName() + ".");
+					AddLog("Crux activated: " + item.getName() + ". " + item.getDescription());
+					statusMessage_ = "Crux activated: " + item.getDescription();
 				} else AddLog("The conditions for that crux are not met.");
 			} else {
 				AddLog("That item has no usable action here.");
@@ -366,17 +383,20 @@ void Win32UI::HandleCommand(int controlId) {
 		view_ = View::Skills;
 	} else if (controlId == ButtonAttack) {
 		PerformCombatAction(CombatAction::Attack);
-	} else if (controlId == ButtonBlock) {
-		PerformCombatAction(CombatAction::Block);
 	} else if (controlId == ButtonShimmer) {
 		PerformCombatAction(CombatAction::Shimmer);
 	} else if (controlId == ButtonFlee) {
 		PerformCombatAction(CombatAction::Flee);
 	} else if (controlId == ButtonQuit) {
 		PostMessageW(window_, WM_CLOSE, 0, 0);
+		handlingCommand_ = false;
 		return;
 	}
-	RefreshControls();
+	if (!refreshPosted_) {
+		refreshPosted_ = true;
+		PostMessageW(window_, RefreshControlsMessage, 0, 0);
+	}
+	handlingCommand_ = false;
 }
 
 void Win32UI::InitializeCompletionState() {
@@ -399,34 +419,13 @@ void Win32UI::EnterRoom(int roomIndex) {
 	Area& area = mapManager_.GetRooms()[roomIndex];
 	if (!area.IsUnlocked()) return;
 	activeEnemy_ = area.getFirstAliveEnemy();
-	if (activeEnemy_ == nullptr && area.IsFullySearched() && !area.HasBossBeenEncountered() &&
-		static_cast<int>(RoomSeed(area.getName()) % 100) < 50) {
-		area.MarkBossEncountered();
-		const int enemyLevel = progression_.GetLevel() + 3;
-		area.addEnemy(std::make_unique<Enemy>("Cathedral Boss", 35 + enemyLevel * 5,
-			10 + enemyLevel * 2, 100, enemyLevel));
-		activeEnemy_ = area.getFirstAliveEnemy();
-	} else if (activeEnemy_ == nullptr && static_cast<int>((RoomSeed(area.getName()) + area.GetSearchCount()) % 100) < SpawnChance(area.GetSpawnCondition())) {
-		const int enemyLevel = progression_.GetLevel() + static_cast<int>(RoomSeed(area.getName()) % 6) - 2;
-		const int boundedLevel = (std::max)(1, enemyLevel);
-		switch (RoomSeed(area.getName()) % 3) {
-		case 0: area.addEnemy(std::make_unique<Enemy>("Automata", 12 + boundedLevel * 2, 3 + boundedLevel, 15, boundedLevel)); break;
-		case 1: area.addEnemy(std::make_unique<Enemy>("Nun", 18 + boundedLevel * 2, 4 + boundedLevel, 15, boundedLevel)); break;
-		default: area.addEnemy(std::make_unique<Enemy>("Shimmer Husk", 10 + boundedLevel * 2, 3 + boundedLevel, 15, boundedLevel)); break;
-		}
-		activeEnemy_ = area.getFirstAliveEnemy();
-	}
-	if (activeEnemy_ != nullptr) {
-		combat_.BeginEncounter(*activeEnemy_);
-		view_ = View::Combat;
-		AddLog("A hostile presence emerges in " + area.getName() + ".");
-	} else {
-		view_ = View::Room;
-		AddLog("Entered " + area.getName() + ".");
-	}
+	view_ = activeEnemy_ != nullptr && activeEnemy_->isAlive() ? View::Combat : View::Room;
+	if (view_ == View::Room) activeEnemy_ = nullptr;
+	AddLog("Entered " + area.getName() + ". Investigate the visible interactions.");
 }
 
 void Win32UI::Inspect(int interactableIndex) {
+	if (selectedRoom_ < 0 || selectedRoom_ >= static_cast<int>(mapManager_.GetRooms().size())) return;
 	Area& area = mapManager_.GetRooms()[selectedRoom_];
 	if (interactableIndex < 0 || interactableIndex >= static_cast<int>(area.GetVisibleInteractables().size())) return;
 	const std::string object = area.GetVisibleInteractables()[interactableIndex];
@@ -435,12 +434,16 @@ void Win32UI::Inspect(int interactableIndex) {
 		progression_.GrantXP(10);
 		progression_.CheckLevelUp(player_);
 		AddLog("Investigation: clue recovered from " + object + ".");
+		statusMessage_ = "Investigation complete: clue recovered.";
 	} else {
 		AddLog("Investigation: nothing new revealed at " + object + ".");
+		statusMessage_ = "Investigation complete: nothing new revealed.";
 	}
 }
 
 void Win32UI::SearchRoom() {
+	if (selectedRoom_ < 0 || selectedRoom_ >= static_cast<int>(mapManager_.GetRooms().size())) return;
+	statusMessage_ = "Investigating the room...";
 	Area& area = mapManager_.GetRooms()[selectedRoom_];
 	area.RecordSearch();
 	const unsigned searchSeed = RoomSeed(area.getName()) + static_cast<unsigned>(area.GetSearchCount() * 31);
@@ -461,6 +464,11 @@ void Win32UI::SearchRoom() {
 			AddLog("Search: an Automata stirs in the cleared room.");
 		}
 		activeEnemy_ = area.getFirstAliveEnemy();
+		if (activeEnemy_ == nullptr || !activeEnemy_->isAlive()) {
+			activeEnemy_ = nullptr;
+			view_ = View::Room;
+			return;
+		}
 		combat_.BeginEncounter(*activeEnemy_);
 		view_ = View::Combat;
 		return;
@@ -472,6 +480,7 @@ void Win32UI::SearchRoom() {
 		area.addEnemy(std::make_unique<Enemy>("Cathedral Boss", 35 + enemyLevel * 5,
 			10 + enemyLevel * 2, 100, enemyLevel));
 		activeEnemy_ = area.getFirstAliveEnemy();
+		if (activeEnemy_ == nullptr) return;
 		combat_.BeginEncounter(*activeEnemy_);
 		view_ = View::Combat;
 		AddLog("Search: the Cathedral Boss emerges from the investigated room.");
@@ -484,6 +493,7 @@ void Win32UI::SearchRoom() {
 		default: area.addEnemy(std::make_unique<Enemy>("Nun", 18 + enemyLevel * 2, 4 + enemyLevel, 15, enemyLevel)); break;
 		}
 		activeEnemy_ = area.getFirstAliveEnemy();
+		if (activeEnemy_ == nullptr) return;
 		combat_.BeginEncounter(*activeEnemy_);
 		view_ = View::Combat;
 		AddLog("Search: an enemy ambushes you in " + area.getName() + ".");
@@ -496,6 +506,7 @@ void Win32UI::SearchRoom() {
 		area.addEnemy(std::make_unique<Enemy>("Cathedral Boss", 35 + enemyLevel * 5,
 			10 + enemyLevel * 2, 100, enemyLevel));
 		activeEnemy_ = area.getFirstAliveEnemy();
+		if (activeEnemy_ == nullptr) return;
 		combat_.BeginEncounter(*activeEnemy_);
 		view_ = View::Combat;
 		AddLog("Search: the Cathedral Boss emerges from the investigated room.");
@@ -516,21 +527,38 @@ void Win32UI::SearchRoom() {
 }
 
 void Win32UI::PerformCombatAction(CombatAction action) {
-	if (activeEnemy_ == nullptr) return;
+	if (selectedRoom_ < 0 || selectedRoom_ >= static_cast<int>(mapManager_.GetRooms().size()) ||
+		activeEnemy_ == nullptr || !activeEnemy_->isAlive()) {
+		activeEnemy_ = nullptr;
+		view_ = View::Room;
+		return;
+	}
+	if (action != CombatAction::Flee && !combat_.IsPlayerTurn()) {
+		AddLog("Wait for your turn.");
+		return;
+	}
 	if (action == CombatAction::Flee) {
 		AddLog("Adelaide withdrew from combat.");
+		statusMessage_ = "Battle ended: Adelaide fled.";
+		activeEnemy_ = nullptr;
 		view_ = View::Room;
 		return;
 	}
 	if (!combat_.resolve(action, player_, *activeEnemy_, nullptr, &progression_)) {
+		statusMessage_ = action == CombatAction::Shimmer ? "Shimmer is unavailable or still recharging." : "That combat action is unavailable.";
 		AddLog("That action is unavailable.");
 		return;
 	}
+	statusMessage_ = action == CombatAction::Shimmer ? "Shimmer effect resolved." : "Adelaide's action resolved.";
 	if (!activeEnemy_->isAlive()) {
-		AddLog("The enemy was defeated.");
 		Area& area = mapManager_.GetRooms()[selectedRoom_];
-		const bool wasBoss = activeEnemy_->getName() == "Cathedral Boss";
+		const std::string defeatedName = activeEnemy_->getName();
+		const int defeatedLevel = activeEnemy_->getLevel();
+		const int xpReward = activeEnemy_->getXPReward();
+		const bool wasBoss = defeatedName == "Cathedral Boss";
 		area.removeDeadEnemies();
+		statusMessage_ = "Battle ended: " + defeatedName + " defeated. XP gained: " + std::to_string(xpReward) + ".";
+		AddLog("Battle ended: " + defeatedName + " defeated. XP gained: " + std::to_string(xpReward) + ".");
 		if (wasBoss) {
 			area.SetBossDefeated(true);
 			if (selectedRoom_ + 1 < static_cast<int>(mapManager_.GetRooms().size())) {
@@ -538,10 +566,9 @@ void Win32UI::PerformCombatAction(CombatAction action) {
 				AddLog("The next area is now visible on the map.");
 			}
 		}
-		const int level = activeEnemy_->getLevel();
-		const unsigned dropRoll = RoomSeed(activeEnemy_->getName()) + static_cast<unsigned>(level * 17 + area.GetSearchCount());
+		const unsigned dropRoll = RoomSeed(defeatedName) + static_cast<unsigned>(defeatedLevel * 17 + area.GetSearchCount());
 		const bool canDropEpic = wasBoss;
-		if (dropRoll % 100 < (std::min)(80, 10 + level)) {
+		if (dropRoll % 100 < (std::min)(80, 10 + defeatedLevel)) {
 			const auto catalog = BuildEquippableCatalog();
 			const int index = static_cast<int>(dropRoll % catalog.size());
 			const bool allowed = canDropEpic ? catalog[index].rarity != Rarity::Legendary && catalog[index].rarity != Rarity::Artifact
@@ -549,6 +576,7 @@ void Win32UI::PerformCombatAction(CombatAction action) {
 			if (allowed) {
 				player_.AddItem(std::make_unique<Item>(catalog[index]));
 				AddLog("Drop: " + catalog[index].name + ".");
+				statusMessage_ += " Item dropped: " + catalog[index].name + ".";
 			}
 		}
 		activeEnemy_ = nullptr;
@@ -556,8 +584,12 @@ void Win32UI::PerformCombatAction(CombatAction action) {
 		return;
 	}
 	combat_.enemyTurn(player_, *activeEnemy_);
-	AddLog("The enemy takes its turn.");
+	statusMessage_ = player_.isAlive() ? "The enemy acted. Adelaide's turn." : "Adelaide has fallen.";
 	if (!player_.isAlive()) AddLog("Adelaide has fallen.");
+	if (!player_.isAlive()) {
+		activeEnemy_ = nullptr;
+		view_ = View::Room;
+	}
 }
 
 void Win32UI::AddLog(const std::string& message) {
@@ -596,10 +628,21 @@ LRESULT CALLBACK Win32UI::NameProcedure(HWND window, UINT message, WPARAM wParam
 			HFONT promptFont = CreateFontW(18, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
 				DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY,
 				DEFAULT_PITCH | FF_DONTCARE, L"IM FELL English");
-			HWND promptLabel = CreateWindowW(L"STATIC", L"What should the investigator be called?",
+			const std::array<const wchar_t*, 4> questions = {
+				L"Who is this poor soul?",
+				L"A name long forgotten...",
+				L"What name survived the dark?",
+				L"Who enters beneath the cathedral?"
+			};
+			const wchar_t* question = questions[GetTickCount() % questions.size()];
+			HWND promptLabel = CreateWindowW(L"STATIC", question,
 					  WS_CHILD | WS_VISIBLE, 24, 22, 410, 24, window, nullptr,
 					  GetModuleHandleW(nullptr), nullptr);
 			SendMessageW(promptLabel, WM_SETFONT, reinterpret_cast<WPARAM>(promptFont), TRUE);
+			HWND promptHint = CreateWindowW(L"STATIC", L"Leave blank for developer mode.",
+					  WS_CHILD | WS_VISIBLE, 24, 38, 410, 20, window, nullptr,
+					  GetModuleHandleW(nullptr), nullptr);
+			SendMessageW(promptHint, WM_SETFONT, reinterpret_cast<WPARAM>(promptFont), TRUE);
 		ui->nameEdit_ = CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", L"",
 										WS_CHILD | WS_VISIBLE | WS_TABSTOP | ES_AUTOHSCROLL,
 										24, 58, 410, 34, window, nullptr,
@@ -621,6 +664,7 @@ LRESULT CALLBACK Win32UI::NameProcedure(HWND window, UINT message, WPARAM wParam
 			if (name.empty()) {
 				name = L"Adelaide";
 				ui->completionMode_ = true;
+				ui->AddLog("Developer mode is active. The cathedral remembers everything.");
 			}
 			ui->player_.SetName(ui->ToNarrow(name));
 			DestroyWindow(window);
@@ -630,6 +674,7 @@ LRESULT CALLBACK Win32UI::NameProcedure(HWND window, UINT message, WPARAM wParam
 	case WM_CLOSE:
 		ui->player_.SetName("Adelaide");
 		ui->completionMode_ = true;
+		ui->AddLog("Developer mode is active. The cathedral remembers everything.");
 		DestroyWindow(window);
 		return 0;
 	case WM_DESTROY:
@@ -661,22 +706,21 @@ LRESULT Win32UI::HandleMessage(UINT message, WPARAM wParam, LPARAM lParam) {
 	case WM_SIZE:
 		LayoutControls(LOWORD(lParam), HIWORD(lParam));
 		return 0;
+	case RefreshControlsMessage:
+		refreshPosted_ = false;
+		RefreshControls();
+		return 0;
 	case WM_COMMAND:
 		if (HIWORD(wParam) == BN_CLICKED) HandleCommand(LOWORD(wParam));
 		return 0;
 	case WM_DRAWITEM: {
 		const auto* draw = reinterpret_cast<const DRAWITEMSTRUCT*>(lParam);
-		if (draw != nullptr && draw->CtlType == ODT_BUTTON &&
-			((draw->CtlID >= RoomButtonBase && draw->CtlID < RoomButtonBase + 4) ||
-			 (draw->CtlID >= InventoryButtonBase && draw->CtlID < InventoryButtonBase + 12))) {
-			const bool inventoryButton = draw->CtlID >= InventoryButtonBase;
-			const int buttonIndex = draw->CtlID - RoomButtonBase;
-			const bool complete = !inventoryButton && buttonIndex < static_cast<int>(visibleRoomIndices_.size()) &&
-				mapManager_.GetRooms()[visibleRoomIndices_[buttonIndex]].IsFullySearched();
-			HBRUSH brush = CreateSolidBrush(((draw->itemState & ODS_SELECTED) != 0) ? RGB(210, 205, 198) : RGB(245, 242, 238));
+		if (draw != nullptr && draw->CtlType == ODT_BUTTON) {
+			const bool inventoryButton = draw->CtlID >= InventoryButtonBase && draw->CtlID < InventoryButtonBase + 12;
+			HBRUSH brush = CreateSolidBrush(((draw->itemState & ODS_SELECTED) != 0) ? RGB(45, 45, 45) : Background);
 			FillRect(draw->hDC, &draw->rcItem, brush);
 			DeleteObject(brush);
-			FrameRect(draw->hDC, &draw->rcItem, reinterpret_cast<HBRUSH>(GetStockObject(GRAY_BRUSH)));
+			FrameRect(draw->hDC, &draw->rcItem, reinterpret_cast<HBRUSH>(GetStockObject(WHITE_BRUSH)));
 			wchar_t label[128]{};
 			GetWindowTextW(draw->hwndItem, label, 128);
 			SetBkMode(draw->hDC, TRANSPARENT);
@@ -687,18 +731,10 @@ LRESULT Win32UI::HandleMessage(UINT message, WPARAM wParam, LPARAM lParam) {
 				SetTextColor(draw->hDC, item == nullptr ? Muted : RarityColor(item->getRarity()));
 				DrawTextW(draw->hDC, label, -1, const_cast<RECT*>(&draw->rcItem),
 					DT_CENTER | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
-			} else if (!complete) {
-				SetTextColor(draw->hDC, RGB(35, 30, 35));
-				DrawTextW(draw->hDC, label, -1, const_cast<RECT*>(&draw->rcItem), DT_CENTER | DT_VCENTER | DT_SINGLELINE);
 			} else {
-				const COLORREF colors[] = {RGB(210, 55, 65), RGB(220, 130, 45), RGB(190, 170, 45), RGB(50, 150, 90), RGB(65, 120, 210), RGB(145, 75, 180)};
-				const int length = lstrlenW(label);
-				RECT segment = draw->rcItem;
-				for (int index = 0; index < length; ++index) {
-					wchar_t character[2] = {label[index], L'\0'};
-					SetTextColor(draw->hDC, colors[index % 6]);
-					DrawTextW(draw->hDC, character, 1, &segment, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
-				}
+				SetTextColor(draw->hDC, Text);
+				DrawTextW(draw->hDC, label, -1, const_cast<RECT*>(&draw->rcItem),
+					DT_CENTER | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
 			}
 			return 1;
 		}
@@ -761,12 +797,20 @@ void Win32UI::Paint(HDC deviceContext) {
 		DrawTextLine(deviceContext, 425, contentY + 45, L"Choose a room or open a panel using the buttons.", Muted);
 		contentY += 100;
 		DrawTextLine(deviceContext, 425, contentY, L"Select a room from the navigation buttons.", Text, 19);
-		DrawTextLine(deviceContext, 425, contentY + 38, L"Map and Shimmer Skills stay available in the upper-right.", Muted, 16);
+		DrawTextLine(deviceContext, 425, contentY + 38, L"Map and Skills stay available in the upper-right.", Muted, 16);
 	} else if (view_ == View::Room) {
+		if (selectedRoom_ < 0 || selectedRoom_ >= static_cast<int>(mapManager_.GetRooms().size())) {
+			DrawTextLine(deviceContext, 425, contentY, L"No room is currently selected.", Muted, 19);
+			return;
+		}
 		const Area& room = mapManager_.GetRooms()[selectedRoom_];
 		DrawTextLine(deviceContext, 425, contentY, ToWide(room.getName()), Shimmer, 25, true);
 		DrawTextLine(deviceContext, 425, contentY + 42, L"The cathedral holds its breath. Investigate an object below.", Muted);
 		contentY += 100;
+		if (!statusMessage_.empty()) {
+			DrawTextLine(deviceContext, 425, contentY, ToWide(statusMessage_), Shimmer, 16);
+			contentY += 32;
+		}
 		for (const auto& object : room.GetVisibleInteractables()) {
 			DrawTextLine(deviceContext, 440, contentY, L"[ ]  " + ToWide(object), Text, 18);
 			contentY += 34;
@@ -777,21 +821,60 @@ void Win32UI::Paint(HDC deviceContext) {
 		DrawTextLine(deviceContext, 425, contentY + 84, L"ATK " + std::to_wstring(activeEnemy_->getAtk()) + L"   DEF " + std::to_wstring(activeEnemy_->getDefense()) + L"   SPD " + std::to_wstring(activeEnemy_->getSpeed()), Muted, 17);
 		DrawTextLine(deviceContext, 425, contentY + 145, L"Turn order", Brass, 18, true);
 		DrawTextLine(deviceContext, 425, contentY + 180, ToWide(player_.getName()) + L"  >  " + ToWide(activeEnemy_->getName()), Text, 18);
+		if (!statusMessage_.empty()) DrawTextLine(deviceContext, 425, contentY + 225, ToWide(statusMessage_), Shimmer, 16);
 	} else if (view_ == View::Inventory) {
+		DrawPanel(deviceContext, {395, eventTop, client.right - 20, client.bottom - 20}, L"ITEM INFORMATION");
 		DrawTextLine(deviceContext, 425, contentY, L"INVENTORY // SELECT AN ITEM, THEN EQUIP", Shimmer, 23, true);
 		DrawTextLine(deviceContext, 425, contentY + 42, L"Select an item to view its details below.", Muted, 16);
+		if (!statusMessage_.empty()) DrawTextLine(deviceContext, 425, contentY + 70, ToWide(statusMessage_), Shimmer, 15);
 		if (selectedInventoryIndex_ >= 0 && selectedInventoryIndex_ < static_cast<int>(inventoryEntryItems_.size())) {
 			const Item* selected = inventoryEntryItems_[selectedInventoryIndex_];
 			const std::string description = inventoryEntryDescriptions_[selectedInventoryIndex_];
 			const Rarity rarity = selected == nullptr ? Rarity::Common : selected->getRarity();
 			DrawTextLine(deviceContext, 425, eventTop + 42, ToWide(selected == nullptr ? "Clue" : selected->getName()), RarityColor(rarity), 20, true);
-			DrawTextLine(deviceContext, 425, eventTop + 78, ToWide(description), Text, 16);
-			if (selected != nullptr) {
+			if (selected == nullptr) {
+				DrawTextLine(deviceContext, 425, eventTop + 74, L"Type: Clue", Muted, 16);
+				DrawTextLine(deviceContext, 425, eventTop + 108, ToWide(description), Text, 16);
+			} else {
+				std::wstring type = L"Type: ";
+				switch (selected->getCategory()) {
+				case ItemCategory::Consumable: type += L"Consumable"; break;
+				case ItemCategory::Crux: type += L"Crux"; break;
+				case ItemCategory::Clue: type += L"Clue"; break;
+				case ItemCategory::ShimmerSkill: type += L"Shimmer skill"; break;
+				case ItemCategory::Equippable:
+					switch (selected->getSlot()) {
+					case EquipSlot::Head: type += L"Head"; break;
+					case EquipSlot::Torso: type += L"Torso"; break;
+					case EquipSlot::Boots: type += L"Feet"; break;
+					case EquipSlot::Hand: type += L"Hands"; break;
+					default: type += L"Equipment"; break;
+					}
+					break;
+				}
+				DrawTextLine(deviceContext, 425, eventTop + 74, type, Muted, 16);
 				const Stats& stats = selected->getStats();
-				DrawTextLine(deviceContext, 425, eventTop + 116,
-					L"ATK " + std::to_wstring(stats.atk) + L"   DEF " + std::to_wstring(stats.def) +
-					L"   HP " + std::to_wstring(stats.hp) + L"   SPD " + std::to_wstring(stats.spd),
-					Muted, 16);
+				const bool hasStats = stats.hp != 0 || stats.def != 0 || stats.spd != 0 || stats.atk != 0 ||
+					stats.acc != 0 || stats.res != 0 || stats.critRate != 0 || stats.critDamage != 0;
+				int detailY = eventTop + 108;
+				if (hasStats) {
+					DrawTextLine(deviceContext, 425, detailY,
+						L"Stats: HP " + std::to_wstring(stats.hp) + L"  DEF " + std::to_wstring(stats.def) +
+						L"  ATK " + std::to_wstring(stats.atk) + L"  SPD " + std::to_wstring(stats.spd), Text, 16);
+					detailY += 32;
+				}
+				if (selected->getCategory() == ItemCategory::Consumable) {
+					DrawTextLine(deviceContext, 425, detailY, L"Effect: " + ToWide(selected->getEffect()), Text, 16);
+					detailY += 32;
+				} else if (selected->getCategory() == ItemCategory::Crux) {
+					DrawTextLine(deviceContext, 425, detailY, L"Lore: " + ToWide(selected->getDescription()), Text, 16);
+					detailY += 32;
+				} else {
+					DrawTextLine(deviceContext, 425, detailY, ToWide(description), Text, 16);
+				}
+				if (!selected->getUniqueEffect().empty()) {
+					DrawTextLine(deviceContext, 425, detailY + 32, L"Special: " + ToWide(selected->getUniqueEffect()), Muted, 15);
+				}
 			}
 		}
 	} else if (view_ == View::Map) {
@@ -804,7 +887,7 @@ void Win32UI::Paint(HDC deviceContext) {
 			}
 		}
 	} else if (view_ == View::Skills) {
-		DrawTextLine(deviceContext, 425, contentY, L"SHIMMER SKILLS // LATIN RESONANCE", Shimmer, 23, true);
+		DrawTextLine(deviceContext, 425, contentY, L"SKILLS // LATIN RESONANCE", Shimmer, 23, true);
 		const std::vector<std::wstring> skills = {L"Pulsus Luminis   CD 3", L"Velum Radiāns    CD 4", L"Gradus Coruscus  CD 2", L"Fulgur Aurorae   CD 5", L"Lux Sanctorum    CD 4"};
 		contentY += 55;
 		for (const auto& skill : skills) { DrawTextLine(deviceContext, 440, contentY, skill, Text, 18); contentY += 34; }
@@ -818,8 +901,6 @@ void Win32UI::Paint(HDC deviceContext) {
 			DrawTextLine(deviceContext, 420, logY, ToWide(log_[i]), Muted, 14);
 			logY += 22;
 		}
-	} else if (view_ == View::Inventory) {
-		DrawPanel(deviceContext, {395, eventTop, client.right - 20, client.bottom - 20}, L"ITEM INFORMATION");
 	}
 }
 

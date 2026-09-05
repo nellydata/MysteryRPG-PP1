@@ -44,7 +44,7 @@ int InterrogationChance(const Enemy& enemy, int playerLevel) {
 
 CombatManager::CombatManager()
     : blocked_(false), weaknessExposed_(false), interrogationAttempts_(0),
-      turnNumber_(0), activeEnemy_(nullptr),
+      turnNumber_(0), playerTurn_(true), activeEnemy_(nullptr),
       defaultSkill_(ShimmerSkill::Create("Pulsus Luminis")) {}
 
 CombatManager::~CombatManager() = default;
@@ -56,6 +56,7 @@ void CombatManager::BeginEncounter(Enemy& enemy) {
     activeEnemy_ = &enemy;
     blocked_ = false;
     turnNumber_ = 0;
+    playerTurn_ = true;
     weaknessExposed_ = false;
     interrogationAttempts_ = 0;
 }
@@ -68,6 +69,7 @@ bool CombatManager::resolve(CombatAction action, Player& player, Enemy& enemy,
     player.ProcessStatuses();
     enemy.ProcessStatuses();
     if (!player.isAlive() || !enemy.isAlive()) return false;
+    if (!playerTurn_) return false;
     ++turnNumber_;
 
     switch (action) {
@@ -87,12 +89,9 @@ bool CombatManager::resolve(CombatAction action, Player& player, Enemy& enemy,
             progression->GrantXP(enemy.getXPReward());
             progression->CheckLevelUp(player);
         }
+        if (enemy.isAlive()) playerTurn_ = false;
         return true;
     }
-    case CombatAction::Block:
-        blocked_ = true;
-        std::cout << "Adelaide braces for the next attack.\n";
-        return true;
     case CombatAction::Shimmer:
         if (skill == nullptr) skill = defaultSkill_.get();
         if (skill == nullptr || !skill->IsReady()) {
@@ -101,11 +100,16 @@ bool CombatManager::resolve(CombatAction action, Player& player, Enemy& enemy,
         }
         skill->apply(player, enemy);
         skill->ResetCooldown();
+        if (enemy.isAlive()) playerTurn_ = false;
         return true;
-    case CombatAction::Interrogate:
-        return interrogate(player, enemy, progression);
+    case CombatAction::Interrogate: {
+        const bool result = interrogate(player, enemy, progression);
+        if (result && enemy.isAlive()) playerTurn_ = false;
+        return result;
+    }
     case CombatAction::ExposeWeakness:
         weaknessExposed_ = true;
+        playerTurn_ = false;
         std::cout << "A weakness in " << enemy.getName() << " is exposed.\n";
         return true;
     case CombatAction::Flee:
@@ -121,21 +125,25 @@ void CombatManager::enemyTurn(Player& player, Enemy& enemy) {
 
     if (enemy.HasStatus(StatusType::Stun)) {
         std::cout << enemy.getName() << " loses its turn to the stun.\n";
+        playerTurn_ = true;
         return;
     }
     if (player.HasStatus(StatusType::Barrier)) {
         player.ClearStatuses();
         std::cout << "The Shimmer barrier negates the attack.\n";
+        playerTurn_ = true;
         return;
     }
-    const int attackDamage = blocked_ ? enemy.getAtk() / 2 : enemy.getAtk();
+    const int attackDamage = enemy.getAtk();
     const int damage = std::max(0, static_cast<int>(std::lround(
         static_cast<double>(attackDamage) * 100.0 / (100.0 + player.getDefense()))));
     player.takeDamage(damage);
-    blocked_ = false;
     std::cout << enemy.getName() << " attacks for " << damage << " damage.\n";
     if (defaultSkill_ != nullptr) defaultSkill_->TickCooldown();
+    playerTurn_ = true;
 }
+
+bool CombatManager::IsPlayerTurn() const { return playerTurn_; }
 
 bool CombatManager::interrogate(Player& player, Enemy& enemy,
                                 ProgressionManager* progression) {

@@ -116,9 +116,9 @@ bool EncounterManager::Explore(Area& area, Player& player,
         if (enemy != nullptr) {
             combat.BeginEncounter(*enemy);
             ui.RenderCombat(player, progression, *enemy, combat);
-            const int choice = ui.Prompt("Choose a combat action.", 1, 6);
+            const int choice = ui.Prompt("Choose a combat action.", 1, 5);
 
-            if (choice == 6) {
+            if (choice == 5) {
                 combat.resolve(CombatAction::Flee, player, *enemy);
                 return false;
             }
@@ -126,10 +126,9 @@ bool EncounterManager::Explore(Area& area, Player& player,
             CombatAction action;
             switch (choice) {
             case 1: action = CombatAction::Attack; break;
-            case 2: action = CombatAction::Block; break;
-            case 3: action = CombatAction::Shimmer; break;
-            case 4: action = CombatAction::Interrogate; break;
-            case 5: action = CombatAction::ExposeWeakness; break;
+            case 2: action = CombatAction::Shimmer; break;
+            case 3: action = CombatAction::Interrogate; break;
+            case 4: action = CombatAction::ExposeWeakness; break;
             default:
                 std::cout << "That is not a combat action.\n";
                 continue;

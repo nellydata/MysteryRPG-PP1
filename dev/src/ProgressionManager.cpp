@@ -12,7 +12,7 @@ void ProgressionManager::GrantXP(int amount) {
 bool ProgressionManager::CheckLevelUp(Player& player) {
     bool leveledUp = false;
 
-    while (xp_ >= xpToNextLevel_) {
+    while (level_ < 100 && xpToNextLevel_ > 0 && xp_ >= xpToNextLevel_) {
         xp_ -= xpToNextLevel_;
         ++level_;
         player.SetLevelStats(level_);
@@ -32,7 +32,9 @@ int ProgressionManager::GetXPToNextLevel() const { return xpToNextLevel_; }
 void ProgressionManager::SetMaxLevel(Player& player) {
     level_ = 100;
     xp_ = 0;
-    xpToNextLevel_ = 0;
+    // Keep the threshold valid so future XP rewards cannot create an endless
+    // level-up loop while the player remains at the completion-mode level.
+    xpToNextLevel_ = 100;
     player.SetLevelStats(level_);
     player.heal(player.getMaxHP());
 }

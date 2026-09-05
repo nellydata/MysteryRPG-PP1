@@ -27,6 +27,7 @@ public:
                  ProgressionManager* progression = nullptr);
     void enemyTurn(Player& player, Enemy& enemy);
     const ShimmerSkill* GetDefaultSkill() const;
+    bool IsPlayerTurn() const;
 
 private:
     bool interrogate(Player& player, Enemy& enemy,
@@ -36,6 +37,7 @@ private:
     bool weaknessExposed_;
     int interrogationAttempts_;
     int turnNumber_;
+    bool playerTurn_;
     Enemy* activeEnemy_;
     std::unique_ptr<ShimmerSkill> defaultSkill_;
 };

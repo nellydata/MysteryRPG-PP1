@@ -4,8 +4,10 @@
 #include <string>
 
 namespace {
-int ScaleStat(int base, double growth, int level) {
-	return (std::max)(1, static_cast<int>(std::lround(base * std::pow(growth, (std::max)(0, level)))));
+int ScaleStat(int base, double growth, int level, int cap) {
+	const int relativeLevel = (std::max)(0, (std::min)(100, level) - 1);
+	const int scaled = static_cast<int>(std::lround(base * std::pow(growth, relativeLevel / 10.0)));
+	return (std::max)(1, (std::min)(cap, scaled));
 }
 }
 
@@ -28,11 +30,11 @@ void Enemy::heal(int amount) {
 
 Enemy::Enemy(const EnemyDefinition& definition, int level)
 	: name_(definition.name),
-	  hp_(ScaleStat(definition.hpBase, definition.tier == EnemyTier::Boss ? 1.25 : definition.tier == EnemyTier::Elite ? 1.20 : 1.15, level)),
+	  hp_(ScaleStat(definition.hpBase, definition.tier == EnemyTier::Boss ? 1.45 : definition.tier == EnemyTier::Elite ? 1.35 : 1.25, level, 250000)),
 	  maxHp_(hp_),
-	  atk_(ScaleStat(definition.atkBase, definition.tier == EnemyTier::Boss ? 1.12 : definition.tier == EnemyTier::Elite ? 1.12 : 1.08, level)),
+	  atk_(ScaleStat(definition.atkBase, definition.tier == EnemyTier::Boss ? 1.22 : definition.tier == EnemyTier::Elite ? 1.18 : 1.14, level, 5000)),
 	  xpReward_(definition.xpReward * (std::max)(1, level)),
-	  defense_(ScaleStat(definition.defBase, definition.tier == EnemyTier::Boss ? 1.15 : definition.tier == EnemyTier::Elite ? 1.12 : 1.10, level)),
+	  defense_(ScaleStat(definition.defBase, definition.tier == EnemyTier::Boss ? 1.22 : definition.tier == EnemyTier::Elite ? 1.18 : 1.14, level, 5000)),
 	  speed_(definition.speed), level_(level), resistance_(0), evasion_(0),
 	  faction_(definition.faction), tier_(definition.tier), skills_(definition.skills),
 	  skillCooldowns_(definition.skills.size(), 0), phase_(1) {}

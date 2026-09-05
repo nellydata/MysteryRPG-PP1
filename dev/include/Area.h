@@ -26,6 +26,7 @@ public:
     const std::string& getName() const;
 
     Enemy* getFirstAliveEnemy();
+    const std::vector<std::unique_ptr<Enemy>>& GetEnemies() const;
     void removeDeadEnemies();
     void ClearEnemies();
 

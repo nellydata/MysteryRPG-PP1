@@ -135,12 +135,18 @@ Spent ~1 hour wrangling scaffolding and resolving small issues to ensure everyth
 •	Updated combat events to identify specific Bleed, Burn, and Poison effects and immediate status deaths.
 •	Replaced unsupported combat-log symbols with readable ASCII event labels.
 •	Recorded the navigation, encounter, recovery, and event-log changes for version-control tracking.
- Version 0.4.0
 •	Added metadata-driven Shimmer skill descriptions and effects to the Skills view.
 •	Added Shimmer skill equip and unequip controls using the progression loadout budget.
 •	Displayed equipped Shimmer skills in the player equipment panel.
 •	Added selectable equipped Shimmer skills to combat and connected selections to combat resolution.
 •	Validated the Shimmer loadout update with a successful Debug x64 build.
+Version 0.4.1
+•	Changed the desktop Skills heading to “SKILLS” and unlocked the starter Shimmer skill during player initialization.
+•	Replaced runaway absolute-level enemy scaling with bounded level-relative HP, ATK, and DEF formulas.
+•	Cleared player and enemy statuses when battles end and kept enemy-only Verdigris Mark out of the player panel.
+•	Added turn-gated combat controls, living-target selection, and deterministic groups of up to three ordinary enemies.
+•	Added level-weighted enemy tier selection, bounded level disparity, exact “Nothing Was Found.” investigation feedback, and active equipment-set status names.
+•	Validated the correction pass with a successful Debug x64 build.
 
 
 

@@ -280,9 +280,9 @@ void CombatManager::enemyTurn(Player& player, Enemy& enemy) {
                 if (!hadStatus && player.HasStatus(type)) AddEvent(CombatEvent::Kind::Debuff, player.getName() + " suffers " + std::string(StatusDisplayName(type)) + " for " + std::to_string(duration) + " turns!");
             }
         } else if (skill.effect == "def_down" || skill.effect == "accuracy_down") {
-            const bool hadStatus = player.HasStatus(StatusType::VerdigrisMark);
-            player.ApplyStatus({StatusType::VerdigrisMark, skill.duration > 0 ? skill.duration : 2, 0, enemy.getAtk()});
-            if (!hadStatus && player.HasStatus(StatusType::VerdigrisMark)) AddEvent(CombatEvent::Kind::Debuff, player.getName() + " suffers Verdigris Mark for " + std::to_string(skill.duration > 0 ? skill.duration : 2) + " turns!");
+            const bool hadStatus = enemy.HasStatus(StatusType::VerdigrisMark);
+            enemy.ApplyStatus({StatusType::VerdigrisMark, skill.duration > 0 ? skill.duration : 2, 0, enemy.getAtk()}, player.getAccuracy());
+            if (!hadStatus && enemy.HasStatus(StatusType::VerdigrisMark)) AddEvent(CombatEvent::Kind::Debuff, enemy.getName() + " suffers Verdigris Mark for " + std::to_string(skill.duration > 0 ? skill.duration : 2) + " turns!");
         } else if (skill.effect == "heal_self" || skill.effect == "heal_cleanse") {
             const int amount = (std::max)(1, enemy.getMaxHP() * 15 / 100);
             const int before = enemy.getHP();

@@ -105,8 +105,12 @@ void Win32UI::ChangeView(View nextView) {
 }
 
 void Win32UI::LeaveCombat() {
+	player_.ClearStatuses();
+	if (activeEnemy_ != nullptr) activeEnemy_->ClearStatuses();
 	activeEnemy_ = nullptr;
 	combatItemSelection_ = false;
+	combatSkillSelection_ = false;
+	selectedCombatSkillName_.clear();
 	combatDefeatRecovery_ = false;
 	combat_.ClearEvents();
 	if (selectedRoom_ >= 0 && selectedRoom_ < static_cast<int>(mapManager_.GetRooms().size())) {
@@ -343,6 +347,7 @@ void Win32UI::RefreshControls() {
 		}
 		ShowWindow(controls_[21], SW_SHOW);
 		ShowWindow(controls_[33], SW_SHOW);
+		SetWindowTextW(controls_[33], L"Equip / Unequip");
 	} else if (view_ == View::Combat) {
 		if (combatDefeatRecovery_) {
 			SetWindowTextW(controls_[24], L"RESPAWN (10% HP)");
@@ -374,6 +379,16 @@ void Win32UI::RefreshControls() {
 			}
 			ShowWindow(controls_[21], SW_SHOW);
 		} else {
+			targetEnemies_.clear();
+			if (selectedRoom_ >= 0 && selectedRoom_ < static_cast<int>(mapManager_.GetRooms().size())) {
+				for (const auto& enemy : mapManager_.GetRooms()[selectedRoom_].GetEnemies()) {
+					if (enemy != nullptr && enemy->isAlive() && targetEnemies_.size() < 3) targetEnemies_.push_back(enemy.get());
+				}
+			}
+			for (std::size_t index = 0; index < targetEnemies_.size(); ++index) {
+				SetWindowTextW(controls_[8 + index], (L"TARGET: " + FormatDisplayText(targetEnemies_[index]->getName())).c_str());
+				ShowWindow(controls_[8 + index], SW_SHOW);
+			}
 			SetWindowTextW(controls_[24], L"ATTACK");
 			SetWindowTextW(controls_[31], L"ITEM");
 			ShowWindow(controls_[24], SW_SHOW);
@@ -595,13 +610,23 @@ void Win32UI::HandleCommand(int controlId) {
 			if (index < static_cast<int>(interactables.size())) Inspect(index);
 		}
 	} else if (controlId >= InventoryButtonBase && controlId < InventoryButtonBase + 12) {
-		if (view_ == View::Combat && combatItemSelection_) {
+		if (view_ == View::Combat && combatItemSelection_ && combat_.IsPlayerTurn()) {
 			const int index = controlId - InventoryButtonBase;
 			if (index < static_cast<int>(combatItemNames_.size())) {
 				if (combat_.UseConsumable(combatItemNames_[index], player_, *activeEnemy_))
 					statusMessage_ = "Consumable used without ending the turn.";
 				else statusMessage_ = "That consumable is unavailable.";
 				combatItemSelection_ = false;
+			}
+		} else if (view_ == View::Combat) {
+			if (!combat_.IsPlayerTurn()) {
+				statusMessage_ = "Wait for your turn.";
+			} else {
+				const int targetIndex = controlId - InventoryButtonBase;
+				if (targetIndex < static_cast<int>(targetEnemies_.size())) {
+					activeEnemy_ = targetEnemies_[targetIndex];
+					statusMessage_ = activeEnemy_->getName() + " targeted.";
+				}
 			}
 		} else {
 		const int index = inventoryPage_ * 12 + controlId - InventoryButtonBase;
@@ -656,6 +681,11 @@ void Win32UI::HandleCommand(int controlId) {
 		}
 	} else if (controlId == ButtonEquip) {
 		if (view_ == View::Skills && selectedSkillIndex_ >= 0 && selectedSkillIndex_ < static_cast<int>(skillNames_.size())) {
+			if (activeEnemy_ != nullptr) {
+				statusMessage_ = "Skills can only be equipped outside battle.";
+				handlingCommand_ = false;
+				return;
+			}
 			const std::string& skillName = skillNames_[selectedSkillIndex_];
 			auto skill = ShimmerSkill::Create(skillName);
 			if (skill != nullptr) {
@@ -692,7 +722,7 @@ void Win32UI::HandleCommand(int controlId) {
 			}
 		}
 	} else if (controlId == ButtonSkills) {
-		ChangeView(View::Skills);
+		if (activeEnemy_ == nullptr) ChangeView(View::Skills);
 	} else if (controlId == ButtonAttack) {
 		if (combatDefeatRecovery_) {
 			player_.heal((std::max)(1, player_.getMaxHP() * 10 / 100));
@@ -711,13 +741,13 @@ void Win32UI::HandleCommand(int controlId) {
 			statusMessage_ = "Battle ended. You returned to the main floor with full HP.";
 		} else if (player_.isAlive()) ShowCombatItems();
 	} else if (controlId == ButtonShimmer) {
-		if (player_.isAlive() && activeEnemy_ != nullptr) {
+		if (player_.isAlive() && activeEnemy_ != nullptr && combat_.IsPlayerTurn()) {
 			equippedSkillNames_ = progression_.GetEquippedShimmerSkills();
 			if (equippedSkillNames_.empty()) statusMessage_ = "No Shimmer skills are equipped.";
 			else combatSkillSelection_ = true;
 		}
 	} else if (controlId == ButtonFlee) {
-		if (player_.isAlive()) PerformCombatAction(CombatAction::Flee);
+		if (player_.isAlive() && combat_.IsPlayerTurn()) PerformCombatAction(CombatAction::Flee);
 	} else if (controlId == ButtonQuit) {
 		PostMessageW(window_, WM_CLOSE, 0, 0);
 		handlingCommand_ = false;
@@ -791,6 +821,8 @@ void Win32UI::SearchRoom() {
 	const int playerLevel = progression_.GetLevel();
 	const EnemyFaction roomFaction = RoomFaction(area.getName());
 	const EnemyTier encounterTier = MaximumEncounterTier(playerLevel);
+	const int levelDisparity = static_cast<int>((searchSeed / 7) % 8) - 2;
+	const int enemyLevel = (std::max)(1, (std::min)(100, playerLevel + levelDisparity));
 	const bool encounterAllowed = area.GetSpawnCondition() != EnemySpawnCondition::None &&
 		roll < SpawnChance(area.GetSpawnCondition());
 	const int enemyThreshold = cluesComplete ? 70 : 50;
@@ -828,7 +860,6 @@ void Win32UI::SearchRoom() {
 	}
 	if (activeEnemy_ == nullptr && playerLevel >= 6 && area.getName() == "Entrance Hall" && cluesComplete && area.HasAllItems() && !area.HasBossBeenDefeated() && roll < bossThreshold) {
 		area.MarkBossEncountered();
-		const int enemyLevel = progression_.GetLevel();
 		if (auto boss = CreateCatalogueEnemy("Matron of the Catacombs", enemyLevel)) area.addEnemy(std::move(boss));
 		activeEnemy_ = area.getFirstAliveEnemy();
 		combat_.BeginEncounter(*activeEnemy_);
@@ -839,7 +870,8 @@ void Win32UI::SearchRoom() {
 		return;
 	}
 	if (activeEnemy_ == nullptr && roll >= 50 && roll < 55) {
-		AddLog("Investigation: the search revealed nothing unusual.");
+		AddLog("Nothing Was Found.");
+		statusMessage_ = "Nothing Was Found.";
 		return;
 	}
 	if (activeEnemy_ == nullptr && area.HasAllClues() && area.HasAllItems() && area.HasBossBeenDefeated()) {
@@ -873,8 +905,10 @@ void Win32UI::SearchRoom() {
 		return;
 	}
 	if (activeEnemy_ == nullptr && encounterAllowed) {
-		const int enemyLevel = (std::max)(1, progression_.GetLevel() + static_cast<int>(searchSeed % 3) - 1);
-		if (auto enemy = CreateRandomCatalogueEnemy(searchSeed, enemyLevel, roomFaction, encounterTier)) area.addEnemy(std::move(enemy));
+		const int enemyCount = 1 + static_cast<int>((searchSeed / 11) % 3);
+		for (int count = 0; count < enemyCount && count < 3; ++count) {
+			if (auto enemy = CreateRandomCatalogueEnemy(searchSeed + static_cast<unsigned>(count * 17), enemyLevel, roomFaction, encounterTier)) area.addEnemy(std::move(enemy));
+		}
 		activeEnemy_ = area.getFirstAliveEnemy();
 		if (activeEnemy_ == nullptr) return;
 		combat_.BeginEncounter(*activeEnemy_);
@@ -918,6 +952,7 @@ void Win32UI::SearchRoom() {
 void Win32UI::PerformCombatAction(CombatAction action) {
 	if (selectedRoom_ < 0 || selectedRoom_ >= static_cast<int>(mapManager_.GetRooms().size()) ||
 		activeEnemy_ == nullptr || !activeEnemy_->isAlive()) {
+		player_.ClearStatuses();
 		activeEnemy_ = nullptr;
 		view_ = View::Room;
 		return;
@@ -992,6 +1027,7 @@ void Win32UI::AddLog(const std::string& message) {
 }
 
 void Win32UI::InitializePlayer() {
+	progression_.UnlockShimmerSkill("Pulsus Luminis");
 	const auto equipment = BuildEquippableCatalog();
 	AddNamedItem(player_, equipment, "plain_rosary");
 	AddNamedItem(player_, equipment, "linen_veil");
@@ -1180,11 +1216,22 @@ void Win32UI::Paint(HDC deviceContext) {
 	DrawTextLine(deviceContext, 42, 278, L"RES   " + std::to_wstring(player_.getDisplayedResistance()) + L"%    CRIT  " + std::to_wstring(player_.getDisplayedCritRate()) + L"% / " + std::to_wstring(player_.getCritDamage()) + L"%", Text, 15);
 	DrawTextLine(deviceContext, 42, 318, L"STATUS", Brass, 17, true);
 	int y = 348;
+	bool displayedStatus = false;
 	for (const auto& status : player_.GetStatuses()) {
+		if (status.type == StatusType::VerdigrisMark) continue;
+		displayedStatus = true;
 		DrawTextLine(deviceContext, 48, y, StatusName(status.type) + L" (" + std::to_wstring(status.turns) + L")", Danger, 15);
 		y += 25;
 	}
-	if (player_.GetStatuses().empty()) DrawTextLine(deviceContext, 48, y, L"No active effects", Muted, 15);
+	if (!displayedStatus) DrawTextLine(deviceContext, 48, y, L"No active effects", Muted, 15);
+	const auto activeSets = player_.GetActiveSets();
+	if (!activeSets.empty()) {
+		if (!displayedStatus) y += 25;
+		for (const auto& setName : activeSets) {
+			DrawTextLine(deviceContext, 48, y, L"Set active: " + FormatDisplayText(setName), Shimmer, 15, false, 300);
+			y += 25;
+		}
+	}
 	DrawTextLine(deviceContext, 42, 430, L"EQUIPMENT", Brass, 17, true);
 	const std::pair<EquipSlot, const wchar_t*> slots[] = {{EquipSlot::Head, L"Head"}, {EquipSlot::Torso, L"Torso"}, {EquipSlot::Boots, L"Boots"}, {EquipSlot::Hand, L"Hand"}, {EquipSlot::Accessory, L"Accessory"}};
 	y = 460;
@@ -1306,6 +1353,7 @@ void Win32UI::Paint(HDC deviceContext) {
 		}
 	} else if (view_ == View::Combat && activeEnemy_ != nullptr) {
 		DrawTextLine(deviceContext, 425, contentY, L"HOSTILE: " + ToWide(activeEnemy_->getName()), Danger, 26, true);
+		DrawTextLine(deviceContext, 425, contentY + 25, L"Select a living target before acting.", Muted, 15);
 		DrawTextLine(deviceContext, 425, contentY + 48, L"HP  " + std::to_wstring(activeEnemy_->getHP()) + L" / " + std::to_wstring(activeEnemy_->getMaxHP()), Text, 20);
 		DrawTextLine(deviceContext, 425, contentY + 84, L"ATK " + std::to_wstring(activeEnemy_->getAtk()) + L"   DEF " + std::to_wstring(activeEnemy_->getDefense()) + L"   SPD " + std::to_wstring(activeEnemy_->getSpeed()), Muted, 17);
 		DrawTextLine(deviceContext, 425, contentY + 112, ToWide(std::string(EnemyFactionName(activeEnemy_->getFaction())) + " // " + EnemyTierName(activeEnemy_->getTier()) + " // Phase " + std::to_string(activeEnemy_->GetPhase())), Brass, 15);
@@ -1338,8 +1386,10 @@ void Win32UI::Paint(HDC deviceContext) {
 			}
 		}
 	} else if (view_ == View::Skills) {
-		DrawTextLine(deviceContext, 425, contentY, L"SKILLS // LATIN RESONANCE", Shimmer, 23, true);
+		DrawTextLine(deviceContext, 425, contentY, L"SKILLS", Shimmer, 23, true);
 		contentY += 55;
+		DrawTextLine(deviceContext, 440, contentY, L"Shimmer points remaining: " + std::to_wstring(progression_.GetShimmerPoints()), Muted, 16);
+		contentY += 30;
 		const auto unlocked = progression_.GetUnlockedShimmerSkills();
 		const auto equipped = progression_.GetEquippedShimmerSkills();
 		for (const auto& name : unlocked) {

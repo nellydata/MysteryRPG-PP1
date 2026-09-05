@@ -120,6 +120,7 @@ private:
 	std::vector<std::string> combatItemNames_;
 	std::vector<std::string> skillNames_;
 	std::vector<std::string> equippedSkillNames_;
+	std::vector<Enemy*> targetEnemies_;
 	std::string selectedCombatSkillName_;
 	bool combatSkillSelection_ = false;
 };

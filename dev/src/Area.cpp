@@ -13,6 +13,8 @@ void Area::addEnemy(std::unique_ptr<Enemy> enemy) {
     if (enemy) enemies_.push_back(std::move(enemy));
 }
 
+const std::vector<std::unique_ptr<Enemy>>& Area::GetEnemies() const { return enemies_; }
+
 bool Area::IsUnlocked() const { return unlocked_; }
 void Area::SetUnlocked(bool unlocked) { unlocked_ = unlocked; }
 int Area::GetSearchCount() const { return searchCount_; }

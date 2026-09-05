@@ -93,9 +93,18 @@ std::unique_ptr<Enemy> CreateRandomCatalogueEnemy(unsigned seed, int level, bool
 std::unique_ptr<Enemy> CreateRandomCatalogueEnemy(unsigned seed, int level,
 	EnemyFaction faction, EnemyTier maximumTier) {
 	std::vector<const EnemyDefinition*> candidates;
+	const int clampedLevel = (std::max)(1, (std::min)(100, level));
 	for (const auto& definition : GetEnemyCatalogue()) {
 		if (definition.faction != faction || static_cast<int>(definition.tier) > static_cast<int>(maximumTier)) continue;
-		candidates.push_back(&definition);
+		int weight = 0;
+		switch (definition.tier) {
+		case EnemyTier::Basic: weight = (clampedLevel >= 80) ? 0 : (100 - clampedLevel); break;
+		case EnemyTier::Rare: weight = (std::max)(1, 100 - clampedLevel / 2); break;
+		case EnemyTier::Epic: weight = (std::max)(1, clampedLevel / 3); break;
+		case EnemyTier::Elite: weight = (std::max)(1, (clampedLevel - 20) / 2); break;
+		case EnemyTier::Boss: weight = 0; break;
+		}
+		for (int copy = 0; copy < weight; ++copy) candidates.push_back(&definition);
 	}
 	if (candidates.empty()) return nullptr;
 	return std::make_unique<Enemy>(*candidates[seed % candidates.size()], level);

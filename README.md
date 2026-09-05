@@ -1,6 +1,6 @@
 # Micare - Cathedral of Lies
 
-Micare is a console-based noir roguelike RPG written in C++17. Adelaide explores a cathedral overtaken by the Shimmer, discovers clues and items, encounters NPCs, and fights enemies while progressing through Floor 1.
+Micare is a C++17 noir roguelike RPG with both a native Win32 desktop UI and a console mode. The player chooses an investigator name, explores a cathedral overtaken by the Shimmer, discovers clues and items, encounters NPCs, and fights enemies while progressing through Floor 1.
 
 ## Project Structure
 
@@ -14,7 +14,7 @@ Micare is a console-based noir roguelike RPG written in C++17. Adelaide explores
 - Deterministic Floor 1 map with Entrance Hall, Archive Room, Chapel, and Storage Room
 - Interactable rooms with neutral environmental descriptions
 - Deterministic enemy spawning
-- Combat with Attack, Block, Shimmer, Interrogate, Expose Weakness, and Flee
+- Combat with Attack, Shimmer, Interrogate, Expose Weakness, and Flee
 - Health, attack, defense, XP, and level progression
 - Item and clue inventory listing
 - NPC placeholders and input validation
@@ -27,6 +27,12 @@ Micare is a console-based noir roguelike RPG written in C++17. Adelaide explores
 - ASCII-safe rendering for Windows consoles, with optional ANSI color styling
 - Hidden developer panel enabled with `MICARE_DEVELOPER_MODE=1`
 - Native Windows desktop UI with clickable room, investigation, inventory, map, shimmer, and combat controls
+- Player-selected name displayed in the character panel, combat messages, turn order, status messages, and event log
+- Inventory paging with aligned item buttons, item details, rarity colors, sorting, locking, discarding, equipping, and consumable use
+- Battle result reporting with defeat messages, XP rewards, and item drops
+- Defensive state validation for room selection, stale enemies, and repeated command handling
+- Deferred Win32 control refresh to prevent command-handler re-entry and UI freezes
+- Completion-mode level cap and guarded XP progression to prevent infinite level-up loops
 
 ## Building and Running
 
@@ -36,15 +42,15 @@ Open `COS-PP1.vcxproj` in Visual Studio and build Debug x64. The project uses C+
 
 ### Overview
 
-This milestone focused on building the initial Micare architecture and a playable console prototype. I organized the project into separate header and source folders, created the core classes, and connected map, encounter, combat, progression, player, and enemy systems.
+This milestone focused on building the Micare architecture, a playable console prototype, and a native Win32 desktop experience. I organized the project into separate header and source folders, created the core classes, and connected map, encounter, combat, progression, player, enemy, inventory, and UI systems.
 
 ### Challenges
 
-The main challenges were keeping the project structure consistent with Visual Studio and separating room exploration from combat. I also diagnosed a Windows Application Control policy that blocked the unsigned debug executable even though the project compiled successfully.
+The main challenges were keeping the project structure consistent with Visual Studio, separating room exploration from combat, and keeping native Win32 controls aligned across different window sizes. I also diagnosed UI freezes caused by synchronous refresh paths and an infinite level-up loop when the XP threshold was zero.
 
 ### Accomplishments
 
-I built a deterministic Floor 1 map, added four interactable rooms, created basic enemy types, implemented combat actions, added XP and level progression, and created readable item and clue inventory output. The project builds with zero errors and zero warnings.
+I built a deterministic Floor 1 map, added four interactable rooms, created basic enemy types, implemented combat actions, added XP and level progression, created readable item and clue inventory output, and added a clickable desktop UI. The project builds successfully with the Visual Studio project configuration.
 
 ### Next Steps
 
@@ -52,7 +58,7 @@ The core catalog and gameplay systems are now data-driven through `ContentCatalo
 
 ## UI Controls
 
-The main dashboard keeps Adelaide's live stats, statuses, and equipped items visible while navigating:
+The main dashboard keeps the chosen investigator's live stats, statuses, and equipped items visible while navigating:
 
 - `1`-`4` - enter a Floor I room
 - `5` - open inventory
@@ -71,6 +77,6 @@ The normal build launches **Micare - Cathedral of Lies** with a name prompt befo
 - Room buttons enter Floor I locations.
 - Investigation buttons inspect individual objects and immediately update the clue log.
 - Search, inventory item, map, and shimmer buttons operate without numeric console input.
-- Combat buttons perform Attack, Block, Shimmer, and Flee actions while refreshing enemy/player state.
+- Combat buttons perform Attack, Shimmer, and Flee actions while refreshing enemy/player state.
 
 For debugging or environments where a window is not available, set `MICARE_CONSOLE_MODE=1` before launching. The repository currently contains no local image asset files, so the desktop UI uses native drawing and the supplied visual references for its dark, brass, verdigris, and shimmer composition.

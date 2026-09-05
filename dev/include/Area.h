@@ -41,6 +41,19 @@ public:
     EnemySpawnCondition GetSpawnCondition() const;
     bool ConsumeClue();
     bool ConsumeItem();
+    bool IsUnlocked() const;
+    void SetUnlocked(bool unlocked);
+    int GetSearchCount() const;
+    void RecordSearch();
+    bool RevealNextInteractable();
+    const std::vector<std::string>& GetVisibleInteractables() const;
+    bool IsFullySearched() const;
+    bool HasDiscoveredNPC() const;
+    void DiscoverNPC();
+    bool HasBossBeenDefeated() const;
+    void SetBossDefeated(bool defeated);
+    bool HasBossBeenEncountered() const;
+    void MarkBossEncountered();
 
 private:
     std::string name_;
@@ -50,4 +63,10 @@ private:
     bool hasClues_;
     bool hasItems_;
     EnemySpawnCondition spawnCondition_;
+    bool unlocked_;
+    int searchCount_;
+    std::vector<std::string> visibleInteractables_;
+    bool discoveredNPC_;
+    bool bossDefeated_;
+    bool bossEncountered_;
 };

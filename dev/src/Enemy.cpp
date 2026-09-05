@@ -1,9 +1,9 @@
 #include "Enemy.h"
 #include <algorithm>
 
-Enemy::Enemy(const std::string& name, int hp, int atk, int xpReward)
+Enemy::Enemy(const std::string& name, int hp, int atk, int xpReward, int level)
 	: name_(name), hp_(hp), maxHp_(hp), atk_(atk), xpReward_(xpReward),
-	  defense_(0), speed_(5) {}
+	  defense_(0), speed_(5), level_(level) {}
 
 Enemy::~Enemy() = default;
 
@@ -21,6 +21,7 @@ int Enemy::getAtk() const { return atk_; }
 int Enemy::getXPReward() const { return xpReward_; }
 int Enemy::getDefense() const { return defense_; }
 int Enemy::getSpeed() const { return speed_; }
+int Enemy::getLevel() const { return level_; }
 
 bool Enemy::HasStatus(StatusType type) const {
 	for (const auto& status : statuses_) if (status.type == type) return true;

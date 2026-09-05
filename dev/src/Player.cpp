@@ -16,6 +16,15 @@ void Player::takeDamage(int amount) {
     if (hp_ < 0) hp_ = 0;
 }
 
+bool Player::ToggleEquip(Item& item) {
+    if (!item.isEquippable() || item.getSlot() == EquipSlot::None) return false;
+    const int slot = static_cast<int>(item.getSlot());
+    if (equipped_[slot] == &item) equipped_[slot] = nullptr;
+    else equipped_[slot] = &item;
+    RecalculateStats();
+    return true;
+}
+
 void Player::heal(int amount) {
     if (amount <= 0) return;
     hp_ += amount;
@@ -164,6 +173,7 @@ void Player::ModifyStats(const Stats& delta) {
 }
 
 const Inventory& Player::GetInventory() const { return inventory_; }
+Inventory& Player::GetInventory() { return inventory_; }
 Item* Player::FindItem(const std::string& itemName) { return inventory_.FindItem(itemName); }
 const std::vector<StatusEffect>& Player::GetStatuses() const { return statuses_; }
 const Item* Player::GetEquipped(EquipSlot slot) const {

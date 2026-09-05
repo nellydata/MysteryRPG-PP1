@@ -40,6 +40,7 @@ public:
     void AddClue(const Clue& clue);
     void PrintInventory() const;
     bool Equip(Item& item);
+    bool ToggleEquip(Item& item);
     bool UseConsumable(const std::string& itemName, class Enemy* target = nullptr);
     bool HasStatus(StatusType type) const;
     void ApplyStatus(const StatusEffect& status);
@@ -47,6 +48,7 @@ public:
     void ClearStatuses();
     void ModifyStats(const Stats& delta);
     const Inventory& GetInventory() const;
+    Inventory& GetInventory();
     Item* FindItem(const std::string& itemName);
     const std::vector<StatusEffect>& GetStatuses() const;
     const Item* GetEquipped(EquipSlot slot) const;

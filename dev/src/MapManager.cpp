@@ -11,6 +11,7 @@ void MapManager::GenerateFloor1() {
 
     rooms_.emplace_back("Entrance Hall");
     Area& entrance = rooms_.back();
+    entrance.SetUnlocked(true);
     entrance.AddInteractable("Broken statue");
     entrance.AddInteractable("Old banner");
     entrance.SetClues(true);

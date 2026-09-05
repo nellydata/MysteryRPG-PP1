@@ -6,7 +6,7 @@
 
 class Enemy {
 public:
-    Enemy(const std::string& name, int hp, int atk, int xpReward = 15);
+    Enemy(const std::string& name, int hp, int atk, int xpReward = 15, int level = 1);
     virtual ~Enemy();
 
     virtual void takeDamage(int amount);
@@ -18,6 +18,7 @@ public:
     int getXPReward() const;
     int getDefense() const;
     int getSpeed() const;
+    int getLevel() const;
     bool HasStatus(StatusType type) const;
     void ApplyStatus(const StatusEffect& status);
     void ProcessStatuses();
@@ -31,5 +32,6 @@ protected:
     int xpReward_;
     int defense_;
     int speed_;
+    int level_;
     std::vector<StatusEffect> statuses_;
 };

@@ -32,6 +32,11 @@ private:
 	static constexpr int ButtonShimmer = 502;
 	static constexpr int ButtonFlee = 503;
 	static constexpr int ButtonQuit = 504;
+	static constexpr int ButtonInventory = 505;
+	static constexpr int ButtonSort = 506;
+	static constexpr int ButtonLock = 507;
+	static constexpr int ButtonDiscard = 508;
+	static constexpr int ButtonEquip = 509;
 
 	static LRESULT CALLBACK WindowProcedure(HWND window, UINT message,
 											 WPARAM wParam, LPARAM lParam);
@@ -64,7 +69,7 @@ private:
 	HWND window_;
 	HWND nameWindow_;
 	HWND nameEdit_;
-	HWND controls_[32];
+	HWND controls_[34];
 	HFONT font_;
 	HFONT headingFont_;
 	View view_;
@@ -75,4 +80,7 @@ private:
 	ProgressionManager progression_;
 	Enemy* activeEnemy_;
 	std::vector<std::string> log_;
+	InventorySort inventorySort_ = InventorySort::RecentlyObtained;
+	std::vector<int> visibleRoomIndices_;
+	int selectedInventoryIndex_ = -1;
 };

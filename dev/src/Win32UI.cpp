@@ -266,12 +266,15 @@ void Win32UI::RefreshControls() {
 
 void Win32UI::LayoutControls(int width, int height) {
 	const int center = 425;
-	const int buttonWidth = 200;
+	const int panelRight = (std::max)(center + 620, width - 35);
+	const int buttonWidth = 180;
 	const int buttonHeight = 42;
-	const int eventTop = (std::max)(120, height - 260);
+	const int eventTop = (std::max)(120, height - 380);
 	const int actionY = eventTop + 28;
+	const int roomActionY = actionY + 124;
 	const int inventoryActionY = eventTop + 190;
-	const int safeRight = (std::max)(center + 620, width - 20);
+	const int inventoryWidth = (std::max)(150, (panelRight - center - 36) / 4);
+	const int inventoryGap = 12;
 
 	for (int i = 0; i < 4; ++i) {
 		MoveWindow(controls_[i], center + (i % 2) * 225, actionY + (i / 2) * 50,
@@ -280,28 +283,28 @@ void Win32UI::LayoutControls(int width, int height) {
 	for (int i = 0; i < 4; ++i) {
 		const int column = i % 2;
 		const int row = i / 2;
-		MoveWindow(controls_[4 + i], center + column * 300, actionY + row * 58,
-				   260, buttonHeight, TRUE);
+		MoveWindow(controls_[4 + i], center + column * (inventoryWidth * 2 + inventoryGap * 2),
+				   actionY + row * 54, inventoryWidth * 2 + inventoryGap, buttonHeight, TRUE);
 	}
 	for (int i = 0; i < 12; ++i) {
-		MoveWindow(controls_[8 + i], center + (i % 3) * 275,
-				   132 + (i / 3) * 48, 250, 38, TRUE);
+		MoveWindow(controls_[8 + i], center + (i % 3) * (inventoryWidth + inventoryGap),
+				   132 + (i / 3) * 48, inventoryWidth, 38, TRUE);
 	}
-	MoveWindow(controls_[20], center, actionY + 104, buttonWidth, buttonHeight, TRUE);
-	MoveWindow(controls_[21], center + 300, actionY + 116, 260, buttonHeight, TRUE);
-	MoveWindow(controls_[22], safeRight - 180, 40, 180, buttonHeight, TRUE);
-	MoveWindow(controls_[29], safeRight - 180, 92, 180, buttonHeight, TRUE);
-	MoveWindow(controls_[23], safeRight - 180, 144, 180, buttonHeight, TRUE);
-	MoveWindow(controls_[28], safeRight - 180, 196, 180, buttonHeight, TRUE);
+	MoveWindow(controls_[20], center, roomActionY, buttonWidth, buttonHeight, TRUE);
+	MoveWindow(controls_[21], center + buttonWidth + 20, roomActionY, buttonWidth, buttonHeight, TRUE);
+	MoveWindow(controls_[22], panelRight - 180, 40, 180, buttonHeight, TRUE);
+	MoveWindow(controls_[29], panelRight - 180, 92, 180, buttonHeight, TRUE);
+	MoveWindow(controls_[23], panelRight - 180, 144, 180, buttonHeight, TRUE);
+	MoveWindow(controls_[28], panelRight - 180, 196, 180, buttonHeight, TRUE);
 	MoveWindow(controls_[24], center, actionY, 180, 44, TRUE);
 	MoveWindow(controls_[26], center + 190, actionY, 180, 44, TRUE);
 	MoveWindow(controls_[27], center + 380, actionY, 180, 44, TRUE);
-	MoveWindow(controls_[30], center, inventoryActionY, 180, 42, TRUE);
-	MoveWindow(controls_[31], center + 190, inventoryActionY, 180, 42, TRUE);
-	MoveWindow(controls_[32], center + 380, inventoryActionY, 180, 42, TRUE);
-	MoveWindow(controls_[33], center + 570, inventoryActionY, 180, 42, TRUE);
+	for (int i = 0; i < 4; ++i) {
+		MoveWindow(controls_[30 + i], center + i * (inventoryWidth + inventoryGap), inventoryActionY,
+				   inventoryWidth, 42, TRUE);
+	}
 	MoveWindow(controls_[34], center, inventoryActionY + 50, 70, 38, TRUE);
-	MoveWindow(controls_[35], center + 565, inventoryActionY + 50, 70, 38, TRUE);
+	MoveWindow(controls_[35], panelRight - 70, inventoryActionY + 50, 70, 38, TRUE);
 }
 
 void Win32UI::HandleCommand(int controlId) {
@@ -542,8 +545,8 @@ void Win32UI::PerformCombatAction(CombatAction action) {
 		return;
 	}
 	if (action == CombatAction::Flee) {
-		AddLog("Adelaide withdrew from combat.");
-		statusMessage_ = "Battle ended: Adelaide fled.";
+		AddLog(player_.getName() + " withdrew from combat.");
+		statusMessage_ = "Battle ended: " + player_.getName() + " fled.";
 		activeEnemy_ = nullptr;
 		view_ = View::Room;
 		return;
@@ -553,7 +556,7 @@ void Win32UI::PerformCombatAction(CombatAction action) {
 		AddLog("That action is unavailable.");
 		return;
 	}
-	statusMessage_ = action == CombatAction::Shimmer ? "Shimmer effect resolved." : "Adelaide's action resolved.";
+	statusMessage_ = action == CombatAction::Shimmer ? "Shimmer effect resolved." : player_.getName() + "'s action resolved.";
 	if (!activeEnemy_->isAlive()) {
 		Area& area = mapManager_.GetRooms()[selectedRoom_];
 		const std::string defeatedName = activeEnemy_->getName();
@@ -588,8 +591,8 @@ void Win32UI::PerformCombatAction(CombatAction action) {
 		return;
 	}
 	combat_.enemyTurn(player_, *activeEnemy_);
-	statusMessage_ = player_.isAlive() ? "The enemy acted. Adelaide's turn." : "Adelaide has fallen.";
-	if (!player_.isAlive()) AddLog("Adelaide has fallen.");
+	statusMessage_ = player_.isAlive() ? "The enemy acted. " + player_.getName() + "'s turn." : player_.getName() + " has fallen.";
+	if (!player_.isAlive()) AddLog(player_.getName() + " has fallen.");
 	if (!player_.isAlive()) {
 		activeEnemy_ = nullptr;
 		view_ = View::Room;

@@ -22,6 +22,21 @@ unsigned InterrogationRoll(const Enemy& enemy, int playerLevel, int attempt) {
     return value % 100;
 }
 
+const char* StatusDisplayName(StatusType type) {
+    switch (type) {
+    case StatusType::Bleed: return "Bleed";
+    case StatusType::Burn: return "Burn";
+    case StatusType::Poison: return "Poison";
+    case StatusType::Stun: return "Stun";
+    case StatusType::HealOverTime: return "Healing-over-time";
+    case StatusType::Slow: return "Slow";
+    case StatusType::VerdigrisMark: return "Verdigris Mark";
+    case StatusType::DamageReduction: return "Damage Reduction";
+    case StatusType::Barrier: return "Barrier";
+    }
+    return "Status";
+}
+
 int InterrogationChance(const Enemy& enemy, int playerLevel) {
     const int healthPercent = enemy.getMaxHP() > 0
         ? enemy.getHP() * 100 / enemy.getMaxHP()
@@ -101,7 +116,17 @@ bool CombatManager::resolve(CombatAction action, Player& player, Enemy& enemy,
         playerTurn_ = playerGauge_ >= 1000;
     }
 
+    const int playerHealthBeforeStatuses = player.getHP();
+    const auto statusesBefore = player.GetStatuses();
     player.ProcessStatuses();
+    for (const auto& status : statusesBefore) {
+        const int healthLost = playerHealthBeforeStatuses - player.getHP();
+        if (healthLost > 0 && (status.type == StatusType::Bleed || status.type == StatusType::Burn || status.type == StatusType::Poison)) {
+            AddEvent(CombatEvent::Kind::DotTick, player.getName() + " takes " + std::to_string(healthLost) + " " + std::string(StatusDisplayName(status.type)) + " damage.", healthLost);
+            break;
+        }
+    }
+    if (!player.isAlive()) AddEvent(CombatEvent::Kind::Death, player.getName() + " has fallen from status damage.");
     enemy.ProcessStatuses();
     if (!player.isAlive() || !enemy.isAlive()) return false;
     if (!playerTurn_) return false;
@@ -141,8 +166,42 @@ bool CombatManager::resolve(CombatAction action, Player& player, Enemy& enemy,
     }
     case CombatAction::Shimmer:
     {
-        AddEvent(CombatEvent::Kind::Info, "Shimmer skills are not available yet.");
-        return false;
+        if (skill == nullptr) {
+            AddEvent(CombatEvent::Kind::Info, "Select an equipped Shimmer skill first.");
+            return false;
+        }
+        const std::string effect = skill->getEffect();
+        const int enemyHealthBefore = enemy.getHP();
+        const int playerHealthBefore = player.getHP();
+        AddEvent(CombatEvent::Kind::Shimmer, player.getName() + " invokes a Shimmer resonance.");
+
+        if (effect.find("heal") != std::string::npos || effect.find("restore") != std::string::npos) {
+            const int healAmount = (std::max)(1, player.getMaxHP() * 20 / 100);
+            player.heal(healAmount);
+        }
+        if (effect.find("barrier") != std::string::npos || effect.find("shield") != std::string::npos) {
+            player.ApplyStatus({StatusType::Barrier, 1, 0, 0});
+            AddEvent(CombatEvent::Kind::Shield, player.getName() + " gains a barrier.");
+        }
+        if (effect.find("damage") != std::string::npos || effect.find("strike") != std::string::npos ||
+            effect.find("attack") != std::string::npos || effect.find("burn") != std::string::npos) {
+            const int rawDamage = (std::max)(1, player.getAttack() * 130 / 100);
+            const int shimmerDamage = std::max(1, static_cast<int>(std::lround(
+                static_cast<double>(rawDamage) * 100.0 / (100.0 + enemy.getDefense()))));
+            enemy.takeDamage(shimmerDamage);
+        }
+
+        const int dealt = enemyHealthBefore - enemy.getHP();
+        const int healed = player.getHP() - playerHealthBefore;
+        if (dealt > 0) AddEvent(CombatEvent::Kind::Damage, "Shimmer dealt " + std::to_string(dealt) + " damage.", dealt);
+        if (healed > 0) AddEvent(CombatEvent::Kind::Heal, "Shimmer restored " + std::to_string(healed) + " HP.", healed);
+        if (!enemy.isAlive() && progression != nullptr) {
+            progression->GrantXP(enemy.getXPReward());
+            progression->CheckLevelUp(player);
+        }
+        playerGauge_ -= 1000;
+        playerTurn_ = enemy.isAlive() && playerGauge_ >= 1000;
+        return true;
     }
     case CombatAction::Item: {
         if (consumableUsedThisTurn_) {
@@ -210,7 +269,7 @@ void CombatManager::enemyTurn(Player& player, Enemy& enemy) {
             StatusType type = skill.effect == "bleed" ? StatusType::Bleed : skill.effect == "burn" ? StatusType::Burn : StatusType::Poison;
             const bool hadStatus = player.HasStatus(type);
             player.ApplyStatus({type, skill.duration > 0 ? skill.duration : 2, 0, enemy.getAtk()});
-            if (!hadStatus && player.HasStatus(type)) AddEvent(CombatEvent::Kind::Debuff, player.getName() + " suffers " + skill.effect + " for " +
+            if (!hadStatus && player.HasStatus(type)) AddEvent(CombatEvent::Kind::Debuff, player.getName() + " suffers " + std::string(StatusDisplayName(type)) + " for " +
                 std::to_string(skill.duration > 0 ? skill.duration : 2) + " turns!");
         } else if (skill.effect == "tri_dot" || skill.effect == "burn_bleed") {
             const int duration = skill.duration > 0 ? skill.duration : 2;
@@ -218,12 +277,12 @@ void CombatManager::enemyTurn(Player& player, Enemy& enemy) {
                 if (skill.effect == "burn_bleed" && type == StatusType::Poison) continue;
                 const bool hadStatus = player.HasStatus(type);
                 player.ApplyStatus({type, duration, 0, enemy.getAtk()});
-                if (!hadStatus && player.HasStatus(type)) AddEvent(CombatEvent::Kind::Debuff, player.getName() + " suffers a damage-over-time effect for " + std::to_string(duration) + " turns!");
+                if (!hadStatus && player.HasStatus(type)) AddEvent(CombatEvent::Kind::Debuff, player.getName() + " suffers " + std::string(StatusDisplayName(type)) + " for " + std::to_string(duration) + " turns!");
             }
         } else if (skill.effect == "def_down" || skill.effect == "accuracy_down") {
             const bool hadStatus = player.HasStatus(StatusType::VerdigrisMark);
             player.ApplyStatus({StatusType::VerdigrisMark, skill.duration > 0 ? skill.duration : 2, 0, enemy.getAtk()});
-            if (!hadStatus && player.HasStatus(StatusType::VerdigrisMark)) AddEvent(CombatEvent::Kind::Debuff, player.getName() + " suffers a weakening effect for " + std::to_string(skill.duration > 0 ? skill.duration : 2) + " turns!");
+            if (!hadStatus && player.HasStatus(StatusType::VerdigrisMark)) AddEvent(CombatEvent::Kind::Debuff, player.getName() + " suffers Verdigris Mark for " + std::to_string(skill.duration > 0 ? skill.duration : 2) + " turns!");
         } else if (skill.effect == "heal_self" || skill.effect == "heal_cleanse") {
             const int amount = (std::max)(1, enemy.getMaxHP() * 15 / 100);
             const int before = enemy.getHP();

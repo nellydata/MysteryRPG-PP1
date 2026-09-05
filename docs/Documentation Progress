@@ -115,5 +115,32 @@ Spent ~1 hour wrangling scaffolding and resolving small issues to ensure everyth
 •	Added guards for invalid rooms, stale enemies, and repeated command handling.
 •	Fixed the executable build successfully after the changes.
 
+•	Added a data-driven enemy catalogue for Devotee, Automata, and Verdigris factions.
+•	Added Basic, Rare, Epic, Elite, and Boss enemy tiers with catalogue skill and drop metadata.
+•	Added tier-specific HP, ATK, and DEF scaling with fixed archetype SPD values.
+•	Migrated Win32 and console enemy spawning to catalogue definitions.
+•	Added enemy skill cooldowns, faction skill effects, boss phase transitions, and structured combat events.
+•	Added elite encounter escalation from seeded Shimmer Surge events.
+•	Added tier-aware elite and boss reward selection.
+•	Added Shimmer unlock triggers and a 10-point Shimmer loadout tracker.
+•	Added enemy faction, tier, and phase details to the combat view.
+•	Validated the catalogue expansion with a successful Debug x64 build.
+
+•	Added immediate-previous-page navigation for Back and inventory access from investigation.
+•	Cleared combat ownership and event history when leaving battles so later investigations start fresh.
+•	Limited enemy encounters by room faction, room spawn condition, player level, and maximum catalogue tier.
+•	Prevented level 1 players from encountering Rare, Epic, Elite, or Boss enemies.
+•	Routed opening-turn, status, hazard, and combat deaths to the fountain recovery choices immediately.
+•	Blocked navigation, investigation, fleeing, and combat actions while the player is at 0 HP.
+•	Updated combat events to identify specific Bleed, Burn, and Poison effects and immediate status deaths.
+•	Replaced unsupported combat-log symbols with readable ASCII event labels.
+•	Recorded the navigation, encounter, recovery, and event-log changes for version-control tracking.
+ Version 0.4.0
+•	Added metadata-driven Shimmer skill descriptions and effects to the Skills view.
+•	Added Shimmer skill equip and unequip controls using the progression loadout budget.
+•	Displayed equipped Shimmer skills in the player equipment panel.
+•	Added selectable equipped Shimmer skills to combat and connected selections to combat resolution.
+•	Validated the Shimmer loadout update with a successful Debug x64 build.
+
 
 

@@ -2,6 +2,7 @@
 
 #include <set>
 #include <string>
+#include <vector>
 
 class Player;
 
@@ -19,8 +20,11 @@ public:
     bool HasCrux(const std::string& itemName) const;
     bool UnlockShimmerSkill(const std::string& skillName);
     bool HasShimmerSkill(const std::string& skillName) const;
+    std::vector<std::string> GetUnlockedShimmerSkills() const;
+    std::vector<std::string> GetEquippedShimmerSkills() const;
     int GetShimmerPoints() const;
     bool EquipShimmerSkill(const std::string& skillName, int cost);
+    bool UnequipShimmerSkill(const std::string& skillName, int cost);
     bool UnlockShimmerFromTrigger(const std::string& trigger);
 
 private:

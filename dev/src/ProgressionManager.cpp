@@ -1,5 +1,6 @@
 #include "ProgressionManager.h"
 #include "Player.h"
+#include <algorithm>
 #include <iostream>
 
 ProgressionManager::ProgressionManager()
@@ -7,6 +8,12 @@ ProgressionManager::ProgressionManager()
 
 void ProgressionManager::GrantXP(int amount) {
     if (amount > 0) xp_ += amount;
+}
+
+bool ProgressionManager::UnequipShimmerSkill(const std::string& skillName, int cost) {
+    if (cost <= 0 || equippedShimmerSkills_.erase(skillName) == 0) return false;
+    shimmerPointsUsed_ = (std::max)(0, shimmerPointsUsed_ - cost);
+    return true;
 }
 
 bool ProgressionManager::CheckLevelUp(Player& player) {
@@ -53,6 +60,14 @@ bool ProgressionManager::UnlockShimmerSkill(const std::string& skillName) {
 
 bool ProgressionManager::HasShimmerSkill(const std::string& skillName) const {
     return shimmerSkills_.find(skillName) != shimmerSkills_.end();
+}
+
+std::vector<std::string> ProgressionManager::GetUnlockedShimmerSkills() const {
+    return std::vector<std::string>(shimmerSkills_.begin(), shimmerSkills_.end());
+}
+
+std::vector<std::string> ProgressionManager::GetEquippedShimmerSkills() const {
+    return std::vector<std::string>(equippedShimmerSkills_.begin(), equippedShimmerSkills_.end());
 }
 
 int ProgressionManager::GetShimmerPoints() const { return 10 - shimmerPointsUsed_; }

@@ -9,6 +9,7 @@
 #include <cstdio>
 #include <array>
 #include <cctype>
+#include <memory>
 
 namespace {
 constexpr COLORREF Background = RGB(24, 24, 24);
@@ -28,6 +29,19 @@ unsigned RoomSeed(const std::string& roomName) {
 		seed *= 16777619u;
 	}
 	return seed;
+}
+
+EnemyFaction RoomFaction(const std::string& roomName) {
+	if (roomName == "Archive Room") return EnemyFaction::Automata;
+	if (roomName == "Chapel") return EnemyFaction::Verdigris;
+	return EnemyFaction::Devotee;
+}
+
+EnemyTier MaximumEncounterTier(int level) {
+	if (level <= 1) return EnemyTier::Basic;
+	if (level <= 3) return EnemyTier::Rare;
+	if (level <= 5) return EnemyTier::Epic;
+	return EnemyTier::Elite;
 }
 
 std::string ReplaceTokens(std::string value) {
@@ -82,6 +96,30 @@ bool EnvironmentEquals(const char* name, const char* expected) {
 	std::free(value);
 	return result;
 }
+}
+
+void Win32UI::ChangeView(View nextView) {
+	if (view_ == nextView) return;
+	viewHistory_.push_back(view_);
+	view_ = nextView;
+}
+
+void Win32UI::LeaveCombat() {
+	activeEnemy_ = nullptr;
+	combatItemSelection_ = false;
+	combatDefeatRecovery_ = false;
+	combat_.ClearEvents();
+	if (selectedRoom_ >= 0 && selectedRoom_ < static_cast<int>(mapManager_.GetRooms().size())) {
+		mapManager_.GetRooms()[selectedRoom_].ClearEnemies();
+	}
+}
+
+void Win32UI::ShowDefeatRecovery() {
+	if (player_.isAlive() || combatDefeatRecovery_) return;
+	combatDefeatRecovery_ = true;
+	view_ = View::Combat;
+	statusMessage_ = "Defeated at the fountain. Respawn with 10% HP or end the battle.";
+	AddLog(player_.getName() + " has fallen. Choose respawn or end battle.");
 }
 
 std::wstring Win32UI::FormatDisplayText(const std::string& text) const {
@@ -193,6 +231,7 @@ void Win32UI::CreateControls() {
 	for (int i = 0; i < 4; ++i) createButton(i, RoomButtonBase + i, L"Room");
 	for (int i = 0; i < 4; ++i) createButton(4 + i, InspectButtonBase + i, L"Inspect");
 	for (int i = 0; i < 12; ++i) createButton(8 + i, InventoryButtonBase + i, L"Item");
+	for (int i = 0; i < 12; ++i) createButton(36 + i, SkillButtonBase + i, L"Skill");
 	controls_[25] = CreateWindowW(L"EDIT", L"", WS_CHILD | WS_BORDER | ES_AUTOHSCROLL,
 		0, 0, 0, 0, window_, reinterpret_cast<HMENU>(InventorySearch), GetModuleHandleW(nullptr), nullptr);
 	SendMessageW(controls_[25], WM_SETFONT, reinterpret_cast<WPARAM>(font_), TRUE);
@@ -252,6 +291,7 @@ void Win32UI::RefreshControls() {
 			ShowWindow(controls_[20], SW_SHOW);
 			ShowWindow(controls_[21], SW_SHOW);
 			ShowWindow(controls_[22], SW_SHOW);
+			ShowWindow(controls_[29], SW_SHOW);
 		}
 	} else if (view_ == View::Inventory) {
 		inventoryEntryItems_.clear();
@@ -295,6 +335,14 @@ void Win32UI::RefreshControls() {
 		ShowWindow(controls_[33], SW_SHOW);
 		ShowWindow(controls_[34], SW_SHOW);
 		ShowWindow(controls_[35], SW_SHOW);
+	} else if (view_ == View::Skills) {
+		skillNames_ = progression_.GetUnlockedShimmerSkills();
+		for (std::size_t index = 0; index < skillNames_.size() && index < 12; ++index) {
+			SetWindowTextW(controls_[36 + index], FormatDisplayText(skillNames_[index]).c_str());
+			ShowWindow(controls_[36 + index], SW_SHOW);
+		}
+		ShowWindow(controls_[21], SW_SHOW);
+		ShowWindow(controls_[33], SW_SHOW);
 	} else if (view_ == View::Combat) {
 		if (combatDefeatRecovery_) {
 			SetWindowTextW(controls_[24], L"RESPAWN (10% HP)");
@@ -315,6 +363,13 @@ void Win32UI::RefreshControls() {
 				if (item == nullptr) continue;
 				SetWindowTextW(controls_[8 + index],
 					(FormatDisplayText(item->getName()) + L"\n" + ToWide(CompactConsumableSummary(*item))).c_str());
+				ShowWindow(controls_[8 + index], SW_SHOW);
+			}
+			ShowWindow(controls_[21], SW_SHOW);
+		} else if (combatSkillSelection_) {
+			equippedSkillNames_ = progression_.GetEquippedShimmerSkills();
+			for (std::size_t index = 0; index < equippedSkillNames_.size() && index < 12; ++index) {
+				SetWindowTextW(controls_[8 + index], FormatDisplayText(equippedSkillNames_[index]).c_str());
 				ShowWindow(controls_[8 + index], SW_SHOW);
 			}
 			ShowWindow(controls_[21], SW_SHOW);
@@ -384,6 +439,8 @@ void Win32UI::LayoutControls(int width, int height) {
 	}
 	for (int i = 0; i < 12; ++i) {
 		MoveWindow(controls_[8 + i], center + (i % 4) * (inventoryWidth + inventoryGap),
+					132 + (i / 4) * 68, inventoryWidth, 58, TRUE);
+		MoveWindow(controls_[36 + i], center + (i % 4) * (inventoryWidth + inventoryGap),
 					132 + (i / 4) * 68, inventoryWidth, 58, TRUE);
 	}
 	MoveWindow(controls_[20], center, roomActionY, buttonWidth, buttonHeight, TRUE);
@@ -554,6 +611,16 @@ void Win32UI::HandleCommand(int controlId) {
 				inventoryEntryItems_[index]->getName() + " selected.";
 		}
 		}
+	} else if (controlId >= SkillButtonBase && controlId < SkillButtonBase + 12) {
+		const int index = controlId - SkillButtonBase;
+		if (view_ == View::Skills && index < static_cast<int>(skillNames_.size())) {
+			selectedSkillIndex_ = index;
+			statusMessage_ = skillNames_[index] + " selected.";
+		} else if (view_ == View::Combat && combatSkillSelection_ && index < static_cast<int>(equippedSkillNames_.size())) {
+			selectedCombatSkillName_ = equippedSkillNames_[index];
+			combatSkillSelection_ = false;
+			PerformCombatAction(CombatAction::Shimmer);
+		}
 	} else if (controlId == ButtonInventoryPrevious) {
 		if (inventoryPage_ > 0) --inventoryPage_;
 		selectedInventoryIndex_ = -1;
@@ -562,15 +629,22 @@ void Win32UI::HandleCommand(int controlId) {
 		if (inventoryPage_ + 1 < pageCount) ++inventoryPage_;
 		selectedInventoryIndex_ = -1;
 	} else if (controlId == ButtonSearch) {
-		if (view_ == View::Room && selectedRoom_ >= 0 &&
+		if (view_ == View::Room && player_.isAlive() && selectedRoom_ >= 0 &&
 			selectedRoom_ < static_cast<int>(mapManager_.GetRooms().size())) SearchRoom();
 	} else if (controlId == ButtonBack) {
+		if (combatDefeatRecovery_) {
+			handlingCommand_ = false;
+			return;
+		}
 		if (view_ == View::Combat && combatItemSelection_) combatItemSelection_ = false;
-		else view_ = View::Floor;
+		else if (!viewHistory_.empty()) {
+			view_ = viewHistory_.back();
+			viewHistory_.pop_back();
+		} else view_ = View::Floor;
 	} else if (controlId == ButtonMap) {
-		view_ = View::Map;
+		if (player_.isAlive() && !combatDefeatRecovery_) ChangeView(View::Map);
 	} else if (controlId == ButtonInventory) {
-		view_ = View::Inventory;
+		if (player_.isAlive() && !combatDefeatRecovery_) ChangeView(View::Inventory);
 	} else if (controlId == ButtonSort) {
 		ShowInventoryMenu();
 	} else if (controlId == ButtonDiscard) {
@@ -581,7 +655,16 @@ void Win32UI::HandleCommand(int controlId) {
 			selectedInventoryIndex_ = -1;
 		}
 	} else if (controlId == ButtonEquip) {
-		if (selectedInventoryIndex_ >= 0 && selectedInventoryIndex_ < static_cast<int>(inventoryEntryItems_.size()) &&
+		if (view_ == View::Skills && selectedSkillIndex_ >= 0 && selectedSkillIndex_ < static_cast<int>(skillNames_.size())) {
+			const std::string& skillName = skillNames_[selectedSkillIndex_];
+			auto skill = ShimmerSkill::Create(skillName);
+			if (skill != nullptr) {
+				const auto equipped = progression_.GetEquippedShimmerSkills();
+				const bool isEquipped = std::find(equipped.begin(), equipped.end(), skillName) != equipped.end();
+				const bool changed = isEquipped ? progression_.UnequipShimmerSkill(skillName, skill->getCost()) : progression_.EquipShimmerSkill(skillName, skill->getCost());
+				statusMessage_ = changed ? (isEquipped ? "Unequipped " : "Equipped ") + skillName + "." : "Not enough Shimmer points.";
+			}
+		} else if (selectedInventoryIndex_ >= 0 && selectedInventoryIndex_ < static_cast<int>(inventoryEntryItems_.size()) &&
 			inventoryEntryItems_[selectedInventoryIndex_] != nullptr) {
 			Item& item = *inventoryEntryItems_[selectedInventoryIndex_];
 			if (item.isEquippable()) {
@@ -609,26 +692,32 @@ void Win32UI::HandleCommand(int controlId) {
 			}
 		}
 	} else if (controlId == ButtonSkills) {
-		view_ = View::Skills;
+		ChangeView(View::Skills);
 	} else if (controlId == ButtonAttack) {
 		if (combatDefeatRecovery_) {
 			player_.heal((std::max)(1, player_.getMaxHP() * 10 / 100));
 			combatDefeatRecovery_ = false;
 			statusMessage_ = "Respawned at the fountain with 10% HP. Continue the battle.";
-		} else PerformCombatAction(CombatAction::Attack);
+			LeaveCombat();
+			view_ = View::Room;
+			statusMessage_ += " Investigate again for a fresh encounter.";
+		} else if (player_.isAlive()) PerformCombatAction(CombatAction::Attack);
 	} else if (controlId == ButtonItem) {
 		if (combatDefeatRecovery_) {
 			player_.heal(player_.getMaxHP());
-			combatDefeatRecovery_ = false;
-			activeEnemy_ = nullptr;
-			combat_.ClearEvents();
+			LeaveCombat();
 			view_ = View::Floor;
+			viewHistory_.clear();
 			statusMessage_ = "Battle ended. You returned to the main floor with full HP.";
-		} else ShowCombatItems();
+		} else if (player_.isAlive()) ShowCombatItems();
 	} else if (controlId == ButtonShimmer) {
-		PerformCombatAction(CombatAction::Shimmer);
+		if (player_.isAlive() && activeEnemy_ != nullptr) {
+			equippedSkillNames_ = progression_.GetEquippedShimmerSkills();
+			if (equippedSkillNames_.empty()) statusMessage_ = "No Shimmer skills are equipped.";
+			else combatSkillSelection_ = true;
+		}
 	} else if (controlId == ButtonFlee) {
-		PerformCombatAction(CombatAction::Flee);
+		if (player_.isAlive()) PerformCombatAction(CombatAction::Flee);
 	} else if (controlId == ButtonQuit) {
 		PostMessageW(window_, WM_CLOSE, 0, 0);
 		handlingCommand_ = false;
@@ -656,19 +745,24 @@ void Win32UI::InitializeCompletionState() {
 }
 
 void Win32UI::EnterRoom(int roomIndex) {
+	if (!player_.isAlive()) {
+		ShowDefeatRecovery();
+		return;
+	}
 	if (roomIndex < 0 || roomIndex >= static_cast<int>(mapManager_.GetRooms().size())) return;
 	selectedRoom_ = roomIndex;
 	Area& area = mapManager_.GetRooms()[roomIndex];
 	if (!area.IsUnlocked()) return;
-	activeEnemy_ = area.getFirstAliveEnemy();
-	view_ = activeEnemy_ != nullptr && activeEnemy_->isAlive() ? View::Combat : View::Room;
-	if (view_ == View::Room) activeEnemy_ = nullptr;
+	LeaveCombat();
+	ChangeView(View::Room);
 	AddLog("Entered " + area.getName() + ". Investigate the visible interactions.");
 }
 
 void Win32UI::Inspect(int interactableIndex) {
+	if (!player_.isAlive()) return;
 	if (selectedRoom_ < 0 || selectedRoom_ >= static_cast<int>(mapManager_.GetRooms().size())) return;
 	Area& area = mapManager_.GetRooms()[selectedRoom_];
+	combat_.ClearEvents();
 	if (interactableIndex < 0 || interactableIndex >= static_cast<int>(area.GetVisibleInteractables().size())) return;
 	const std::string object = area.GetVisibleInteractables()[interactableIndex];
 	if (area.ConsumeClue()) {
@@ -684,35 +778,46 @@ void Win32UI::Inspect(int interactableIndex) {
 }
 
 void Win32UI::SearchRoom() {
+	if (!player_.isAlive()) return;
 	if (selectedRoom_ < 0 || selectedRoom_ >= static_cast<int>(mapManager_.GetRooms().size())) return;
 	statusMessage_ = "Investigating the room...";
+	combat_.ClearEvents();
 	Area& area = mapManager_.GetRooms()[selectedRoom_];
 	area.RecordSearch();
 	const unsigned searchSeed = RoomSeed(area.getName()) + static_cast<unsigned>(area.GetSearchCount() * 31);
 	const int roll = static_cast<int>(searchSeed % 100);
 	const bool cluesComplete = area.HasAllClues();
 	const int bossThreshold = 18;
+	const int playerLevel = progression_.GetLevel();
+	const EnemyFaction roomFaction = RoomFaction(area.getName());
+	const EnemyTier encounterTier = MaximumEncounterTier(playerLevel);
+	const bool encounterAllowed = area.GetSpawnCondition() != EnemySpawnCondition::None &&
+		roll < SpawnChance(area.GetSpawnCondition());
 	const int enemyThreshold = cluesComplete ? 70 : 50;
 	if (activeEnemy_ == nullptr && roll >= 90) {
 		const int damage = (std::max)(1, player_.getMaxHP() * 5 / 100);
 		player_.takeDamage(damage);
 		AddLog("Investigation: environmental hazard caused " + std::to_string(damage) + " damage.");
+		if (!player_.isAlive()) ShowDefeatRecovery();
 		return;
 	}
 	if (activeEnemy_ == nullptr && roll >= 84) {
 		player_.heal((std::max)(1, player_.getMaxHP() * 10 / 100));
 		AddLog("Shimmer Surge: the player gains a temporary restorative pulse.");
 		if (roll % 5 == 0) {
-			const int eliteLevel = progression_.GetLevel() + 3;
-			if (auto elite = CreateRandomCatalogueEnemy(searchSeed + 7, eliteLevel, true, false)) {
+			const int eliteLevel = progression_.GetLevel();
+			if (static_cast<int>(encounterTier) >= static_cast<int>(EnemyTier::Elite)) {
+				if (auto elite = CreateRandomCatalogueEnemy(searchSeed + 7, eliteLevel, roomFaction, EnemyTier::Elite)) {
 				if (elite->getTier() == EnemyTier::Elite) {
 					area.addEnemy(std::move(elite));
 					activeEnemy_ = area.getFirstAliveEnemy();
 					combat_.BeginEncounter(*activeEnemy_);
 					combat_.PrepareTurn(player_, *activeEnemy_);
 					view_ = View::Combat;
+			if (!player_.isAlive()) ShowDefeatRecovery();
 					AddLog("Shimmer Anomaly: an elite enemy spawned.");
 				}
+			}
 			}
 		}
 		return;
@@ -721,14 +826,15 @@ void Win32UI::SearchRoom() {
 		AddLog("Investigation: a Shimmer anomaly rippled through the room.");
 		return;
 	}
-	if (activeEnemy_ == nullptr && area.getName() == "Entrance Hall" && cluesComplete && area.HasAllItems() && !area.HasBossBeenDefeated() && roll < bossThreshold) {
+	if (activeEnemy_ == nullptr && playerLevel >= 6 && area.getName() == "Entrance Hall" && cluesComplete && area.HasAllItems() && !area.HasBossBeenDefeated() && roll < bossThreshold) {
 		area.MarkBossEncountered();
-		const int enemyLevel = progression_.GetLevel() + 5;
+		const int enemyLevel = progression_.GetLevel();
 		if (auto boss = CreateCatalogueEnemy("Matron of the Catacombs", enemyLevel)) area.addEnemy(std::move(boss));
 		activeEnemy_ = area.getFirstAliveEnemy();
 		combat_.BeginEncounter(*activeEnemy_);
 		combat_.PrepareTurn(player_, *activeEnemy_);
 		view_ = View::Combat;
+		if (!player_.isAlive()) ShowDefeatRecovery();
 		AddLog("Search: the Guard of the Catacombs emerges.");
 		return;
 	}
@@ -738,17 +844,17 @@ void Win32UI::SearchRoom() {
 	}
 	if (activeEnemy_ == nullptr && area.HasAllClues() && area.HasAllItems() && area.HasBossBeenDefeated()) {
 		const int repeatRoll = static_cast<int>(searchSeed % 100);
-		if (repeatRoll < 10) {
-			const int enemyLevel = progression_.GetLevel() + 5;
+		if (repeatRoll < 10 && playerLevel >= 6) {
+			const int enemyLevel = progression_.GetLevel();
 			if (auto boss = CreateCatalogueEnemy("Overlord-Prime", enemyLevel)) area.addEnemy(std::move(boss));
 			AddLog("Search: the defeated boss returns in a stronger form.");
 		} else if (repeatRoll < 60) {
-			const int enemyLevel = (std::max)(1, progression_.GetLevel() + static_cast<int>(searchSeed % 6) - 2);
-			if (auto enemy = CreateRandomCatalogueEnemy(searchSeed, enemyLevel, false, false)) area.addEnemy(std::move(enemy));
+			const int enemyLevel = (std::max)(1, progression_.GetLevel() + static_cast<int>(searchSeed % 3) - 1);
+			if (auto enemy = CreateRandomCatalogueEnemy(searchSeed, enemyLevel, roomFaction, encounterTier)) area.addEnemy(std::move(enemy));
 			AddLog("Search: a Nun emerges from the cleared room.");
 		} else {
-			const int enemyLevel = (std::max)(1, progression_.GetLevel() + static_cast<int>(searchSeed % 6) - 2);
-			if (auto enemy = CreateRandomCatalogueEnemy(searchSeed + 1, enemyLevel, false, false)) area.addEnemy(std::move(enemy));
+			const int enemyLevel = (std::max)(1, progression_.GetLevel() + static_cast<int>(searchSeed % 3) - 1);
+			if (auto enemy = CreateRandomCatalogueEnemy(searchSeed + 1, enemyLevel, roomFaction, encounterTier)) area.addEnemy(std::move(enemy));
 			AddLog("Search: an Automata stirs in the cleared room.");
 		}
 		activeEnemy_ = area.getFirstAliveEnemy();
@@ -763,19 +869,18 @@ void Win32UI::SearchRoom() {
 		combat_.BeginEncounter(*activeEnemy_);
 	combat_.PrepareTurn(player_, *activeEnemy_);
 		view_ = View::Combat;
+		if (!player_.isAlive()) ShowDefeatRecovery();
 		return;
 	}
-	if (activeEnemy_ == nullptr && roll < 50) {
-		const int enemyLevel = (std::max)(1, progression_.GetLevel() + static_cast<int>(searchSeed % 6) - 2);
-		switch (searchSeed % 2) {
-		case 0: if (auto enemy = CreateRandomCatalogueEnemy(searchSeed, enemyLevel, false, false)) area.addEnemy(std::move(enemy)); break;
-		default: if (auto enemy = CreateRandomCatalogueEnemy(searchSeed + 1, enemyLevel, false, false)) area.addEnemy(std::move(enemy)); break;
-		}
+	if (activeEnemy_ == nullptr && encounterAllowed) {
+		const int enemyLevel = (std::max)(1, progression_.GetLevel() + static_cast<int>(searchSeed % 3) - 1);
+		if (auto enemy = CreateRandomCatalogueEnemy(searchSeed, enemyLevel, roomFaction, encounterTier)) area.addEnemy(std::move(enemy));
 		activeEnemy_ = area.getFirstAliveEnemy();
 		if (activeEnemy_ == nullptr) return;
 		combat_.BeginEncounter(*activeEnemy_);
 		combat_.PrepareTurn(player_, *activeEnemy_);
 		view_ = View::Combat;
+		if (!player_.isAlive()) ShowDefeatRecovery();
 		AddLog("Search: an enemy ambushes you in " + area.getName() + ".");
 		return;
 	}
@@ -822,14 +927,17 @@ void Win32UI::PerformCombatAction(CombatAction action) {
 		return;
 	}
 	if (action == CombatAction::Flee) {
+		if (!player_.isAlive()) return;
 		AddLog(player_.getName() + " withdrew from combat.");
 		statusMessage_ = "Battle ended: " + player_.getName() + " fled.";
 		mapManager_.GetRooms()[selectedRoom_].ClearEnemies();
-		activeEnemy_ = nullptr;
+		LeaveCombat();
 		view_ = View::Room;
 		return;
 	}
-	if (!combat_.resolve(action, player_, *activeEnemy_, nullptr, &progression_)) {
+	std::unique_ptr<ShimmerSkill> selectedSkill;
+	if (action == CombatAction::Shimmer) selectedSkill = ShimmerSkill::Create(selectedCombatSkillName_);
+	if (!combat_.resolve(action, player_, *activeEnemy_, selectedSkill.get(), &progression_)) {
 		statusMessage_ = action == CombatAction::Shimmer ? "Shimmer is unavailable or still recharging." : "That combat action is unavailable.";
 		AddLog("That action is unavailable.");
 		return;
@@ -868,18 +976,14 @@ void Win32UI::PerformCombatAction(CombatAction action) {
 				statusMessage_ += " Item dropped: " + catalog[index].name + ".";
 			}
 		}
-		activeEnemy_ = nullptr;
+		LeaveCombat();
 		view_ = View::Room;
 		return;
 	}
 	while (!combat_.IsPlayerTurn() && activeEnemy_->isAlive() && player_.isAlive())
 		combat_.enemyTurn(player_, *activeEnemy_);
 	statusMessage_.clear();
-	if (!player_.isAlive()) AddLog(player_.getName() + " has fallen. Choose respawn or end battle.");
-	if (!player_.isAlive()) {
-		combatDefeatRecovery_ = true;
-		statusMessage_ = "Defeated at the fountain. Respawn with 10% HP or end the battle.";
-	}
+	if (!player_.isAlive()) ShowDefeatRecovery();
 }
 
 void Win32UI::AddLog(const std::string& message) {
@@ -1091,6 +1195,14 @@ void Win32UI::Paint(HDC deviceContext) {
 		else DrawTextLine(deviceContext, 105, y, L"--", Muted, 14);
 		y += 25;
 	}
+	DrawTextLine(deviceContext, 42, y + 12, L"SHIMMER LOADOUT", Brass, 17, true);
+	y += 42;
+	const auto equippedShimmer = progression_.GetEquippedShimmerSkills();
+	if (equippedShimmer.empty()) DrawTextLine(deviceContext, 48, y, L"--", Muted, 14);
+	for (const auto& skillName : equippedShimmer) {
+		DrawTextLine(deviceContext, 48, y, FormatDisplayText(skillName), Shimmer, 14, false, 275);
+		y += 25;
+	}
 
 	if (view_ == View::Inventory) {
 		const int left = client.right / 3 < 395 ? (client.right / 3 < 20 ? 20 : client.right / 3) : 395;
@@ -1208,10 +1320,10 @@ void Win32UI::Paint(HDC deviceContext) {
 			else if (event.kind == CombatManager::CombatEvent::Kind::Heal) eventColor = RGB(90, 210, 110);
 			else if (event.kind == CombatManager::CombatEvent::Kind::Shield) eventColor = RGB(90, 160, 245);
 			else if (event.kind == CombatManager::CombatEvent::Kind::Status || event.kind == CombatManager::CombatEvent::Kind::Buff || event.kind == CombatManager::CombatEvent::Kind::Debuff || event.kind == CombatManager::CombatEvent::Kind::PhaseTransition || event.kind == CombatManager::CombatEvent::Kind::Mutation) eventColor = Shimmer;
-			const std::wstring symbol = event.kind == CombatManager::CombatEvent::Kind::Status || event.kind == CombatManager::CombatEvent::Kind::Buff || event.kind == CombatManager::CombatEvent::Kind::Debuff ? L"◆ " :
-				event.kind == CombatManager::CombatEvent::Kind::Damage || event.kind == CombatManager::CombatEvent::Kind::Attack || event.kind == CombatManager::CombatEvent::Kind::Skill || event.kind == CombatManager::CombatEvent::Kind::DotTick ? L"⚔ " :
-				event.kind == CombatManager::CombatEvent::Kind::Heal ? L"✚ " :
-				event.kind == CombatManager::CombatEvent::Kind::Shield ? L"▣ " : L"• ";
+			const std::wstring symbol = event.kind == CombatManager::CombatEvent::Kind::Status || event.kind == CombatManager::CombatEvent::Kind::Buff || event.kind == CombatManager::CombatEvent::Kind::Debuff ? L"[STATUS] " :
+				event.kind == CombatManager::CombatEvent::Kind::Damage || event.kind == CombatManager::CombatEvent::Kind::Attack || event.kind == CombatManager::CombatEvent::Kind::Skill || event.kind == CombatManager::CombatEvent::Kind::DotTick ? L"[DAMAGE] " :
+				event.kind == CombatManager::CombatEvent::Kind::Heal ? L"[HEAL] " :
+				event.kind == CombatManager::CombatEvent::Kind::Shield ? L"[SHIELD] " : L"[INFO] ";
 			eventY += DrawTextLine(deviceContext, 425, eventY, symbol + FormatDisplayText(event.message), eventColor, 16, false,
 				client.right - 449) + 5;
 			if (eventY > eventTop - 30) break;
@@ -1227,9 +1339,18 @@ void Win32UI::Paint(HDC deviceContext) {
 		}
 	} else if (view_ == View::Skills) {
 		DrawTextLine(deviceContext, 425, contentY, L"SKILLS // LATIN RESONANCE", Shimmer, 23, true);
-		const std::vector<std::wstring> skills = {L"Pulsus Luminis   CD 3", L"Velum Radiāns    CD 4", L"Gradus Coruscus  CD 2", L"Fulgur Aurorae   CD 5", L"Lux Sanctorum    CD 4"};
 		contentY += 55;
-		for (const auto& skill : skills) { DrawTextLine(deviceContext, 440, contentY, skill, Text, 18); contentY += 34; }
+		const auto unlocked = progression_.GetUnlockedShimmerSkills();
+		const auto equipped = progression_.GetEquippedShimmerSkills();
+		for (const auto& name : unlocked) {
+			auto skill = ShimmerSkill::Create(name);
+			if (skill == nullptr) continue;
+			const bool active = std::find(equipped.begin(), equipped.end(), name) != equipped.end();
+			DrawTextLine(deviceContext, 440, contentY, FormatDisplayText(name) + (active ? L"  [EQUIPPED]" : L""), Shimmer, 18, true, client.right - 470);
+			contentY += 28;
+			DrawTextLine(deviceContext, 455, contentY, L"Effect: " + FormatDisplayText(skill->getEffect()) + L" | " + FormatDisplayText(skill->getDescription()), Text, 15, false, client.right - 485);
+			contentY += 34;
+		}
 	}
 
 	if (view_ == View::Floor) {

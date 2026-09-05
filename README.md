@@ -14,7 +14,7 @@ Micare is a C++17 noir roguelike RPG with both a native Win32 desktop UI and a c
 - Deterministic Floor 1 map with Entrance Hall, Archive Room, Chapel, and Storage Room
 - Interactable rooms with neutral environmental descriptions
 - Deterministic enemy spawning
-- Combat with Attack, Shimmer, Interrogate, Expose Weakness, and Flee
+- Combat with Attack, Item, Shimmer, and Flee actions
 - Health, attack, defense, XP, and level progression
 - Item and clue inventory listing
 - NPC placeholders and input validation
@@ -23,6 +23,7 @@ Micare is a C++17 noir roguelike RPG with both a native Win32 desktop UI and a c
 - Bleed, burn, poison, stun, healing-over-time, barrier, and mark status processing
 - Percentage-based defense reduction, deterministic critical hits, and turn cooldowns
 - Fifteen concrete shimmer skills with Latin display names and specification cooldowns
+- Metadata-driven Shimmer Skills menu with descriptions, effects, equip/unequip loadouts, and combat selection
 - Structured console UI with a persistent player panel, exploration/combat views, inventory overlay, map, and shimmer bar
 - ASCII-safe rendering for Windows consoles, with optional ANSI color styling
 - Hidden developer panel enabled with `MICARE_DEVELOPER_MODE=1`
@@ -33,10 +34,24 @@ Micare is a C++17 noir roguelike RPG with both a native Win32 desktop UI and a c
 - Defensive state validation for room selection, stale enemies, and repeated command handling
 - Deferred Win32 control refresh to prevent command-handler re-entry and UI freezes
 - Completion-mode level cap and guarded XP progression to prevent infinite level-up loops
+- Data-driven Devotee, Automata, and Verdigris enemy catalogue with Basic, Rare, Epic, Elite, and Boss tiers
+- Tier-specific enemy scaling, fixed archetype speed, catalogue skills, cooldowns, passives, and drop metadata
+- Data-driven enemy spawning, faction skill behavior, elite Shimmer Surge escalation, and boss phase transitions
+- Structured combat events for attacks, skills, damage, DOT effects, healing, debuffs, deaths, and phase changes
+- Shimmer unlock triggers and a 10-point Shimmer loadout tracker
 
 ## Building and Running
 
 Open `COS-PP1.vcxproj` in Visual Studio and build Debug x64. The project uses C++17 and no external libraries.
+
+## Reference Sources
+
+- [C++17 language support](https://learn.microsoft.com/cpp/overview/visual-cpp-language-conformance)
+- [Microsoft Win32 API documentation](https://learn.microsoft.com/windows/win32/api/)
+- [Microsoft GDI drawing documentation](https://learn.microsoft.com/windows/win32/gdi/windows-gdi)
+- [Visual Studio C++ project documentation](https://learn.microsoft.com/cpp/build/projects-and-build-systems-cpp)
+- [C++ standard library documentation](https://en.cppreference.com/w/cpp)
+- [Git documentation](https://git-scm.com/docs)
 
 ## Milestone Stand-Up
 
@@ -77,6 +92,6 @@ The normal build launches **Micare - Cathedral of Lies** with a name prompt befo
 - Room buttons enter Floor I locations.
 - Investigation buttons inspect individual objects and immediately update the clue log.
 - Search, inventory item, map, and shimmer buttons operate without numeric console input.
-- Combat buttons perform Attack, Shimmer, and Flee actions while refreshing enemy/player state.
+- Combat buttons perform Attack, Item, Shimmer, and Flee actions while refreshing enemy/player state.
 
 For debugging or environments where a window is not available, set `MICARE_CONSOLE_MODE=1` before launching. The repository currently contains no local image asset files, so the desktop UI uses native drawing and the supplied visual references for its dark, brass, verdigris, and shimmer composition.

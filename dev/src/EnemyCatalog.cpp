@@ -90,6 +90,17 @@ std::unique_ptr<Enemy> CreateRandomCatalogueEnemy(unsigned seed, int level, bool
 	return std::make_unique<Enemy>(*candidates[seed % candidates.size()], level);
 }
 
+std::unique_ptr<Enemy> CreateRandomCatalogueEnemy(unsigned seed, int level,
+	EnemyFaction faction, EnemyTier maximumTier) {
+	std::vector<const EnemyDefinition*> candidates;
+	for (const auto& definition : GetEnemyCatalogue()) {
+		if (definition.faction != faction || static_cast<int>(definition.tier) > static_cast<int>(maximumTier)) continue;
+		candidates.push_back(&definition);
+	}
+	if (candidates.empty()) return nullptr;
+	return std::make_unique<Enemy>(*candidates[seed % candidates.size()], level);
+}
+
 const char* EnemyFactionName(EnemyFaction faction) {
 	switch (faction) {
 	case EnemyFaction::Devotee: return "Devotee";

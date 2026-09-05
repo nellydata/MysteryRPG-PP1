@@ -15,6 +15,7 @@ void MapManager::GenerateFloor1() {
     entrance.AddInteractable("Broken statue");
     entrance.AddInteractable("Old banner");
     entrance.SetClues(true);
+    entrance.SetItems(true);
     entrance.SetSpawnCondition(EnemySpawnCondition::Low);
 
     rooms_.emplace_back("Archive Room");
@@ -34,12 +35,14 @@ void MapManager::GenerateFloor1() {
     chapel.AddInteractable("Figure in the shadows");
     chapel.SetNPC(true);
     chapel.SetClues(true);
+    chapel.SetItems(true);
     chapel.SetSpawnCondition(EnemySpawnCondition::High);
 
     rooms_.emplace_back("Storage Room");
     Area& storage = rooms_.back();
     storage.AddInteractable("Crates");
     storage.AddInteractable("Supply shelf");
+    storage.SetClues(true);
     storage.SetItems(true);
     storage.SetSpawnCondition(EnemySpawnCondition::None);
 }

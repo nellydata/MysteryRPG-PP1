@@ -52,6 +52,18 @@ CombatManager::~CombatManager() = default;
 
 const ShimmerSkill* CombatManager::GetDefaultSkill() const { return defaultSkill_.get(); }
 
+void CombatManager::PrepareTurn(Player& player, Enemy& enemy) {
+    if (!enemy.isAlive()) return;
+    if (turnNumber_ == 0 && playerGauge_ == 0 && enemyGauge_ == 0) {
+        while (playerGauge_ < 1000 && enemyGauge_ < 1000) {
+            playerGauge_ += (std::max)(1, player.getSpeed());
+            enemyGauge_ += (std::max)(1, enemy.getSpeed());
+        }
+        playerTurn_ = playerGauge_ >= 1000;
+    }
+    while (!playerTurn_ && player.isAlive() && enemy.isAlive()) enemyTurn(player, enemy);
+}
+
 void CombatManager::BeginEncounter(Enemy& enemy) {
     if (activeEnemy_ == &enemy) return;
     activeEnemy_ = &enemy;

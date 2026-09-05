@@ -38,6 +38,8 @@ public:
     bool HasNPC() const;
     bool HasClues() const;
     bool HasItems() const;
+    bool HasAllClues() const;
+    bool HasAllItems() const;
     EnemySpawnCondition GetSpawnCondition() const;
     bool ConsumeClue();
     bool ConsumeItem();
@@ -63,6 +65,8 @@ private:
     bool hasNPC_;
     bool hasClues_;
     bool hasItems_;
+    int cluesRemaining_;
+    int itemsRemaining_;
     EnemySpawnCondition spawnCondition_;
     bool unlocked_;
     int searchCount_;

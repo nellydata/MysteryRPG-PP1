@@ -22,6 +22,7 @@ public:
     ~CombatManager();
 
     void BeginEncounter(Enemy& enemy);
+    void PrepareTurn(Player& player, Enemy& enemy);
     bool resolve(CombatAction action, Player& player, Enemy& enemy,
                  ShimmerSkill* skill = nullptr,
                  ProgressionManager* progression = nullptr);

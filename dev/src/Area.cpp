@@ -3,7 +3,7 @@
 #include <algorithm>
 
 Area::Area(const std::string& name)
-    : name_(name), hasNPC_(false), hasClues_(false), hasItems_(false),
+    : name_(name), hasNPC_(false), hasClues_(false), hasItems_(false), cluesRemaining_(0), itemsRemaining_(0),
       spawnCondition_(EnemySpawnCondition::None), unlocked_(false), searchCount_(0),
       discoveredNPC_(false), bossDefeated_(false), bossEncountered_(false) {}
 
@@ -76,24 +76,28 @@ void Area::AddInteractable(const std::string& interactable) {
 }
 
 void Area::SetNPC(bool hasNPC) { hasNPC_ = hasNPC; }
-void Area::SetClues(bool hasClues) { hasClues_ = hasClues; }
-void Area::SetItems(bool hasItems) { hasItems_ = hasItems; }
+void Area::SetClues(bool hasClues) { hasClues_ = hasClues; cluesRemaining_ = hasClues ? 5 : 0; }
+void Area::SetItems(bool hasItems) { hasItems_ = hasItems; itemsRemaining_ = hasItems ? 5 : 0; }
 void Area::SetSpawnCondition(EnemySpawnCondition condition) { spawnCondition_ = condition; }
 
 const std::vector<std::string>& Area::GetInteractables() const { return interactables_; }
 bool Area::HasNPC() const { return hasNPC_; }
 bool Area::HasClues() const { return hasClues_; }
 bool Area::HasItems() const { return hasItems_; }
+bool Area::HasAllClues() const { return cluesRemaining_ == 0; }
+bool Area::HasAllItems() const { return itemsRemaining_ == 0; }
 EnemySpawnCondition Area::GetSpawnCondition() const { return spawnCondition_; }
 
 bool Area::ConsumeClue() {
-    if (!hasClues_) return false;
-    hasClues_ = false;
+    if (!hasClues_ || cluesRemaining_ <= 0) return false;
+    --cluesRemaining_;
+    hasClues_ = cluesRemaining_ > 0;
     return true;
 }
 
 bool Area::ConsumeItem() {
-    if (!hasItems_) return false;
-    hasItems_ = false;
+    if (!hasItems_ || itemsRemaining_ <= 0) return false;
+    --itemsRemaining_;
+    hasItems_ = itemsRemaining_ > 0;
     return true;
 }

@@ -550,14 +550,30 @@ void Win32UI::SearchRoom() {
 	Area& area = mapManager_.GetRooms()[selectedRoom_];
 	area.RecordSearch();
 	const unsigned searchSeed = RoomSeed(area.getName()) + static_cast<unsigned>(area.GetSearchCount() * 31);
-	if (activeEnemy_ == nullptr && area.IsFullySearched() && area.HasBossBeenDefeated()) {
-		const unsigned roll = searchSeed % 100;
-		if (roll < 10) {
+	const int roll = static_cast<int>(searchSeed % 100);
+	const bool cluesComplete = area.HasAllClues();
+	const int bossThreshold = 18;
+	const int enemyThreshold = cluesComplete ? 70 : 50;
+	if (activeEnemy_ == nullptr && area.getName() == "Entrance Hall" && cluesComplete && area.HasAllItems() && !area.HasBossBeenDefeated() && roll < bossThreshold) {
+		area.MarkBossEncountered();
+		const int enemyLevel = progression_.GetLevel() + 5;
+		area.addEnemy(std::make_unique<Enemy>("Guard of the Catacombs", 180 + enemyLevel * enemyLevel * 4,
+			35 + enemyLevel * 4, 250, enemyLevel));
+		activeEnemy_ = area.getFirstAliveEnemy();
+		combat_.BeginEncounter(*activeEnemy_);
+		combat_.PrepareTurn(player_, *activeEnemy_);
+		view_ = View::Combat;
+		AddLog("Search: the Guard of the Catacombs emerges.");
+		return;
+	}
+	if (activeEnemy_ == nullptr && area.HasAllClues() && area.HasAllItems() && area.HasBossBeenDefeated()) {
+		const int repeatRoll = static_cast<int>(searchSeed % 100);
+		if (repeatRoll < 10) {
 			const int enemyLevel = progression_.GetLevel() + 5;
-			area.addEnemy(std::make_unique<Enemy>("Cathedral Boss", 70 + enemyLevel * 8,
+			area.addEnemy(std::make_unique<Enemy>("Cathedral Boss", 260 + enemyLevel * enemyLevel * 8,
 				20 + enemyLevel * 3, 200, enemyLevel));
 			AddLog("Search: the defeated boss returns in a stronger form.");
-		} else if (roll < 60) {
+		} else if (repeatRoll < 60) {
 			const int enemyLevel = (std::max)(1, progression_.GetLevel() + static_cast<int>(searchSeed % 6) - 2);
 			area.addEnemy(std::make_unique<Enemy>("Nun", 18 + enemyLevel * 2, 4 + enemyLevel, 15, enemyLevel));
 			AddLog("Search: a Nun emerges from the cleared room.");
@@ -573,47 +589,40 @@ void Win32UI::SearchRoom() {
 			return;
 		}
 		combat_.BeginEncounter(*activeEnemy_);
+	combat_.PrepareTurn(player_, *activeEnemy_);
 		view_ = View::Combat;
 		return;
 	}
-	if (activeEnemy_ == nullptr && area.IsFullySearched() && !area.HasBossBeenEncountered() &&
-		(searchSeed % 100) < 50) {
-		area.MarkBossEncountered();
-		const int enemyLevel = progression_.GetLevel() + 3;
-		area.addEnemy(std::make_unique<Enemy>("Cathedral Boss", 35 + enemyLevel * 5,
-			10 + enemyLevel * 2, 100, enemyLevel));
-		activeEnemy_ = area.getFirstAliveEnemy();
-		if (activeEnemy_ == nullptr) return;
-		combat_.BeginEncounter(*activeEnemy_);
-		view_ = View::Combat;
-		AddLog("Search: the Cathedral Boss emerges from the investigated room.");
-		return;
-	}
-	if (activeEnemy_ == nullptr && (searchSeed % 100) < SpawnChance(area.GetSpawnCondition())) {
+	if (activeEnemy_ == nullptr && roll < 50) {
 		const int enemyLevel = (std::max)(1, progression_.GetLevel() + static_cast<int>(searchSeed % 6) - 2);
 		switch (searchSeed % 2) {
-		case 0: area.addEnemy(std::make_unique<Enemy>("Automata", 12 + enemyLevel * 2, 3 + enemyLevel, 15, enemyLevel)); break;
-		default: area.addEnemy(std::make_unique<Enemy>("Nun", 18 + enemyLevel * 2, 4 + enemyLevel, 15, enemyLevel)); break;
+		case 0: area.addEnemy(std::make_unique<Enemy>("Automata", 40 + enemyLevel * enemyLevel * 3, 3 + enemyLevel, 15, enemyLevel)); break;
+		default: area.addEnemy(std::make_unique<Enemy>("Nun", 55 + enemyLevel * enemyLevel * 3, 4 + enemyLevel, 15, enemyLevel)); break;
 		}
 		activeEnemy_ = area.getFirstAliveEnemy();
 		if (activeEnemy_ == nullptr) return;
 		combat_.BeginEncounter(*activeEnemy_);
+		combat_.PrepareTurn(player_, *activeEnemy_);
 		view_ = View::Combat;
 		AddLog("Search: an enemy ambushes you in " + area.getName() + ".");
 		return;
 	}
-	if (area.IsFullySearched() && !area.HasBossBeenEncountered() &&
-		static_cast<int>((RoomSeed(area.getName()) + area.GetSearchCount()) % 100) < 50) {
-		area.MarkBossEncountered();
-		const int enemyLevel = progression_.GetLevel() + 3;
-		area.addEnemy(std::make_unique<Enemy>("Cathedral Boss", 35 + enemyLevel * 5,
-			10 + enemyLevel * 2, 100, enemyLevel));
-		activeEnemy_ = area.getFirstAliveEnemy();
-		if (activeEnemy_ == nullptr) return;
-		combat_.BeginEncounter(*activeEnemy_);
-		view_ = View::Combat;
-		AddLog("Search: the Cathedral Boss emerges from the investigated room.");
+	if (roll >= enemyThreshold && (cluesComplete || roll < 80)) {
+		if (!area.HasAllItems()) area.ConsumeItem();
+		AddNamedItem(player_, BuildConsumableCatalog(), "cellar_rations");
+		AddLog("Search: a consumable item was added to the inventory.");
 		return;
+	}
+	if (!cluesComplete && roll >= 80) {
+		if (!area.HasAllClues()) {
+			if (area.ConsumeClue()) {
+				player_.AddClue({"A fragment recovered during the investigation."});
+				progression_.GrantXP(10);
+				progression_.CheckLevelUp(player_);
+				AddLog("Search: a clue was recovered.");
+			}
+			return;
+		}
 	}
 	if (area.RevealNextInteractable()) {
 		AddLog("Search: a new interaction became visible.");
@@ -658,7 +667,7 @@ void Win32UI::PerformCombatAction(CombatAction action) {
 		const std::string defeatedName = activeEnemy_->getName();
 		const int defeatedLevel = activeEnemy_->getLevel();
 		const int xpReward = activeEnemy_->getXPReward();
-		const bool wasBoss = defeatedName == "Cathedral Boss";
+		const bool wasBoss = defeatedName == "Cathedral Boss" || defeatedName == "Guard of the Catacombs";
 		area.removeDeadEnemies();
 		statusMessage_ = "Battle ended: " + defeatedName + " defeated. XP gained: " + std::to_string(xpReward) + ".";
 		AddLog("Battle ended: " + defeatedName + " defeated. XP gained: " + std::to_string(xpReward) + ".");
@@ -686,7 +695,8 @@ void Win32UI::PerformCombatAction(CombatAction action) {
 		view_ = View::Room;
 		return;
 	}
-	combat_.enemyTurn(player_, *activeEnemy_);
+	while (!combat_.IsPlayerTurn() && activeEnemy_->isAlive() && player_.isAlive())
+		combat_.enemyTurn(player_, *activeEnemy_);
 	statusMessage_ = player_.isAlive() ? "The enemy acted. " + player_.getName() + "'s turn." : player_.getName() + " has fallen.";
 	if (!player_.isAlive()) AddLog(player_.getName() + " has fallen.");
 	if (!player_.isAlive()) {
@@ -902,8 +912,8 @@ void Win32UI::Paint(HDC deviceContext) {
 	}
 
 	if (view_ == View::Inventory) {
-		const int left = (std::min)(395, (std::max)(20, client.right / 3));
-		const int right = (std::max)(left + 240, client.right - 20);
+		const int left = client.right / 3 < 395 ? (client.right / 3 < 20 ? 20 : client.right / 3) : 395;
+		const int right = client.right - 20 > left + 240 ? client.right - 20 : left + 240;
 		const int top = 20;
 		const int bottom = client.bottom - 20;
 		const int split = left + (right - left) * 56 / 100;

@@ -115,6 +115,7 @@ bool EncounterManager::Explore(Area& area, Player& player,
         Enemy* enemy = area.getFirstAliveEnemy();
         if (enemy != nullptr) {
             combat.BeginEncounter(*enemy);
+            combat.PrepareTurn(player, *enemy);
             ui.RenderCombat(player, progression, *enemy, combat);
             const int choice = ui.Prompt("Choose a combat action.", 1, 5);
 
@@ -138,7 +139,8 @@ bool EncounterManager::Explore(Area& area, Player& player,
             if (!enemy->isAlive()) {
                 area.removeDeadEnemies();
             } else {
-                combat.enemyTurn(player, *enemy);
+                while (!combat.IsPlayerTurn() && player.isAlive() && enemy->isAlive())
+                    combat.enemyTurn(player, *enemy);
             }
             continue;
         }

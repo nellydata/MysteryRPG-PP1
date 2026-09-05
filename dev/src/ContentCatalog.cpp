@@ -31,11 +31,6 @@ void SetSlotRules(ItemDefinition& item, EquipSlot slot, const std::string& mainS
 		break;
 	default: break;
 	}
-
-int SpeedMainStatValue(Rarity rarity, int value) {
-	const int rarityMultiplier = static_cast<int>(rarity) + 1;
-	return value * rarityMultiplier * 2;
-}
 }
 
 int MainStatValue(Rarity rarity, int value) {
@@ -53,6 +48,11 @@ int SubstatValue(Rarity rarity) {
 	case Rarity::Artifact: return 23;
 	}
 	return 0;
+}
+
+int SpeedMainStatValue(Rarity rarity, int value) {
+	const int rarityMultiplier = static_cast<int>(rarity) + 1;
+	return value * rarityMultiplier * 2;
 }
 
 void AddEquippables(std::vector<ItemDefinition>& result, EquipSlot slot, const char* const* names,

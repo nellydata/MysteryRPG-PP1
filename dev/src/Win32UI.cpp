@@ -959,6 +959,10 @@ void Win32UI::Paint(HDC deviceContext) {
 				drawStat(L"Healing potency", stats.healingPotency); drawStat(L"Healing received", stats.healingReceived);
 				drawStat(L"Barrier potency", stats.barrierPotency); drawStat(L"DOT potency", stats.dotPotency);
 				drawStat(L"Lifesteal", stats.lifesteal); drawStat(L"Debuff reduction", stats.debuffDurationReduction);
+				if (selected->getCategory() == ItemCategory::Consumable && !selected->getEffect().empty()) {
+					DrawTextLine(deviceContext, detailX, detailY, L"Use: " + ToWide(selected->getEffect()), Shimmer, 17);
+					detailY += 24;
+				}
 				std::string effect = selected->getEffect();
 				if (!selected->getPassive().empty()) effect += (effect.empty() ? "" : " ") + selected->getPassive();
 				if (!selected->getUniqueEffect().empty()) effect += (effect.empty() ? "" : " ") + selected->getUniqueEffect();

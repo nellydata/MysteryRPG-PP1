@@ -45,6 +45,7 @@ int InterrogationChance(const Enemy& enemy, int playerLevel) {
 CombatManager::CombatManager()
     : blocked_(false), weaknessExposed_(false), interrogationAttempts_(0),
       turnNumber_(0), playerTurn_(true), activeEnemy_(nullptr),
+      playerGauge_(0), enemyGauge_(0),
       defaultSkill_(ShimmerSkill::Create("Pulsus Luminis")) {}
 
 CombatManager::~CombatManager() = default;
@@ -56,7 +57,9 @@ void CombatManager::BeginEncounter(Enemy& enemy) {
     activeEnemy_ = &enemy;
     blocked_ = false;
     turnNumber_ = 0;
-    playerTurn_ = true;
+    playerGauge_ = 0;
+    enemyGauge_ = 0;
+    playerTurn_ = false;
     weaknessExposed_ = false;
     interrogationAttempts_ = 0;
 }
@@ -65,6 +68,13 @@ bool CombatManager::resolve(CombatAction action, Player& player, Enemy& enemy,
                             ShimmerSkill* skill, ProgressionManager* progression) {
     BeginEncounter(enemy);
     blocked_ = false;
+    if (turnNumber_ == 0 && playerGauge_ == 0 && enemyGauge_ == 0) {
+        while (playerGauge_ < 1000 && enemyGauge_ < 1000) {
+            playerGauge_ += (std::max)(1, player.getSpeed());
+            enemyGauge_ += (std::max)(1, enemy.getSpeed());
+        }
+        playerTurn_ = playerGauge_ >= 1000;
+    }
 
     player.ProcessStatuses();
     enemy.ProcessStatuses();
@@ -95,6 +105,7 @@ bool CombatManager::resolve(CombatAction action, Player& player, Enemy& enemy,
             progression->CheckLevelUp(player);
         }
         if (enemy.isAlive()) playerTurn_ = false;
+        playerGauge_ -= 1000;
         return true;
     }
     case CombatAction::Shimmer:
@@ -106,6 +117,7 @@ bool CombatManager::resolve(CombatAction action, Player& player, Enemy& enemy,
         skill->apply(player, enemy);
         skill->ResetCooldown();
         if (enemy.isAlive()) playerTurn_ = false;
+        playerGauge_ -= 1000;
         return true;
     case CombatAction::Interrogate: {
         const bool result = interrogate(player, enemy, progression);
@@ -130,7 +142,13 @@ void CombatManager::enemyTurn(Player& player, Enemy& enemy) {
 
     if (enemy.HasStatus(StatusType::Stun)) {
         std::cout << enemy.getName() << " loses its turn to the stun.\n";
-        playerTurn_ = true;
+        enemyGauge_ -= 1000;
+        playerTurn_ = false;
+        while (playerGauge_ < 1000 && enemyGauge_ < 1000) {
+            playerGauge_ += (std::max)(1, player.getSpeed());
+            enemyGauge_ += (std::max)(1, enemy.getSpeed());
+        }
+        playerTurn_ = playerGauge_ >= 1000;
         return;
     }
     if (player.HasStatus(StatusType::Barrier)) {
@@ -145,7 +163,13 @@ void CombatManager::enemyTurn(Player& player, Enemy& enemy) {
     player.takeDamage(damage);
     std::cout << enemy.getName() << " attacks for " << damage << " damage.\n";
     if (defaultSkill_ != nullptr) defaultSkill_->TickCooldown();
-    playerTurn_ = true;
+    enemyGauge_ -= 1000;
+    playerTurn_ = false;
+    while (playerGauge_ < 1000 && enemyGauge_ < 1000) {
+        playerGauge_ += (std::max)(1, player.getSpeed());
+        enemyGauge_ += (std::max)(1, enemy.getSpeed());
+    }
+    playerTurn_ = playerGauge_ >= 1000;
 }
 
 bool CombatManager::IsPlayerTurn() const { return playerTurn_; }

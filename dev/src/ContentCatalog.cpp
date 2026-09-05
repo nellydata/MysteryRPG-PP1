@@ -6,31 +6,36 @@ void SetSlotRules(ItemDefinition& item, EquipSlot slot, const std::string& mainS
 	switch (slot) {
 	case EquipSlot::Head:
 		item.theme = "insight, clarity, protection, perception";
-		item.allowedSubstats = {ItemStat::CritRate, ItemStat::CritDamage, ItemStat::Resistance, ItemStat::Accuracy};
-		item.forbiddenStats = {ItemStat::ATK, ItemStat::SPD, ItemStat::DotPotency, ItemStat::Evasion};
+		item.allowedSubstats = {ItemStat::CritRate, ItemStat::CritDamage, ItemStat::Resistance, ItemStat::Accuracy, ItemStat::SPD};
+		item.forbiddenStats = {ItemStat::ATK, ItemStat::DotPotency, ItemStat::Evasion};
 		break;
 	case EquipSlot::Torso:
 		item.theme = "protection, stability, purity, endurance";
-		item.allowedSubstats = {ItemStat::Resistance, ItemStat::BarrierPotency, ItemStat::HealingPotency, ItemStat::DebuffDurationReduction};
-		item.forbiddenStats = {ItemStat::ATK, ItemStat::CritRate, ItemStat::CritDamage, ItemStat::Accuracy, ItemStat::DotPotency, ItemStat::Evasion, ItemStat::SPD};
+		item.allowedSubstats = {ItemStat::Resistance, ItemStat::BarrierPotency, ItemStat::HealingPotency, ItemStat::DebuffDurationReduction, ItemStat::SPD};
+		item.forbiddenStats = {ItemStat::ATK, ItemStat::CritRate, ItemStat::CritDamage, ItemStat::Accuracy, ItemStat::DotPotency, ItemStat::Evasion};
 		break;
 	case EquipSlot::Hand:
 		item.theme = "offense, aggression, precision, execution";
-		item.allowedSubstats = {ItemStat::CritRate, ItemStat::CritDamage, ItemStat::Accuracy, ItemStat::DotPotency, ItemStat::Lifesteal};
-		item.forbiddenStats = {ItemStat::DEF, ItemStat::HP, ItemStat::Resistance, ItemStat::BarrierPotency, ItemStat::HealingPotency, ItemStat::SPD, ItemStat::Evasion};
+		item.allowedSubstats = {ItemStat::CritRate, ItemStat::CritDamage, ItemStat::Accuracy, ItemStat::DotPotency, ItemStat::Lifesteal, ItemStat::SPD};
+		item.forbiddenStats = {ItemStat::DEF, ItemStat::HP, ItemStat::Resistance, ItemStat::BarrierPotency, ItemStat::HealingPotency, ItemStat::Evasion};
 		break;
 	case EquipSlot::Boots:
 		item.theme = "movement, agility, positioning";
-		item.allowedSubstats = {ItemStat::Evasion, ItemStat::Accuracy, ItemStat::ATK, ItemStat::DEF};
+		item.allowedSubstats = {ItemStat::Evasion, ItemStat::Accuracy, ItemStat::ATK, ItemStat::DEF, ItemStat::SPD};
 		item.forbiddenStats = {ItemStat::CritRate, ItemStat::CritDamage, ItemStat::DotPotency, ItemStat::HealingPotency, ItemStat::BarrierPotency, ItemStat::Resistance, ItemStat::HP};
 		break;
 	case EquipSlot::Accessory:
 		item.theme = "spiritual power, amplification, utility";
-		item.allowedSubstats = {ItemStat::CritRate, ItemStat::CritDamage, ItemStat::Accuracy, ItemStat::Resistance, ItemStat::HealingPotency, ItemStat::BarrierPotency, ItemStat::DotPotency};
-		item.forbiddenStats = {ItemStat::SPD, ItemStat::Evasion};
+		item.allowedSubstats = {ItemStat::CritRate, ItemStat::CritDamage, ItemStat::Accuracy, ItemStat::Resistance, ItemStat::HealingPotency, ItemStat::BarrierPotency, ItemStat::DotPotency, ItemStat::SPD};
+		item.forbiddenStats = {ItemStat::Evasion};
 		break;
 	default: break;
 	}
+
+int SpeedMainStatValue(Rarity rarity, int value) {
+	const int rarityMultiplier = static_cast<int>(rarity) + 1;
+	return value * rarityMultiplier * 2;
+}
 }
 
 int MainStatValue(Rarity rarity, int value) {
@@ -68,7 +73,7 @@ void AddEquippables(std::vector<ItemDefinition>& result, EquipSlot slot, const c
 		item.rarity = rarity;
 		item.slot = slot;
 		item.mainStat = resolvedMainStat;
-		const int scaledValue = MainStatValue(rarity, value);
+		const int scaledValue = resolvedMainStat == "spd" ? SpeedMainStatValue(rarity, value) : MainStatValue(rarity, value);
 		if (resolvedMainStat == "hp") item.stats.hp = scaledValue;
 		else if (resolvedMainStat == "def") item.stats.def = scaledValue;
 		else if (resolvedMainStat == "spd") item.stats.spd = scaledValue;
@@ -105,8 +110,8 @@ void AddEquippables(std::vector<ItemDefinition>& result, EquipSlot slot, const c
 			if (slot == EquipSlot::Head) { item.passive = "Crit rate +5%"; item.stats.critRate += 5; }
 			else if (slot == EquipSlot::Torso) { item.passive = "Healing received +10%"; item.stats.healingReceived += 10; }
 			else if (slot == EquipSlot::Hand) { item.passive = "DOT potency +10%"; item.stats.dotPotency += 10; }
-			else if (slot == EquipSlot::Boots) { item.passive = "Accuracy +5%"; item.stats.acc += 5; }
-			else if (slot == EquipSlot::Accessory) { item.passive = "Accuracy +5%"; item.stats.acc += 5; }
+			else if (slot == EquipSlot::Boots) { item.passive = "Accuracy +18%"; item.stats.acc += 18; }
+			else if (slot == EquipSlot::Accessory) { item.passive = "Accuracy +18%"; item.stats.acc += 18; }
 		}
 		SetSlotRules(item, slot, resolvedMainStat);
 		result.push_back(item);
@@ -187,6 +192,13 @@ std::vector<ItemDefinition> BuildEquippableCatalog() {
 	result.push_back({"first_light_crucible", "Artifact hand gear.", ItemCategory::Equippable, Rarity::Artifact, EquipSlot::Hand, {0, 0, 0, 12}, {}, "gain_5_percent_atk_every_time_you_use_a_shimmer_skill"});
 	for (auto& item : result) {
 		if (item.rarity != Rarity::Artifact) continue;
+		item.stats = {};
+		const int artifactMain = item.slot == EquipSlot::Boots ? SpeedMainStatValue(Rarity::Artifact, 12) : MainStatValue(Rarity::Artifact, 30);
+		if (item.slot == EquipSlot::Head) item.stats.hp = artifactMain;
+		else if (item.slot == EquipSlot::Torso) item.stats.def = artifactMain;
+		else if (item.slot == EquipSlot::Boots) item.stats.spd = artifactMain;
+		else item.stats.atk = artifactMain;
+		item.stats.spd += SubstatValue(Rarity::Artifact);
 		SetSlotRules(item, item.slot, item.slot == EquipSlot::Head ? "hp" :
 			item.slot == EquipSlot::Torso ? "def" :
 			item.slot == EquipSlot::Boots ? "spd" : "atk");

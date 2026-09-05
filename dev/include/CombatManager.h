@@ -38,6 +38,8 @@ private:
     int interrogationAttempts_;
     int turnNumber_;
     bool playerTurn_;
+    int playerGauge_;
+    int enemyGauge_;
     Enemy* activeEnemy_;
     std::unique_ptr<ShimmerSkill> defaultSkill_;
 };

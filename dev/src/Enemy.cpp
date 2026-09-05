@@ -1,10 +1,18 @@
 #include "Enemy.h"
 #include <algorithm>
+#include <cmath>
 #include <string>
+
+namespace {
+int ScaleStat(int base, double growth, int level) {
+	return (std::max)(1, static_cast<int>(std::lround(base * std::pow(growth, (std::max)(0, level)))));
+}
+}
 
 Enemy::Enemy(const std::string& name, int hp, int atk, int xpReward, int level)
 	: name_(name), hp_(hp), maxHp_(hp), atk_(atk), xpReward_(xpReward),
-	  defense_(0), speed_(5), level_(level), resistance_(0), evasion_(0) {
+	  defense_(0), speed_(5), level_(level), resistance_(0), evasion_(0),
+	  faction_(EnemyFaction::Devotee), tier_(EnemyTier::Basic), phase_(1) {
 	int baseSpeed = 10;
 	double growth = 1.0;
 	if (name.find("Automata") != std::string::npos) baseSpeed = 8;
@@ -12,6 +20,22 @@ Enemy::Enemy(const std::string& name, int hp, int atk, int xpReward, int level)
 	else if (name.find("Nun") != std::string::npos) { baseSpeed = 12; growth = 1.5; }
 	speed_ = baseSpeed + static_cast<int>(growth * (std::max)(0, level_ - 1));
 }
+
+void Enemy::heal(int amount) {
+	if (amount <= 0) return;
+	hp_ = (std::min)(maxHp_, hp_ + amount);
+}
+
+Enemy::Enemy(const EnemyDefinition& definition, int level)
+	: name_(definition.name),
+	  hp_(ScaleStat(definition.hpBase, definition.tier == EnemyTier::Boss ? 1.25 : definition.tier == EnemyTier::Elite ? 1.20 : 1.15, level)),
+	  maxHp_(hp_),
+	  atk_(ScaleStat(definition.atkBase, definition.tier == EnemyTier::Boss ? 1.12 : definition.tier == EnemyTier::Elite ? 1.12 : 1.08, level)),
+	  xpReward_(definition.xpReward * (std::max)(1, level)),
+	  defense_(ScaleStat(definition.defBase, definition.tier == EnemyTier::Boss ? 1.15 : definition.tier == EnemyTier::Elite ? 1.12 : 1.10, level)),
+	  speed_(definition.speed), level_(level), resistance_(0), evasion_(0),
+	  faction_(definition.faction), tier_(definition.tier), skills_(definition.skills),
+	  skillCooldowns_(definition.skills.size(), 0), phase_(1) {}
 
 const std::vector<StatusEffect>& Enemy::GetStatuses() const { return statuses_; }
 
@@ -34,6 +58,37 @@ int Enemy::getSpeed() const { return speed_; }
 int Enemy::getLevel() const { return level_; }
 int Enemy::getResistance() const { return resistance_; }
 int Enemy::getEvasion() const { return evasion_; }
+EnemyFaction Enemy::getFaction() const { return faction_; }
+EnemyTier Enemy::getTier() const { return tier_; }
+const std::vector<EnemySkillDefinition>& Enemy::GetSkills() const { return skills_; }
+int Enemy::GetSkillCooldown(std::size_t index) const {
+	return index < skillCooldowns_.size() ? skillCooldowns_[index] : 0;
+}
+bool Enemy::IsSkillReady(std::size_t index) const { return GetSkillCooldown(index) == 0; }
+void Enemy::StartSkillCooldown(std::size_t index) {
+	if (index < skillCooldowns_.size()) skillCooldowns_[index] = skills_[index].cooldown;
+}
+void Enemy::TickSkillCooldowns() {
+	for (int& cooldown : skillCooldowns_) if (cooldown > 0) --cooldown;
+}
+int Enemy::GetPhase() const { return phase_; }
+bool Enemy::UpdatePhase() {
+	if (tier_ != EnemyTier::Boss) return false;
+	const int healthPercent = maxHp_ > 0 ? hp_ * 100 / maxHp_ : 0;
+	const int newPhase = healthPercent <= 30 ? 3 : healthPercent <= 70 ? 2 : 1;
+	if (newPhase <= phase_) return false;
+	phase_ = newPhase;
+	if (phase_ == 2) {
+		atk_ = atk_ * 120 / 100;
+		defense_ = defense_ * 120 / 100;
+		speed_ = speed_ * 120 / 100;
+	} else {
+		atk_ = atk_ * 140 / 100;
+		defense_ = defense_ * 125 / 100;
+		speed_ = speed_ * 125 / 100;
+	}
+	return true;
+}
 
 bool Enemy::HasStatus(StatusType type) const {
 	for (const auto& status : statuses_) if (status.type == type) return true;

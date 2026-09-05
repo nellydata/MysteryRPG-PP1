@@ -1,6 +1,7 @@
 #include "Win32UI.h"
 #include "Automata.h"
 #include "ContentCatalog.h"
+#include "EnemyCatalog.h"
 #include "Nun.h"
 #include "ShimmerSkill.h"
 #include <algorithm>
@@ -700,7 +701,20 @@ void Win32UI::SearchRoom() {
 	}
 	if (activeEnemy_ == nullptr && roll >= 84) {
 		player_.heal((std::max)(1, player_.getMaxHP() * 10 / 100));
-		AddLog("Investigation: a Shimmer surge restored 10% HP.");
+		AddLog("Shimmer Surge: the player gains a temporary restorative pulse.");
+		if (roll % 5 == 0) {
+			const int eliteLevel = progression_.GetLevel() + 3;
+			if (auto elite = CreateRandomCatalogueEnemy(searchSeed + 7, eliteLevel, true, false)) {
+				if (elite->getTier() == EnemyTier::Elite) {
+					area.addEnemy(std::move(elite));
+					activeEnemy_ = area.getFirstAliveEnemy();
+					combat_.BeginEncounter(*activeEnemy_);
+					combat_.PrepareTurn(player_, *activeEnemy_);
+					view_ = View::Combat;
+					AddLog("Shimmer Anomaly: an elite enemy spawned.");
+				}
+			}
+		}
 		return;
 	}
 	if (activeEnemy_ == nullptr && roll >= 78) {
@@ -710,8 +724,7 @@ void Win32UI::SearchRoom() {
 	if (activeEnemy_ == nullptr && area.getName() == "Entrance Hall" && cluesComplete && area.HasAllItems() && !area.HasBossBeenDefeated() && roll < bossThreshold) {
 		area.MarkBossEncountered();
 		const int enemyLevel = progression_.GetLevel() + 5;
-		area.addEnemy(std::make_unique<Enemy>("Guard of the Catacombs", 180 + enemyLevel * enemyLevel * 4,
-			35 + enemyLevel * 4, 250, enemyLevel));
+		if (auto boss = CreateCatalogueEnemy("Matron of the Catacombs", enemyLevel)) area.addEnemy(std::move(boss));
 		activeEnemy_ = area.getFirstAliveEnemy();
 		combat_.BeginEncounter(*activeEnemy_);
 		combat_.PrepareTurn(player_, *activeEnemy_);
@@ -727,16 +740,15 @@ void Win32UI::SearchRoom() {
 		const int repeatRoll = static_cast<int>(searchSeed % 100);
 		if (repeatRoll < 10) {
 			const int enemyLevel = progression_.GetLevel() + 5;
-			area.addEnemy(std::make_unique<Enemy>("Cathedral Boss", 260 + enemyLevel * enemyLevel * 8,
-				20 + enemyLevel * 3, 200, enemyLevel));
+			if (auto boss = CreateCatalogueEnemy("Overlord-Prime", enemyLevel)) area.addEnemy(std::move(boss));
 			AddLog("Search: the defeated boss returns in a stronger form.");
 		} else if (repeatRoll < 60) {
 			const int enemyLevel = (std::max)(1, progression_.GetLevel() + static_cast<int>(searchSeed % 6) - 2);
-			area.addEnemy(std::make_unique<Enemy>("Nun", 18 + enemyLevel * 2, 4 + enemyLevel, 15, enemyLevel));
+			if (auto enemy = CreateRandomCatalogueEnemy(searchSeed, enemyLevel, false, false)) area.addEnemy(std::move(enemy));
 			AddLog("Search: a Nun emerges from the cleared room.");
 		} else {
 			const int enemyLevel = (std::max)(1, progression_.GetLevel() + static_cast<int>(searchSeed % 6) - 2);
-			area.addEnemy(std::make_unique<Enemy>("Automata", 12 + enemyLevel * 2, 3 + enemyLevel, 15, enemyLevel));
+			if (auto enemy = CreateRandomCatalogueEnemy(searchSeed + 1, enemyLevel, false, false)) area.addEnemy(std::move(enemy));
 			AddLog("Search: an Automata stirs in the cleared room.");
 		}
 		activeEnemy_ = area.getFirstAliveEnemy();
@@ -756,8 +768,8 @@ void Win32UI::SearchRoom() {
 	if (activeEnemy_ == nullptr && roll < 50) {
 		const int enemyLevel = (std::max)(1, progression_.GetLevel() + static_cast<int>(searchSeed % 6) - 2);
 		switch (searchSeed % 2) {
-		case 0: area.addEnemy(std::make_unique<Enemy>("Automata", 40 + enemyLevel * enemyLevel * 3, 3 + enemyLevel, 15, enemyLevel)); break;
-		default: area.addEnemy(std::make_unique<Enemy>("Nun", 55 + enemyLevel * enemyLevel * 3, 4 + enemyLevel, 15, enemyLevel)); break;
+		case 0: if (auto enemy = CreateRandomCatalogueEnemy(searchSeed, enemyLevel, false, false)) area.addEnemy(std::move(enemy)); break;
+		default: if (auto enemy = CreateRandomCatalogueEnemy(searchSeed + 1, enemyLevel, false, false)) area.addEnemy(std::move(enemy)); break;
 		}
 		activeEnemy_ = area.getFirstAliveEnemy();
 		if (activeEnemy_ == nullptr) return;
@@ -828,11 +840,13 @@ void Win32UI::PerformCombatAction(CombatAction action) {
 		const std::string defeatedName = activeEnemy_->getName();
 		const int defeatedLevel = activeEnemy_->getLevel();
 		const int xpReward = activeEnemy_->getXPReward();
-		const bool wasBoss = defeatedName == "Cathedral Boss" || defeatedName == "Guard of the Catacombs";
+		const EnemyTier defeatedTier = activeEnemy_->getTier();
+		const bool wasBoss = defeatedTier == EnemyTier::Boss;
 		area.removeDeadEnemies();
 		statusMessage_ = "Battle ended: " + defeatedName + " defeated. XP gained: " + std::to_string(xpReward) + ".";
 		AddLog("Battle ended: " + defeatedName + " defeated. XP gained: " + std::to_string(xpReward) + ".");
 		if (wasBoss) {
+			if (progression_.UnlockShimmerFromTrigger(defeatedName)) AddLog("Shimmer skill unlocked from the boss: " + defeatedName + ".");
 			area.SetBossDefeated(true);
 			if (selectedRoom_ + 1 < static_cast<int>(mapManager_.GetRooms().size())) {
 				mapManager_.GetRooms()[selectedRoom_ + 1].SetUnlocked(true);
@@ -840,11 +854,13 @@ void Win32UI::PerformCombatAction(CombatAction action) {
 			}
 		}
 		const unsigned dropRoll = RoomSeed(defeatedName) + static_cast<unsigned>(defeatedLevel * 17 + area.GetSearchCount());
-		const bool canDropEpic = wasBoss;
-		if (dropRoll % 100 < (std::min)(80, 10 + defeatedLevel)) {
+		const int dropChance = defeatedTier == EnemyTier::Elite ? 100 : (std::min)(80, 10 + defeatedLevel);
+		if (dropRoll % 100 < dropChance) {
 			const auto catalog = BuildEquippableCatalog();
 			const int index = static_cast<int>(dropRoll % catalog.size());
-			const bool allowed = canDropEpic ? catalog[index].rarity != Rarity::Legendary && catalog[index].rarity != Rarity::Artifact
+			const bool allowed = defeatedTier == EnemyTier::Boss ? catalog[index].rarity != Rarity::Artifact
+				: defeatedTier == EnemyTier::Elite ? catalog[index].rarity == Rarity::Rare || catalog[index].rarity == Rarity::Epic || catalog[index].rarity == Rarity::Legendary
+				: wasBoss ? catalog[index].rarity != Rarity::Legendary && catalog[index].rarity != Rarity::Artifact
 				: catalog[index].rarity == Rarity::Common || catalog[index].rarity == Rarity::Uncommon || catalog[index].rarity == Rarity::Rare;
 			if (allowed) {
 				player_.AddItem(std::make_unique<Item>(catalog[index]));
@@ -1180,6 +1196,7 @@ void Win32UI::Paint(HDC deviceContext) {
 		DrawTextLine(deviceContext, 425, contentY, L"HOSTILE: " + ToWide(activeEnemy_->getName()), Danger, 26, true);
 		DrawTextLine(deviceContext, 425, contentY + 48, L"HP  " + std::to_wstring(activeEnemy_->getHP()) + L" / " + std::to_wstring(activeEnemy_->getMaxHP()), Text, 20);
 		DrawTextLine(deviceContext, 425, contentY + 84, L"ATK " + std::to_wstring(activeEnemy_->getAtk()) + L"   DEF " + std::to_wstring(activeEnemy_->getDefense()) + L"   SPD " + std::to_wstring(activeEnemy_->getSpeed()), Muted, 17);
+		DrawTextLine(deviceContext, 425, contentY + 112, ToWide(std::string(EnemyFactionName(activeEnemy_->getFaction())) + " // " + EnemyTierName(activeEnemy_->getTier()) + " // Phase " + std::to_string(activeEnemy_->GetPhase())), Brass, 15);
 		DrawTextLine(deviceContext, 425, contentY + 145, L"Battle event log", Brass, 18, true);
 		int eventY = contentY + 180;
 		const auto& events = combat_.GetEvents();
@@ -1187,12 +1204,12 @@ void Win32UI::Paint(HDC deviceContext) {
 		for (int index = firstEvent; index < static_cast<int>(events.size()); ++index) {
 			const auto& event = events[static_cast<std::size_t>(index)];
 			COLORREF eventColor = Text;
-			if (event.kind == CombatManager::CombatEvent::Kind::Damage) eventColor = Danger;
+			if (event.kind == CombatManager::CombatEvent::Kind::Damage || event.kind == CombatManager::CombatEvent::Kind::Attack || event.kind == CombatManager::CombatEvent::Kind::Skill || event.kind == CombatManager::CombatEvent::Kind::DotTick || event.kind == CombatManager::CombatEvent::Kind::Death) eventColor = Danger;
 			else if (event.kind == CombatManager::CombatEvent::Kind::Heal) eventColor = RGB(90, 210, 110);
 			else if (event.kind == CombatManager::CombatEvent::Kind::Shield) eventColor = RGB(90, 160, 245);
-			else if (event.kind == CombatManager::CombatEvent::Kind::Status) eventColor = Shimmer;
-			const std::wstring symbol = event.kind == CombatManager::CombatEvent::Kind::Status ? L"◆ " :
-				event.kind == CombatManager::CombatEvent::Kind::Damage ? L"⚔ " :
+			else if (event.kind == CombatManager::CombatEvent::Kind::Status || event.kind == CombatManager::CombatEvent::Kind::Buff || event.kind == CombatManager::CombatEvent::Kind::Debuff || event.kind == CombatManager::CombatEvent::Kind::PhaseTransition || event.kind == CombatManager::CombatEvent::Kind::Mutation) eventColor = Shimmer;
+			const std::wstring symbol = event.kind == CombatManager::CombatEvent::Kind::Status || event.kind == CombatManager::CombatEvent::Kind::Buff || event.kind == CombatManager::CombatEvent::Kind::Debuff ? L"◆ " :
+				event.kind == CombatManager::CombatEvent::Kind::Damage || event.kind == CombatManager::CombatEvent::Kind::Attack || event.kind == CombatManager::CombatEvent::Kind::Skill || event.kind == CombatManager::CombatEvent::Kind::DotTick ? L"⚔ " :
 				event.kind == CombatManager::CombatEvent::Kind::Heal ? L"✚ " :
 				event.kind == CombatManager::CombatEvent::Kind::Shield ? L"▣ " : L"• ";
 			eventY += DrawTextLine(deviceContext, 425, eventY, symbol + FormatDisplayText(event.message), eventColor, 16, false,

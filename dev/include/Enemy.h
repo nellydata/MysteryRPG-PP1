@@ -7,9 +7,11 @@
 class Enemy {
 public:
     Enemy(const std::string& name, int hp, int atk, int xpReward = 15, int level = 1);
+    Enemy(const EnemyDefinition& definition, int level);
     virtual ~Enemy();
 
     virtual void takeDamage(int amount);
+    void heal(int amount);
     bool isAlive() const;
     const std::string& getName() const;
     int getHP() const;
@@ -21,6 +23,15 @@ public:
     int getLevel() const;
     int getResistance() const;
     int getEvasion() const;
+    EnemyFaction getFaction() const;
+    EnemyTier getTier() const;
+    const std::vector<EnemySkillDefinition>& GetSkills() const;
+    int GetSkillCooldown(std::size_t index) const;
+    bool IsSkillReady(std::size_t index) const;
+    void StartSkillCooldown(std::size_t index);
+    void TickSkillCooldowns();
+    int GetPhase() const;
+    bool UpdatePhase();
     bool HasStatus(StatusType type) const;
     const std::vector<StatusEffect>& GetStatuses() const;
     bool ApplyStatus(const StatusEffect& status, int accuracy = 100);
@@ -39,4 +50,9 @@ protected:
     int resistance_;
     int evasion_;
     std::vector<StatusEffect> statuses_;
+    EnemyFaction faction_;
+    EnemyTier tier_;
+    std::vector<EnemySkillDefinition> skills_;
+    std::vector<int> skillCooldowns_;
+    int phase_;
 };

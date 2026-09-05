@@ -3,7 +3,7 @@
 #include <iostream>
 
 ProgressionManager::ProgressionManager()
-    : level_(1), xp_(0), xpToNextLevel_(100) {}
+    : level_(1), xp_(0), xpToNextLevel_(100), shimmerPointsUsed_(0) {}
 
 void ProgressionManager::GrantXP(int amount) {
     if (amount > 0) xp_ += amount;
@@ -53,4 +53,24 @@ bool ProgressionManager::UnlockShimmerSkill(const std::string& skillName) {
 
 bool ProgressionManager::HasShimmerSkill(const std::string& skillName) const {
     return shimmerSkills_.find(skillName) != shimmerSkills_.end();
+}
+
+int ProgressionManager::GetShimmerPoints() const { return 10 - shimmerPointsUsed_; }
+bool ProgressionManager::EquipShimmerSkill(const std::string& skillName, int cost) {
+    if (!HasShimmerSkill(skillName) || cost <= 0 || equippedShimmerSkills_.count(skillName) != 0 || shimmerPointsUsed_ + cost > 10) return false;
+    equippedShimmerSkills_.insert(skillName);
+    shimmerPointsUsed_ += cost;
+    return true;
+}
+
+bool ProgressionManager::UnlockShimmerFromTrigger(const std::string& trigger) {
+    static const std::pair<const char*, const char*> unlocks[] = {
+        {"mirror", "Phragmós Phōtós"}, {"Matron of the Catacombs", "Therapeía Anakláseōs"},
+        {"Catacombs", "Anástasis Phōtós"}, {"corpse", "Siphon Lux"},
+        {"statue", "Phthorá Phōtós"}, {"Overlord-Prime", "Refractio Ultima"},
+        {"light-spear", "Lumen Spiculum"}, {"relic", "Phōteinḕ Kátharsis"},
+        {"vortex", "Lux Vortex"}, {"Oracle Core", "Phōteinòs Thṓrax"}
+    };
+    for (const auto& unlock : unlocks) if (trigger.find(unlock.first) != std::string::npos) return UnlockShimmerSkill(unlock.second);
+    return false;
 }

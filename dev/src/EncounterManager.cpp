@@ -6,6 +6,7 @@
 #include "ContentCatalog.h"
 #include "ConsoleUI.h"
 #include "Enemy.h"
+#include "EnemyCatalog.h"
 #include "Item.h"
 #include "Nun.h"
 #include "Player.h"
@@ -34,11 +35,9 @@ int SpawnChance(EnemySpawnCondition condition) {
 }
 
 void SpawnEnemy(Area& area, unsigned seed) {
-    switch (seed % 3) {
-    case 0: area.addEnemy(std::make_unique<Automata>()); break;
-    case 1: area.addEnemy(std::make_unique<Nun>()); break;
-    default: area.addEnemy(std::make_unique<Enemy>("Shimmer Husk", 10, 3)); break;
-    }
+    const int level = 1 + static_cast<int>((seed / 3) % 5);
+    if (auto enemy = CreateRandomCatalogueEnemy(seed, level, false, false))
+        area.addEnemy(std::move(enemy));
 }
 
 void InspectEnvironment(Area& area, Player& player, ProgressionManager& progression,

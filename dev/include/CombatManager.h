@@ -19,7 +19,11 @@ enum class CombatAction {
 class CombatManager {
 public:
     struct CombatEvent {
-        enum class Kind { Turn, Damage, Heal, Shield, Status, Info };
+        enum class Kind {
+            Turn, Attack, Skill, Damage, DotTick, Heal, Shield, Buff, Debuff,
+            Cleanse, ExtraTurn, PhaseTransition, Shimmer, Mutation, Death,
+            Revive, Environment, Status, Info
+        };
         Kind kind;
         std::string message;
         int value = 0;

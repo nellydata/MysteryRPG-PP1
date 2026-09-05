@@ -45,6 +45,33 @@ enum class Rarity { Common, Uncommon, Rare, Epic, Legendary, Artifact };
 enum class EquipSlot { Head, Torso, Boots, Hand, Accessory, None };
 enum class ItemCategory { Equippable, Consumable, Clue, Crux, ShimmerSkill };
 
+enum class EnemyFaction { Devotee, Automata, Verdigris };
+enum class EnemyTier { Basic, Rare, Epic, Elite, Boss };
+
+struct EnemySkillDefinition {
+	std::string name;
+	std::string effect;
+	int multiplier = 100;
+	int cooldown = 0;
+	int duration = 0;
+};
+
+struct EnemyDefinition {
+	std::string name;
+	EnemyFaction faction = EnemyFaction::Devotee;
+	EnemyTier tier = EnemyTier::Basic;
+	int hpBase = 1;
+	int atkBase = 1;
+	int defBase = 0;
+	int speed = 1;
+	int xpReward = 15;
+	std::vector<EnemySkillDefinition> skills;
+	std::string passive;
+	int rareDropChance = 0;
+	int epicDropChance = 0;
+	int legendaryDropChance = 0;
+};
+
 enum class ItemStat {
 	HP,
 	DEF,

@@ -126,6 +126,9 @@ bool CombatManager::resolve(CombatAction action, Player& player, Enemy& enemy,
             + (weaknessExposed_ ? 2 : 0));
         enemy.takeDamage(damage);
         AddEvent(CombatEvent::Kind::Damage, player.getName() + " inflicted " + std::to_string(damage) + " damage!", damage);
+        if (enemy.UpdatePhase()) {
+            AddEvent(CombatEvent::Kind::Info, "Boss enters Phase " + std::to_string(enemy.GetPhase()) + ".");
+        }
         std::cout << "Adelaide attacks " << enemy.getName()
                   << " for " << damage << (critical ? " critical" : "") << " damage.\n";
         if (!enemy.isAlive() && progression != nullptr) {
@@ -188,6 +191,54 @@ void CombatManager::enemyTurn(Player& player, Enemy& enemy) {
 
     AddEvent(CombatEvent::Kind::Turn, enemy.getName() + "'s turn.");
     consumableUsedThisTurn_ = false;
+    const auto& skills = enemy.GetSkills();
+    for (std::size_t index = 0; index < skills.size(); ++index) {
+        const auto& skill = skills[index];
+        if (!enemy.IsSkillReady(index)) continue;
+        if (skill.effect == "heal_self" && enemy.getHP() >= enemy.getMaxHP() / 2) continue;
+        if (skill.effect == "cleanse_self" && enemy.GetStatuses().empty()) continue;
+        const int damage = skill.multiplier > 0
+            ? (std::max)(1, enemy.getAtk() * skill.multiplier / 100)
+            : 0;
+        if (damage > 0) {
+            player.takeDamage((std::max)(0, static_cast<int>(std::lround(
+                static_cast<double>(damage) * 100.0 / (100.0 + player.getDefense())))));
+            AddEvent(CombatEvent::Kind::Skill, enemy.getName() + " uses " + skill.name + ". " + enemy.getName() + " dealt " + std::to_string(damage) +
+                " damage to " + player.getName() + " with " + skill.name + ".", damage);
+        }
+        if (skill.effect == "bleed" || skill.effect == "burn" || skill.effect == "poison") {
+            StatusType type = skill.effect == "bleed" ? StatusType::Bleed : skill.effect == "burn" ? StatusType::Burn : StatusType::Poison;
+            const bool hadStatus = player.HasStatus(type);
+            player.ApplyStatus({type, skill.duration > 0 ? skill.duration : 2, 0, enemy.getAtk()});
+            if (!hadStatus && player.HasStatus(type)) AddEvent(CombatEvent::Kind::Debuff, player.getName() + " suffers " + skill.effect + " for " +
+                std::to_string(skill.duration > 0 ? skill.duration : 2) + " turns!");
+        } else if (skill.effect == "tri_dot" || skill.effect == "burn_bleed") {
+            const int duration = skill.duration > 0 ? skill.duration : 2;
+            for (StatusType type : {StatusType::Burn, StatusType::Bleed, StatusType::Poison}) {
+                if (skill.effect == "burn_bleed" && type == StatusType::Poison) continue;
+                const bool hadStatus = player.HasStatus(type);
+                player.ApplyStatus({type, duration, 0, enemy.getAtk()});
+                if (!hadStatus && player.HasStatus(type)) AddEvent(CombatEvent::Kind::Debuff, player.getName() + " suffers a damage-over-time effect for " + std::to_string(duration) + " turns!");
+            }
+        } else if (skill.effect == "def_down" || skill.effect == "accuracy_down") {
+            const bool hadStatus = player.HasStatus(StatusType::VerdigrisMark);
+            player.ApplyStatus({StatusType::VerdigrisMark, skill.duration > 0 ? skill.duration : 2, 0, enemy.getAtk()});
+            if (!hadStatus && player.HasStatus(StatusType::VerdigrisMark)) AddEvent(CombatEvent::Kind::Debuff, player.getName() + " suffers a weakening effect for " + std::to_string(skill.duration > 0 ? skill.duration : 2) + " turns!");
+        } else if (skill.effect == "heal_self" || skill.effect == "heal_cleanse") {
+            const int amount = (std::max)(1, enemy.getMaxHP() * 15 / 100);
+            const int before = enemy.getHP();
+            enemy.heal(amount);
+            AddEvent(CombatEvent::Kind::Heal, enemy.getName() + " healed for " + std::to_string(enemy.getHP() - before) + ".", enemy.getHP() - before);
+        }
+        if (!enemy.isAlive()) AddEvent(CombatEvent::Kind::Death, enemy.getName() + " has been defeated.");
+        enemy.StartSkillCooldown(index);
+        enemy.TickSkillCooldowns();
+        enemyGauge_ -= 1000;
+        playerTurn_ = false;
+        AccumulateGaugesUntilReady(playerGauge_, enemyGauge_, player.getSpeed(), enemy.getSpeed());
+        playerTurn_ = playerGauge_ >= 1000;
+        return;
+    }
 
     if (enemy.HasStatus(StatusType::Stun)) {
         std::cout << enemy.getName() << " loses its turn to the stun.\n";
@@ -208,7 +259,8 @@ void CombatManager::enemyTurn(Player& player, Enemy& enemy) {
     const int damage = std::max(0, static_cast<int>(std::lround(
         static_cast<double>(attackDamage) * 100.0 / (100.0 + player.getDefense()))));
     player.takeDamage(damage);
-    AddEvent(CombatEvent::Kind::Damage, enemy.getName() + " inflicted " + std::to_string(damage) + " damage!", damage);
+    AddEvent(CombatEvent::Kind::Attack, enemy.getName() + " uses Basic Attack and inflicted " + std::to_string(damage) + " damage!", damage);
+    if (!player.isAlive()) AddEvent(CombatEvent::Kind::Death, player.getName() + " has fallen.");
     std::cout << enemy.getName() << " attacks for " << damage << " damage.\n";
     if (defaultSkill_ != nullptr) defaultSkill_->TickCooldown();
     enemyGauge_ -= 1000;

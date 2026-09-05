@@ -1,0 +1,119 @@
+9/3/2026
+
+
+Spent ~1 hour wrangling scaffolding and resolving small issues to ensure everything is structured properly
+
+•	Organized the project into a cleaner include/ and src/ structure.
+•	Added the core Enemy class with:
+•	Name, health, and attack values
+•	Damage handling
+•	Alive/dead state checks
+•	Basic accessors
+•	Added enemy types:
+•	Automata
+•	Nun
+•	Boss
+•	Added the Item class with item names and descriptions.
+•	Added the Clue class for storing discovered information.
+•	Expanded Player to include:
+•	Health and maximum health
+•	Shimmer Points
+•	Healing and damage handling
+•	SP spending and recovery
+•	Inventory storage
+•	Added the abstract ShimmerSkill base class for future polymorphic Shimmer abilities.
+•	Added Area functionality for:
+•	Storing enemies with std::unique_ptr
+•	Checking whether enemies remain
+•	Finding the first living enemy
+•	Removing defeated enemies
+•	Added procedural area generation through MapManager.
+•	Area generation now creates a small selection of:
+•	Automata
+•	Nuns
+•	Shimmer Husks
+•	Bosses in special areas such as the Sanctum
+•	Added ProgressionManager for:
+•	XP tracking
+•	XP thresholds
+•	Level progression
+•	Health and SP rewards after leveling up
+•	Added a combat action system with:
+•	Attack
+•	Block
+•	Shimmer
+•	Interrogate
+•	Expose Weakness
+•	Item
+•	Flee
+•	Added enemy-turn handling, including reduced damage when blocking.
+•	Added basic weakness exposure so attacks can deal increased damage afterward.
+•	Added Shimmer skill validation based on the player’s available SP.
+•	Added EncounterManager to coordinate:
+•	Area exploration
+•	Combat menus
+•	Player actions
+•	Enemy turns
+•	XP rewards
+•	Defeated enemy cleanup
+•	Flee and defeat outcomes
+•	Added invalid numeric input handling in the console encounter menu.
+•	Connected all current managers through GameManager.
+•	Added a simple playable console flow:
+•	Adelaide enters the cathedral
+•	An area is generated
+•	Enemies are encountered
+•	Combat actions are selected
+•	XP and level progression are displayed
+•	Added a basic main.cpp entry point that starts the game.
+•	Configured the Visual Studio project for C++17.
+•	Added the canonical include/ directory to the compiler include path.
+•	Confirmed the project builds successfully with no errors or warnings.
+•	Ran a console smoke test that verified:
+•	Combat execution
+•	Enemy damage
+•	Player damage
+•	Enemy defeat
+•	XP gain
+•	Level-up behavior
+•	Area completion messages
+•	MapManager now owns the deterministic Floor 1 room list.
+•	Area stores room-specific environment and encounter metadata.
+•	EncounterManager handles room interaction and combat entry.
+•	GameManager controls the overall map-and-room loop.
+•	Progression remains minimal and fixed-threshold.
+•	The current system is ready for later clue persistence, dialogue, item usage, and map progression features.
+
+
+9/4
+•	Implemented native Win32 UI for Micare - Cathedral of Lies.
+•	Added player name entry and used the chosen name in the UI, combat messages, and event logs.
+•	Added Floor, Map, Room, Inventory, Skills, and Combat views.
+•	Added deterministic Floor 1 rooms and room progression.
+•	Added room interaction buttons and investigation/search behavior.
+•	Added deterministic enemy spawning and combat encounters.
+•	Added Attack, Shimmer, and Flee combat actions.
+•	Removed the Block button.
+•	Added combat turn handling and enemy response logic.
+•	Added battle completion messages with XP and item drop information.
+•	Added inventory item selection and item information display.
+•	Added inventory sorting, paging, locking, discarding, equipping, and consumable use.
+•	Added rarity-based item text colors.
+•	Added status messages for room, inventory, and combat actions.
+
+9/5
+
+•	Improved room, inventory, combat, and navigation button alignment.
+•	Fixed inventory controls overlapping or extending outside the window.
+•	Fixed room interaction buttons overlapping the Back button.
+•	Fixed navigation buttons being positioned below or outside the visible panel.
+•	Fixed stacked or overlapping text rendering in the UI.
+•	Fixed combat and room interactions appearing to freeze the executable.
+•	Root cause of the freeze was an infinite level-up loop caused by xpToNextLevel_ being set to 0 in completion mode.
+•	Added a level-100 cap and a defensive nonzero XP-threshold check.
+•	Added deferred UI refresh handling to reduce Win32 command/refresh re-entry issues.
+•	Added guards for invalid rooms, stale enemies, and repeated command handling.
+•	Fixed the executable build successfully after the changes.
+
+
+

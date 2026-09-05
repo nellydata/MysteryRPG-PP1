@@ -13,9 +13,9 @@ public:
 		if (effect_ == "damage_reveal") enemy.takeDamage(player.getAttack());
 		else if (effect_ == "damage_burn") {
 			enemy.takeDamage(player.getAttack());
-			enemy.ApplyStatus({StatusType::Burn, 3, 0, player.getAttack()});
+			enemy.ApplyStatus({StatusType::Burn, 3, 0, player.getAttack(), player.getDotPotency()}, player.getAccuracy());
 		} else if (effect_ == "damage_mark") {
-			enemy.ApplyStatus({StatusType::VerdigrisMark, 3, player.getAttack() / 2, player.getAttack()});
+			enemy.ApplyStatus({StatusType::VerdigrisMark, 3, player.getAttack() / 2, player.getAttack()}, player.getAccuracy());
 		} else if (effect_ == "heal_cleanse") {
 			player.heal(player.getMaxHP() * 30 / 100);
 			player.ClearStatuses();
@@ -23,11 +23,11 @@ public:
 			player.ApplyStatus({StatusType::Barrier, 1, 1, 0});
 		} else if (effect_ == "damage_stun") {
 			enemy.takeDamage(player.getAttack());
-			enemy.ApplyStatus({StatusType::Stun, 1, 0, player.getAttack()});
+			enemy.ApplyStatus({StatusType::Stun, 1, 0, player.getAttack()}, player.getAccuracy());
 		} else if (effect_ == "damage") {
 			enemy.takeDamage(player.getAttack() * 2);
 		} else if (effect_ == "defense_break") {
-			enemy.ApplyStatus({StatusType::VerdigrisMark, 3, 0, player.getAttack()});
+			enemy.ApplyStatus({StatusType::VerdigrisMark, 3, 0, player.getAttack()}, player.getAccuracy());
 		} else if (effect_ == "extra_turn") {
 			player.ApplyStatus({StatusType::HealOverTime, 1, 0, 0});
 		} else if (effect_ == "stat_boost") {

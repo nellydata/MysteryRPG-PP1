@@ -3,10 +3,39 @@
 #include <iostream>
 #include <algorithm>
 
+namespace {
+bool HasValue(const Stats& stats, ItemStat stat) {
+    switch (stat) {
+    case ItemStat::HP: return stats.hp != 0;
+    case ItemStat::DEF: return stats.def != 0;
+    case ItemStat::SPD: return stats.spd != 0;
+    case ItemStat::ATK: return stats.atk != 0;
+    case ItemStat::Accuracy: return stats.acc != 0;
+    case ItemStat::Resistance: return stats.res != 0;
+    case ItemStat::CritRate: return stats.critRate != 0;
+    case ItemStat::CritDamage: return stats.critDamage != 0;
+    case ItemStat::Evasion: return stats.evasion != 0;
+    case ItemStat::HealingPotency: return stats.healingPotency != 0;
+    case ItemStat::BarrierPotency: return stats.barrierPotency != 0;
+    case ItemStat::DotPotency: return stats.dotPotency != 0;
+    case ItemStat::Lifesteal: return stats.lifesteal != 0;
+    case ItemStat::DebuffDurationReduction: return stats.debuffDurationReduction != 0;
+    }
+    return false;
+}
+
+bool ViolatesTheme(const Item& item) {
+    for (const ItemStat stat : item.getForbiddenStats()) {
+        if (HasValue(item.getStats(), stat)) return true;
+    }
+    return false;
+}
+}
+
 Player::Player(const std::string& name, int maxHp, int maxSp)
     : name_(name), hp_(maxHp), maxHp_(maxHp), sp_(maxSp), maxSp_(maxSp),
       baseStats_{maxHp, 10, 10, 20, 0, 0, 5, 150},
-      totalStats_(baseStats_), equipped_{nullptr, nullptr, nullptr, nullptr} {}
+      totalStats_(baseStats_), equipped_{nullptr, nullptr, nullptr, nullptr, nullptr} {}
 
 Player::~Player() = default;
 
@@ -17,7 +46,7 @@ void Player::takeDamage(int amount) {
 }
 
 bool Player::ToggleEquip(Item& item) {
-    if (!item.isEquippable() || item.getSlot() == EquipSlot::None) return false;
+    if (!item.isEquippable() || item.getSlot() == EquipSlot::None || ViolatesTheme(item)) return false;
     const int slot = static_cast<int>(item.getSlot());
     if (equipped_[slot] == &item) equipped_[slot] = nullptr;
     else equipped_[slot] = &item;
@@ -46,6 +75,16 @@ int Player::getAccuracy() const { return totalStats_.acc; }
 int Player::getResistance() const { return totalStats_.res; }
 int Player::getCritRate() const { return totalStats_.critRate; }
 int Player::getCritDamage() const { return totalStats_.critDamage; }
+int Player::getEvasion() const { return totalStats_.evasion; }
+int Player::getHealingPotency() const { return totalStats_.healingPotency; }
+int Player::getBarrierPotency() const { return totalStats_.barrierPotency; }
+int Player::getDotPotency() const { return totalStats_.dotPotency; }
+int Player::getLifesteal() const { return totalStats_.lifesteal; }
+int Player::getDebuffDurationReduction() const { return totalStats_.debuffDurationReduction; }
+int Player::getDisplayedAccuracy() const { return (std::min)(100, totalStats_.acc); }
+int Player::getDisplayedResistance() const { return (std::min)(100, totalStats_.res); }
+int Player::getDisplayedCritRate() const { return (std::min)(100, totalStats_.critRate); }
+int Player::getDisplayedEvasion() const { return (std::min)(80, totalStats_.evasion); }
 const Stats& Player::getStats() const { return totalStats_; }
 std::size_t Player::GetInventorySize() const {
     return inventory_.GetItems().size() + inventory_.GetClues().size();
@@ -121,10 +160,32 @@ void Player::PrintInventory() const {
 }
 
 bool Player::Equip(Item& item) {
-    if (!item.isEquippable() || item.getSlot() == EquipSlot::None) return false;
+    if (!item.isEquippable() || item.getSlot() == EquipSlot::None || ViolatesTheme(item)) return false;
     equipped_[static_cast<int>(item.getSlot())] = &item;
     RecalculateStats();
     return true;
+}
+
+std::vector<std::string> Player::GetActiveSets() const {
+    std::vector<std::string> activeSets;
+    for (const Item* item : equipped_) {
+        if (item == nullptr || item->getSetName().empty()) continue;
+        bool alreadySeen = false;
+        for (const std::string& setName : activeSets) {
+            if (setName == item->getSetName()) {
+                alreadySeen = true;
+                break;
+            }
+        }
+        if (alreadySeen) continue;
+
+        int pieces = 0;
+        for (const Item* equipped : equipped_) {
+            if (equipped != nullptr && equipped->getSetName() == item->getSetName()) ++pieces;
+        }
+        if (pieces == 5) activeSets.push_back(item->getSetName());
+    }
+    return activeSets;
 }
 
 bool Player::UseConsumable(const std::string& itemName, Enemy* target) {
@@ -160,8 +221,8 @@ void Player::ApplyStatus(const StatusEffect& status) {
 
 void Player::ProcessStatuses() {
     for (auto& status : statuses_) {
-        if (status.type == StatusType::Bleed) takeDamage(status.sourceAttack * 30 / 100);
-        else if (status.type == StatusType::Burn) takeDamage(status.sourceAttack * 60 / 100);
+        if (status.type == StatusType::Bleed) takeDamage(status.sourceAttack * 30 * (100 + status.dotPotency) / 10000);
+        else if (status.type == StatusType::Burn) takeDamage(status.sourceAttack * 60 * (100 + status.dotPotency) / 10000);
         else if (status.type == StatusType::Poison) takeDamage(maxHp_ * 5 / 100);
         else if (status.type == StatusType::HealOverTime) heal(status.potency);
         --status.turns;
@@ -181,6 +242,12 @@ void Player::ModifyStats(const Stats& delta) {
     baseStats_.res += delta.res;
     baseStats_.critRate += delta.critRate;
     baseStats_.critDamage += delta.critDamage;
+    baseStats_.evasion += delta.evasion;
+    baseStats_.healingPotency += delta.healingPotency;
+    baseStats_.barrierPotency += delta.barrierPotency;
+    baseStats_.dotPotency += delta.dotPotency;
+    baseStats_.lifesteal += delta.lifesteal;
+    baseStats_.debuffDurationReduction += delta.debuffDurationReduction;
     RecalculateStats();
 }
 
@@ -206,6 +273,25 @@ void Player::RecalculateStats() {
         totalStats_.res += stats.res;
         totalStats_.critRate += stats.critRate;
         totalStats_.critDamage += stats.critDamage;
+        totalStats_.evasion += stats.evasion;
+        totalStats_.healingPotency += stats.healingPotency;
+        totalStats_.barrierPotency += stats.barrierPotency;
+        totalStats_.dotPotency += stats.dotPotency;
+        totalStats_.lifesteal += stats.lifesteal;
+        totalStats_.debuffDurationReduction += stats.debuffDurationReduction;
+    }
+
+    for (const std::string& setName : GetActiveSets()) {
+        if (setName == "Shimmer Ascendant") {
+            totalStats_.atk += 15;
+            totalStats_.acc += 15;
+        } else if (setName == "Automaton Overlord") {
+            totalStats_.acc += 20;
+            totalStats_.critDamage += 20;
+        } else if (setName == "Oracle Automaton") {
+            totalStats_.acc += 10;
+            totalStats_.critDamage += 10;
+        }
     }
     maxHp_ = totalStats_.hp;
     if (hp_ > maxHp_) hp_ = maxHp_;

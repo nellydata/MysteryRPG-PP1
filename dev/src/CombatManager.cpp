@@ -75,7 +75,12 @@ bool CombatManager::resolve(CombatAction action, Player& player, Enemy& enemy,
     switch (action) {
     case CombatAction::Attack: {
         const unsigned roll = static_cast<unsigned>(turnNumber_ * 37 + player.getAttack() * 11 + enemy.getHP()) % 100;
-        const bool critical = roll < static_cast<unsigned>(player.getCritRate());
+        if (roll < static_cast<unsigned>(enemy.getEvasion())) {
+            std::cout << player.getName() << " attacks " << enemy.getName() << ", but the strike is evaded.\n";
+            playerTurn_ = false;
+            return true;
+        }
+        const bool critical = roll < static_cast<unsigned>((std::min)(100, player.getCritRate()));
         const int rawDamage = critical
             ? player.getAttack() * player.getCritDamage() / 100
             : player.getAttack();

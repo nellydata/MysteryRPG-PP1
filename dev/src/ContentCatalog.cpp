@@ -1,6 +1,38 @@
 #include "ContentCatalog.h"
 
 namespace {
+void SetSlotRules(ItemDefinition& item, EquipSlot slot, const std::string& mainStat) {
+	item.mainStat = mainStat;
+	switch (slot) {
+	case EquipSlot::Head:
+		item.theme = "insight, clarity, protection, perception";
+		item.allowedSubstats = {ItemStat::CritRate, ItemStat::CritDamage, ItemStat::Resistance, ItemStat::Accuracy};
+		item.forbiddenStats = {ItemStat::ATK, ItemStat::SPD, ItemStat::DotPotency, ItemStat::Evasion};
+		break;
+	case EquipSlot::Torso:
+		item.theme = "protection, stability, purity, endurance";
+		item.allowedSubstats = {ItemStat::Resistance, ItemStat::BarrierPotency, ItemStat::HealingPotency, ItemStat::DebuffDurationReduction};
+		item.forbiddenStats = {ItemStat::ATK, ItemStat::CritRate, ItemStat::CritDamage, ItemStat::Accuracy, ItemStat::DotPotency, ItemStat::Evasion, ItemStat::SPD};
+		break;
+	case EquipSlot::Hand:
+		item.theme = "offense, aggression, precision, execution";
+		item.allowedSubstats = {ItemStat::CritRate, ItemStat::CritDamage, ItemStat::Accuracy, ItemStat::DotPotency, ItemStat::Lifesteal};
+		item.forbiddenStats = {ItemStat::DEF, ItemStat::HP, ItemStat::Resistance, ItemStat::BarrierPotency, ItemStat::HealingPotency, ItemStat::SPD, ItemStat::Evasion};
+		break;
+	case EquipSlot::Boots:
+		item.theme = "movement, agility, positioning";
+		item.allowedSubstats = {ItemStat::Evasion, ItemStat::Accuracy, ItemStat::ATK, ItemStat::DEF};
+		item.forbiddenStats = {ItemStat::CritRate, ItemStat::CritDamage, ItemStat::DotPotency, ItemStat::HealingPotency, ItemStat::BarrierPotency, ItemStat::Resistance, ItemStat::HP};
+		break;
+	case EquipSlot::Accessory:
+		item.theme = "spiritual power, amplification, utility";
+		item.allowedSubstats = {ItemStat::CritRate, ItemStat::CritDamage, ItemStat::Accuracy, ItemStat::Resistance, ItemStat::HealingPotency, ItemStat::BarrierPotency, ItemStat::DotPotency};
+		item.forbiddenStats = {ItemStat::SPD, ItemStat::Evasion};
+		break;
+	default: break;
+	}
+}
+
 void AddEquippables(std::vector<ItemDefinition>& result, EquipSlot slot, const char* const* names,
 					int count, Rarity rarity, const std::string& mainStat, int value) {
 	for (int i = 0; i < count; ++i) {
@@ -10,10 +42,12 @@ void AddEquippables(std::vector<ItemDefinition>& result, EquipSlot slot, const c
 		item.category = ItemCategory::Equippable;
 		item.rarity = rarity;
 		item.slot = slot;
+		item.mainStat = mainStat;
 		if (mainStat == "hp") item.stats.hp = value;
 		else if (mainStat == "def") item.stats.def = value;
 		else if (mainStat == "spd") item.stats.spd = value;
 		else if (mainStat == "atk") item.stats.atk = value;
+		SetSlotRules(item, slot, mainStat);
 		result.push_back(item);
 	}
 }
@@ -61,6 +95,23 @@ std::vector<ItemDefinition> BuildEquippableCatalog() {
 	AddEquippables(result, EquipSlot::Hand, handRare, 5, Rarity::Rare, "atk", 6);
 	AddEquippables(result, EquipSlot::Hand, handEpic, 4, Rarity::Epic, "atk", 8);
 	AddEquippables(result, EquipSlot::Hand, handLegendary, 3, Rarity::Legendary, "atk", 10);
+	const char* accessoryCommon[] = {"worn_rosary", "tarnished_iron_ring", "cracked_automaton_charm", "old_choir_pendant", "brass_prayer_token"};
+	const char* accessoryUncommon[] = {"blessed_rosary", "reinforced_iron_ring", "polished_automaton_charm", "choir_ember_pendant"};
+	const char* accessoryRare[] = {"ceremonial_rosary_of_grace", "ironbound_ring", "automaton_combat_charm", "choir_flame_pendant"};
+	const char* accessoryEpic[] = {"rosary_of_benediction", "ironheart_ring", "automaton_strike_charm", "choir_inferno_pendant"};
+	const char* accessoryLegendary[] = {"choir_verdigris_rosary", "shimmer_ascendant_ring", "automaton_command_charm"};
+	AddEquippables(result, EquipSlot::Accessory, accessoryCommon, 5, Rarity::Common, "hp", 5);
+	AddEquippables(result, EquipSlot::Accessory, accessoryUncommon, 4, Rarity::Uncommon, "hp", 10);
+	AddEquippables(result, EquipSlot::Accessory, accessoryRare, 4, Rarity::Rare, "hp", 15);
+	AddEquippables(result, EquipSlot::Accessory, accessoryEpic, 4, Rarity::Epic, "hp", 20);
+	AddEquippables(result, EquipSlot::Accessory, accessoryLegendary, 3, Rarity::Legendary, "hp", 25);
+	for (auto& item : result) {
+		if (item.rarity == Rarity::Legendary) {
+			if (item.name.find("choir") != std::string::npos) item.setName = "Choir of Verdigris";
+			else if (item.name.find("shimmer") != std::string::npos) item.setName = "Shimmer Ascendant";
+			else if (item.name.find("automaton") != std::string::npos || item.name.find("clockwork") != std::string::npos) item.setName = "Automaton Overlord";
+		}
+	}
 	result.push_back({"verdigris_halo_of_saint_adelaide", "Artifact headgear.", ItemCategory::Equippable, Rarity::Artifact, EquipSlot::Head, {12}, {}, "shimmer_cooldown_reduced_by_1"});
 	result.push_back({"choirs_eternal_mourning_veil", "Artifact headgear.", ItemCategory::Equippable, Rarity::Artifact, EquipSlot::Head, {12}, {}, "immune_to_stun_once_per_battle"});
 	result.push_back({"locket_crown_of_the_first_light", "Artifact headgear.", ItemCategory::Equippable, Rarity::Artifact, EquipSlot::Head, {12}, {}, "crit_hits_restore_5_percent_hp"});
@@ -73,6 +124,15 @@ std::vector<ItemDefinition> BuildEquippableCatalog() {
 	result.push_back({"verdigris_saint_relic", "Artifact hand gear.", ItemCategory::Equippable, Rarity::Artifact, EquipSlot::Hand, {0, 0, 0, 12}, {}, "attacks_apply_verdigris_mark_dealing_bonus_damage_over_time"});
 	result.push_back({"choirs_eternal_tome", "Artifact hand gear.", ItemCategory::Equippable, Rarity::Artifact, EquipSlot::Hand, {0, 0, 0, 12}, {}, "first_attack_each_battle_is_guaranteed_crit"});
 	result.push_back({"first_light_crucible", "Artifact hand gear.", ItemCategory::Equippable, Rarity::Artifact, EquipSlot::Hand, {0, 0, 0, 12}, {}, "gain_5_percent_atk_every_time_you_use_a_shimmer_skill"});
+	for (auto& item : result) {
+		if (item.rarity != Rarity::Artifact) continue;
+		SetSlotRules(item, item.slot, item.slot == EquipSlot::Head ? "hp" :
+			item.slot == EquipSlot::Torso ? "def" :
+			item.slot == EquipSlot::Boots ? "spd" : "atk");
+		if (item.name.find("verdigris") != std::string::npos) item.setName = "Verdigris Matron";
+		else if (item.name.find("choir") != std::string::npos) item.setName = "Shimmer Reliquary";
+		else if (item.name.find("first_light") != std::string::npos) item.setName = "Oracle Automaton";
+	}
 	return result;
 }
 

@@ -28,6 +28,16 @@ public:
     int getResistance() const;
     int getCritRate() const;
     int getCritDamage() const;
+    int getEvasion() const;
+    int getHealingPotency() const;
+    int getBarrierPotency() const;
+    int getDotPotency() const;
+    int getLifesteal() const;
+    int getDebuffDurationReduction() const;
+    int getDisplayedAccuracy() const;
+    int getDisplayedResistance() const;
+    int getDisplayedCritRate() const;
+    int getDisplayedEvasion() const;
     const Stats& getStats() const;
     std::size_t GetInventorySize() const;
 
@@ -53,6 +63,7 @@ public:
     Item* FindItem(const std::string& itemName);
     const std::vector<StatusEffect>& GetStatuses() const;
     const Item* GetEquipped(EquipSlot slot) const;
+    std::vector<std::string> GetActiveSets() const;
 
 private:
     std::string name_;
@@ -64,7 +75,7 @@ private:
     int maxSp_;
     Inventory inventory_;
     std::vector<StatusEffect> statuses_;
-    Item* equipped_[4];
+    Item* equipped_[5];
 
     void RecalculateStats();
 };

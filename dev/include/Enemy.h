@@ -19,8 +19,10 @@ public:
     int getDefense() const;
     int getSpeed() const;
     int getLevel() const;
+    int getResistance() const;
+    int getEvasion() const;
     bool HasStatus(StatusType type) const;
-    void ApplyStatus(const StatusEffect& status);
+    bool ApplyStatus(const StatusEffect& status, int accuracy = 100);
     void ProcessStatuses();
     void ClearStatuses();
 
@@ -33,5 +35,7 @@ protected:
     int defense_;
     int speed_;
     int level_;
+    int resistance_;
+    int evasion_;
     std::vector<StatusEffect> statuses_;
 };

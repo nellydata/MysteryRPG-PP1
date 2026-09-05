@@ -17,6 +17,13 @@ public:
     const Stats& getStats() const;
     const std::string& getEffect() const;
     const std::string& getUniqueEffect() const;
+    const std::string& getTheme() const;
+    const std::string& getMainStat() const;
+    const std::vector<ItemStat>& getAllowedSubstats() const;
+    const std::vector<ItemStat>& getForbiddenStats() const;
+    const std::string& getSetName() const;
+    const std::string& getPassive() const;
+    const std::string& getSetPassive() const;
     bool isEquippable() const;
 
 private:
@@ -28,4 +35,11 @@ private:
     Stats stats_;
     std::string effect_;
     std::string uniqueEffect_;
+    std::string theme_;
+    std::string mainStat_;
+    std::vector<ItemStat> allowedSubstats_;
+    std::vector<ItemStat> forbiddenStats_;
+    std::string setName_;
+    std::string passive_;
+    std::string setPassive_;
 };

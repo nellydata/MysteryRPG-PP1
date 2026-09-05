@@ -37,6 +37,7 @@ std::string SlotName(EquipSlot slot) {
 	case EquipSlot::Torso: return "Torso";
 	case EquipSlot::Boots: return "Boots";
 	case EquipSlot::Hand: return "Hand";
+	case EquipSlot::Accessory: return "Accessory";
 	case EquipSlot::None: return "None";
 	}
 	return "None";
@@ -102,7 +103,7 @@ void ConsoleUI::PrintPlayerPanel(const Player& player, const ProgressionManager&
 			  << "|        .-.       " << player.getName() << "  |  Level " << progression.GetLevel() << "\n"
 			  << "|       (o o)      HP  " << player.getHP() << "/" << player.getMaxHP()
 			  << "  DEF " << player.getDefense() << "  SPD " << player.getSpeed() << "\n"
-				<< "|        |=|       ATK " << player.getAttack() << "  ACC " << player.getAccuracy()
+				<< "|        |=|       ATK " << player.getAttack() << "  ACC " << player.getDisplayedAccuracy()
 			  << "%  RES " << player.getResistance() << "%\n"
 				<< "|       /| |\\      CRIT " << player.getCritRate() << "% / "
 			  << player.getCritDamage() << "%  XP " << progression.GetXP() << "\n"
@@ -126,7 +127,7 @@ void ConsoleUI::PrintStatusEffects(const Player& player) const {
 
 void ConsoleUI::PrintEquipment(const Player& player) const {
 	std::cout << "Equipment: ";
-	for (EquipSlot slot : {EquipSlot::Head, EquipSlot::Torso, EquipSlot::Boots, EquipSlot::Hand}) {
+	for (EquipSlot slot : {EquipSlot::Head, EquipSlot::Torso, EquipSlot::Boots, EquipSlot::Hand, EquipSlot::Accessory}) {
 		const Item* item = player.GetEquipped(slot);
 		std::cout << SlotName(slot) << "=" << (item == nullptr ? "--" : item->getName()) << "  ";
 	}

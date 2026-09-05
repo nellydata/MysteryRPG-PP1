@@ -12,6 +12,12 @@ struct Stats {
 	int res = 0;
 	int critRate = 0;
 	int critDamage = 0;
+	int evasion = 0;
+	int healingPotency = 0;
+	int barrierPotency = 0;
+	int dotPotency = 0;
+	int lifesteal = 0;
+	int debuffDurationReduction = 0;
 };
 
 enum class StatusType {
@@ -31,11 +37,29 @@ struct StatusEffect {
 	int turns = 1;
 	int potency = 0;
 	int sourceAttack = 0;
+	int dotPotency = 0;
 };
 
 enum class Rarity { Common, Uncommon, Rare, Epic, Legendary, Artifact };
-enum class EquipSlot { Head, Torso, Boots, Hand, None };
+enum class EquipSlot { Head, Torso, Boots, Hand, Accessory, None };
 enum class ItemCategory { Equippable, Consumable, Clue, Crux, ShimmerSkill };
+
+enum class ItemStat {
+	HP,
+	DEF,
+	SPD,
+	ATK,
+	Accuracy,
+	Resistance,
+	CritRate,
+	CritDamage,
+	Evasion,
+	HealingPotency,
+	BarrierPotency,
+	DotPotency,
+	Lifesteal,
+	DebuffDurationReduction
+};
 
 struct ItemDefinition {
 	std::string name;
@@ -46,4 +70,11 @@ struct ItemDefinition {
 	Stats stats;
 	std::string effect;
 	std::string uniqueEffect;
+	std::string theme;
+	std::string mainStat;
+	std::vector<ItemStat> allowedSubstats;
+	std::vector<ItemStat> forbiddenStats;
+	std::string setName;
+	std::string passive;
+	std::string setPassive;
 };

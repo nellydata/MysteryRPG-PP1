@@ -272,7 +272,7 @@ void Win32UI::LayoutControls(int width, int height) {
 	const int eventTop = (std::max)(120, height - 380);
 	const int actionY = eventTop + 28;
 	const int roomActionY = actionY + 124;
-	const int inventoryActionY = eventTop + 190;
+	const int inventoryActionY = eventTop + 260;
 	const int inventoryWidth = (std::max)(150, (panelRight - center - 36) / 4);
 	const int inventoryGap = 12;
 
@@ -775,8 +775,8 @@ void Win32UI::Paint(HDC deviceContext) {
 	DrawTextLine(deviceContext, 250, 110, L"LEVEL " + std::to_wstring(progression_.GetLevel()), Text, 19, true);
 	DrawTextLine(deviceContext, 42, 150, L"HP", Muted); DrawTextLine(deviceContext, 150, 150, std::to_wstring(player_.getHP()) + L" / " + std::to_wstring(player_.getMaxHP()), Text);
 	DrawTextLine(deviceContext, 42, 182, L"DEF   " + std::to_wstring(player_.getDefense()) + L"     SPD   " + std::to_wstring(player_.getSpeed()), Text);
-	DrawTextLine(deviceContext, 42, 214, L"ATK   " + std::to_wstring(player_.getAttack()) + L"     ACC   " + std::to_wstring(player_.getAccuracy()) + L"%", Text);
-	DrawTextLine(deviceContext, 42, 246, L"RES   " + std::to_wstring(player_.getResistance()) + L"%    CRIT  " + std::to_wstring(player_.getCritRate()) + L"% / " + std::to_wstring(player_.getCritDamage()) + L"%", Text, 15);
+	DrawTextLine(deviceContext, 42, 214, L"ATK   " + std::to_wstring(player_.getAttack()) + L"     ACC   " + std::to_wstring(player_.getDisplayedAccuracy()) + L"%", Text);
+	DrawTextLine(deviceContext, 42, 246, L"RES   " + std::to_wstring(player_.getDisplayedResistance()) + L"%    CRIT  " + std::to_wstring(player_.getDisplayedCritRate()) + L"% / " + std::to_wstring(player_.getCritDamage()) + L"%", Text, 15);
 	DrawTextLine(deviceContext, 42, 290, L"STATUS", Brass, 17, true);
 	int y = 320;
 	for (const auto& status : player_.GetStatuses()) {
@@ -785,7 +785,7 @@ void Win32UI::Paint(HDC deviceContext) {
 	}
 	if (player_.GetStatuses().empty()) DrawTextLine(deviceContext, 48, y, L"No active effects", Muted, 15);
 	DrawTextLine(deviceContext, 42, 430, L"EQUIPMENT", Brass, 17, true);
-	const std::pair<EquipSlot, const wchar_t*> slots[] = {{EquipSlot::Head, L"Head"}, {EquipSlot::Torso, L"Torso"}, {EquipSlot::Boots, L"Boots"}, {EquipSlot::Hand, L"Hand"}};
+	const std::pair<EquipSlot, const wchar_t*> slots[] = {{EquipSlot::Head, L"Head"}, {EquipSlot::Torso, L"Torso"}, {EquipSlot::Boots, L"Boots"}, {EquipSlot::Hand, L"Hand"}, {EquipSlot::Accessory, L"Accessory"}};
 	y = 460;
 	for (const auto& slot : slots) {
 		const Item* item = player_.GetEquipped(slot.first);
@@ -862,25 +862,42 @@ void Win32UI::Paint(HDC deviceContext) {
 				DrawTextLine(deviceContext, 425, eventTop + 74, type, Muted, 16);
 				const Stats& stats = selected->getStats();
 				const bool hasStats = stats.hp != 0 || stats.def != 0 || stats.spd != 0 || stats.atk != 0 ||
-					stats.acc != 0 || stats.res != 0 || stats.critRate != 0 || stats.critDamage != 0;
+					stats.acc != 0 || stats.res != 0 || stats.critRate != 0 || stats.critDamage != 0 ||
+					stats.evasion != 0 || stats.healingPotency != 0 || stats.barrierPotency != 0 ||
+					stats.dotPotency != 0 || stats.lifesteal != 0 || stats.debuffDurationReduction != 0;
 				int detailY = eventTop + 108;
 				if (hasStats) {
 					DrawTextLine(deviceContext, 425, detailY,
 						L"Stats: HP " + std::to_wstring(stats.hp) + L"  DEF " + std::to_wstring(stats.def) +
 						L"  ATK " + std::to_wstring(stats.atk) + L"  SPD " + std::to_wstring(stats.spd), Text, 16);
-					detailY += 32;
+					detailY += 20;
+					DrawTextLine(deviceContext, 425, detailY,
+						L"ACC " + std::to_wstring(stats.acc) + L"  RES " + std::to_wstring(stats.res) +
+						L"  CRIT " + std::to_wstring(stats.critRate) + L"  CDMG " + std::to_wstring(stats.critDamage) +
+						L"  EVA " + std::to_wstring(stats.evasion), Text, 16);
+					detailY += 18;
+					DrawTextLine(deviceContext, 425, detailY,
+						L"HEAL " + std::to_wstring(stats.healingPotency) + L"  BARRIER " + std::to_wstring(stats.barrierPotency) +
+						L"  DOT " + std::to_wstring(stats.dotPotency) + L"  LS " + std::to_wstring(stats.lifesteal), Text, 14);
+					detailY += 18;
 				}
 				if (selected->getCategory() == ItemCategory::Consumable) {
 					DrawTextLine(deviceContext, 425, detailY, L"Effect: " + ToWide(selected->getEffect()), Text, 16);
-					detailY += 32;
+					detailY += 20;
 				} else if (selected->getCategory() == ItemCategory::Crux) {
 					DrawTextLine(deviceContext, 425, detailY, L"Lore: " + ToWide(selected->getDescription()), Text, 16);
-					detailY += 32;
+					detailY += 20;
 				} else {
-					DrawTextLine(deviceContext, 425, detailY, ToWide(description), Text, 16);
+					DrawTextLine(deviceContext, 425, detailY, L"Theme: " + ToWide(selected->getTheme()), Text, 16);
+					detailY += 20;
+					DrawTextLine(deviceContext, 425, detailY, L"Passive: " + ToWide(selected->getPassive()), Text, 16);
+					detailY += 18;
+					DrawTextLine(deviceContext, 425, detailY, L"Description: " + ToWide(description), Text, 16);
 				}
-				if (!selected->getUniqueEffect().empty()) {
-					DrawTextLine(deviceContext, 425, detailY + 32, L"Special: " + ToWide(selected->getUniqueEffect()), Muted, 15);
+				if (!selected->getSetName().empty()) {
+					DrawTextLine(deviceContext, 425, detailY + 20, L"Set: " + ToWide(selected->getSetName()) + L" // Bonus: " + ToWide(selected->getSetPassive()), Muted, 13);
+				} else if (!selected->getUniqueEffect().empty()) {
+					DrawTextLine(deviceContext, 425, detailY + 20, L"Special: " + ToWide(selected->getUniqueEffect()), Muted, 13);
 				}
 			}
 		}

@@ -4,10 +4,19 @@
 #include <memory>
 #include <string>
 #include "Clue.h"
+#include "GameplayTypes.h"
 
 class Item;
 
-enum class InventorySort { Amount, Alphabetical, RecentlyObtained };
+enum class InventorySort {
+	AlphabeticalAscending,
+	AlphabeticalDescending,
+	RarityAscending,
+	RarityDescending,
+	RecentlyObtained,
+	LeastRecentlyObtained,
+	HighestStat
+};
 
 class Inventory {
 public:
@@ -24,7 +33,7 @@ public:
 	bool IsLocked(const std::string& name) const;
 	void SetLocked(const std::string& name, bool locked);
 	bool DiscardItem(const std::string& name, int amount = 1);
-	std::vector<Item*> GetSortedItems(InventorySort sort) const;
+	std::vector<Item*> GetSortedItems(InventorySort sort, ItemStat focusStat = ItemStat::ATK) const;
 	std::size_t GetItemCount() const;
 
 private:

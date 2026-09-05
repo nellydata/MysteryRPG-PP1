@@ -14,6 +14,7 @@ struct Stats {
 	int critDamage = 0;
 	int evasion = 0;
 	int healingPotency = 0;
+	int healingReceived = 0;
 	int barrierPotency = 0;
 	int dotPotency = 0;
 	int lifesteal = 0;

@@ -244,6 +244,7 @@ void Player::ModifyStats(const Stats& delta) {
     baseStats_.critDamage += delta.critDamage;
     baseStats_.evasion += delta.evasion;
     baseStats_.healingPotency += delta.healingPotency;
+    baseStats_.healingReceived += delta.healingReceived;
     baseStats_.barrierPotency += delta.barrierPotency;
     baseStats_.dotPotency += delta.dotPotency;
     baseStats_.lifesteal += delta.lifesteal;
@@ -275,6 +276,7 @@ void Player::RecalculateStats() {
         totalStats_.critDamage += stats.critDamage;
         totalStats_.evasion += stats.evasion;
         totalStats_.healingPotency += stats.healingPotency;
+        totalStats_.healingReceived += stats.healingReceived;
         totalStats_.barrierPotency += stats.barrierPotency;
         totalStats_.dotPotency += stats.dotPotency;
         totalStats_.lifesteal += stats.lifesteal;

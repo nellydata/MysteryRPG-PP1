@@ -33,21 +33,70 @@ void SetSlotRules(ItemDefinition& item, EquipSlot slot, const std::string& mainS
 	}
 }
 
+int SubstatValue(Rarity rarity) {
+	switch (rarity) {
+	case Rarity::Common: return 2;
+	case Rarity::Uncommon: return 4;
+	case Rarity::Rare: return 8;
+	case Rarity::Epic: return 12;
+	case Rarity::Legendary: return 18;
+	case Rarity::Artifact: return 23;
+	}
+	return 0;
+}
+
 void AddEquippables(std::vector<ItemDefinition>& result, EquipSlot slot, const char* const* names,
 					int count, Rarity rarity, const std::string& mainStat, int value) {
 	for (int i = 0; i < count; ++i) {
 		ItemDefinition item;
-		item.name = names[i];
-		item.description = "Micare " + mainStat + " equipment.";
+		const std::string name = names[i];
+		std::string resolvedMainStat = mainStat;
+		if (slot == EquipSlot::Head && (name.find("automaton") != std::string::npos || name.find("shimmer") != std::string::npos)) resolvedMainStat = "acc";
+		if (slot == EquipSlot::Accessory) {
+			if (name.find("automaton") != std::string::npos || name.find("shimmer_ascendant") != std::string::npos) resolvedMainStat = "atk";
+			else if (name.find("iron") != std::string::npos) resolvedMainStat = "def";
+			else resolvedMainStat = "hp";
+		}
+		item.name = name;
+		item.description = "Micare " + resolvedMainStat + " equipment.";
 		item.category = ItemCategory::Equippable;
 		item.rarity = rarity;
 		item.slot = slot;
-		item.mainStat = mainStat;
-		if (mainStat == "hp") item.stats.hp = value;
-		else if (mainStat == "def") item.stats.def = value;
-		else if (mainStat == "spd") item.stats.spd = value;
-		else if (mainStat == "atk") item.stats.atk = value;
-		SetSlotRules(item, slot, mainStat);
+		item.mainStat = resolvedMainStat;
+		if (resolvedMainStat == "hp") item.stats.hp = value;
+		else if (resolvedMainStat == "def") item.stats.def = value;
+		else if (resolvedMainStat == "spd") item.stats.spd = value;
+		else if (resolvedMainStat == "atk") item.stats.atk = value;
+		else if (resolvedMainStat == "acc") item.stats.acc = value;
+		const int substat = SubstatValue(rarity);
+		if (slot == EquipSlot::Head) {
+			if (resolvedMainStat == "acc") item.stats.critRate = rarity >= Rarity::Rare ? substat : 0;
+			else item.stats.res = substat;
+		} else if (slot == EquipSlot::Torso) {
+			if (name.find("automaton") != std::string::npos) item.stats.barrierPotency = substat;
+			else if (name.find("choir") != std::string::npos) item.stats.healingPotency = substat;
+			else item.stats.res = substat;
+		} else if (slot == EquipSlot::Hand) {
+			if (name.find("choir") != std::string::npos || name.find("verdigris") != std::string::npos) item.stats.dotPotency = substat;
+			else if (name.find("automaton") != std::string::npos) item.stats.critRate = substat;
+			else item.stats.acc = substat;
+		} else if (slot == EquipSlot::Boots) {
+			if (name.find("sandals") != std::string::npos || name.find("shoes") != std::string::npos) item.stats.evasion = substat;
+			else item.stats.acc = substat;
+		} else if (slot == EquipSlot::Accessory) {
+			if (resolvedMainStat == "atk") item.stats.acc = substat;
+			else if (resolvedMainStat == "def") item.stats.res = substat;
+			else if (name.find("choir") != std::string::npos || name.find("rosary") != std::string::npos) item.stats.healingPotency = substat;
+			else item.stats.barrierPotency = substat;
+		}
+		if (rarity == Rarity::Epic) {
+			if (slot == EquipSlot::Head) { item.passive = "Crit rate +5%"; item.stats.critRate += 5; }
+			else if (slot == EquipSlot::Torso) { item.passive = "Healing received +10%"; item.stats.healingReceived += 10; }
+			else if (slot == EquipSlot::Hand) { item.passive = "DOT potency +10%"; item.stats.dotPotency += 10; }
+			else if (slot == EquipSlot::Boots) { item.passive = "Accuracy +5%"; item.stats.acc += 5; }
+			else if (slot == EquipSlot::Accessory) { item.passive = "Accuracy +5%"; item.stats.acc += 5; }
+		}
+		SetSlotRules(item, slot, resolvedMainStat);
 		result.push_back(item);
 	}
 }
@@ -70,7 +119,7 @@ std::vector<ItemDefinition> BuildEquippableCatalog() {
 	const char* bootsRare[] = {"boots_of_the_luminous_choir","occultists_ritual_boots","shimmer_infused_slippers","verdigris_sanctum_sandals","mechanica_ritual_boots"};
 	const char* bootsEpic[] = {"choirs_resonant_boots","boots_of_the_verdigris_saint","shimmer_woven_sandals","clockwork_sisters_step"};
 	const char* bootsLegendary[] = {"radiant_oath_boots","steps_of_the_broken_choir","lumen_forged_sandals"};
-	const char* handCommon[] = {"plain_rosary","cellar_bible","worn_crucible","simple_ritual_staff","dusty_prayer_book","basic_choir_tome","old_ritual_blade","faded_sanctum_relic","thin_silk_gloves","plain_vestment_staff"};
+	const char* handCommon[] = {"worn_ritual_dagger","cellar_bible","worn_crucible","simple_ritual_staff","dusty_prayer_book","basic_choir_tome","old_ritual_blade","faded_sanctum_relic","thin_silk_gloves","plain_vestment_staff"};
 	const char* handUncommon[] = {"verdigris_etched_rosary","shimmer_thread_bible","choirmistress_ritual_blade","gilded_prayer_tome","mechanized_relic_staff","hollow_choir_crucible","wax_sealed_ritual_gloves"};
 	const char* handRare[] = {"tome_of_the_luminous_choir","occultists_blood_blade","shimmer_infused_crucible","verdigris_sanctum_staff","mechanica_ritual_tome"};
 	const char* handEpic[] = {"choirs_resonant_relic","blade_of_the_verdigris_saint","shimmer_woven_crucible","clockwork_sisters_staff"};
@@ -95,7 +144,7 @@ std::vector<ItemDefinition> BuildEquippableCatalog() {
 	AddEquippables(result, EquipSlot::Hand, handRare, 5, Rarity::Rare, "atk", 6);
 	AddEquippables(result, EquipSlot::Hand, handEpic, 4, Rarity::Epic, "atk", 8);
 	AddEquippables(result, EquipSlot::Hand, handLegendary, 3, Rarity::Legendary, "atk", 10);
-	const char* accessoryCommon[] = {"worn_rosary", "tarnished_iron_ring", "cracked_automaton_charm", "old_choir_pendant", "brass_prayer_token"};
+	const char* accessoryCommon[] = {"plain_rosary", "tarnished_iron_ring", "cracked_automaton_charm", "old_choir_pendant", "brass_prayer_token"};
 	const char* accessoryUncommon[] = {"blessed_rosary", "reinforced_iron_ring", "polished_automaton_charm", "choir_ember_pendant"};
 	const char* accessoryRare[] = {"ceremonial_rosary_of_grace", "ironbound_ring", "automaton_combat_charm", "choir_flame_pendant"};
 	const char* accessoryEpic[] = {"rosary_of_benediction", "ironheart_ring", "automaton_strike_charm", "choir_inferno_pendant"};
@@ -107,9 +156,9 @@ std::vector<ItemDefinition> BuildEquippableCatalog() {
 	AddEquippables(result, EquipSlot::Accessory, accessoryLegendary, 3, Rarity::Legendary, "hp", 25);
 	for (auto& item : result) {
 		if (item.rarity == Rarity::Legendary) {
-			if (item.name.find("choir") != std::string::npos) item.setName = "Choir of Verdigris";
-			else if (item.name.find("shimmer") != std::string::npos) item.setName = "Shimmer Ascendant";
-			else if (item.name.find("automaton") != std::string::npos || item.name.find("clockwork") != std::string::npos) item.setName = "Automaton Overlord";
+			if (item.name.find("choir") != std::string::npos) { item.setName = "Choir of Verdigris"; item.setPassive = "Barrier at battle start; DOT damage taken -20%"; }
+			else if (item.name.find("shimmer") != std::string::npos) { item.setName = "Shimmer Ascendant"; item.setPassive = "ATK +15%; Accuracy +15%; first attack guaranteed critical"; }
+			else if (item.name.find("automaton") != std::string::npos || item.name.find("clockwork") != std::string::npos) { item.setName = "Automaton Overlord"; item.setPassive = "Accuracy +20%; Crit damage +20%; chance for an extra turn"; }
 		}
 	}
 	result.push_back({"verdigris_halo_of_saint_adelaide", "Artifact headgear.", ItemCategory::Equippable, Rarity::Artifact, EquipSlot::Head, {12}, {}, "shimmer_cooldown_reduced_by_1"});
@@ -132,6 +181,7 @@ std::vector<ItemDefinition> BuildEquippableCatalog() {
 		if (item.name.find("verdigris") != std::string::npos) item.setName = "Verdigris Matron";
 		else if (item.name.find("choir") != std::string::npos) item.setName = "Shimmer Reliquary";
 		else if (item.name.find("first_light") != std::string::npos) item.setName = "Oracle Automaton";
+		item.passive = item.uniqueEffect;
 	}
 	return result;
 }

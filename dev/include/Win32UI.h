@@ -33,11 +33,12 @@ private:
 	static constexpr int ButtonQuit = 504;
 	static constexpr int ButtonInventory = 505;
 	static constexpr int ButtonSort = 506;
-	static constexpr int ButtonLock = 507;
 	static constexpr int ButtonDiscard = 508;
 	static constexpr int ButtonEquip = 509;
 	static constexpr int ButtonInventoryPrevious = 510;
 	static constexpr int ButtonInventoryNext = 511;
+	static constexpr int SortModeBase = 600;
+	static constexpr int FilterModeBase = 620;
 	static constexpr UINT RefreshControlsMessage = WM_APP + 1;
 
 	static LRESULT CALLBACK WindowProcedure(HWND window, UINT message,
@@ -52,6 +53,7 @@ private:
 	void RefreshControls();
 	void LayoutControls(int width, int height);
 	void HandleCommand(int controlId);
+	void ShowInventoryMenu();
 	void EnterRoom(int roomIndex);
 	void Inspect(int interactableIndex);
 	void SearchRoom();
@@ -87,6 +89,8 @@ private:
 	std::vector<std::string> log_;
 	std::string statusMessage_;
 	InventorySort inventorySort_ = InventorySort::RecentlyObtained;
+	ItemStat inventoryFocusStat_ = ItemStat::ATK;
+	int inventoryFilter_ = -1;
 	std::vector<int> visibleRoomIndices_;
 	int selectedInventoryIndex_ = -1;
 	bool completionMode_ = false;

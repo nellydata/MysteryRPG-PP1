@@ -174,8 +174,7 @@ void Win32UI::CreateControls() {
 	createButton(27, ButtonFlee, L"FLEE");
 	createButton(28, ButtonQuit, L"Quit");
 	createButton(29, ButtonInventory, L"Inventory");
-	createButton(30, ButtonSort, L"Sort");
-	createButton(31, ButtonLock, L"Lock / unlock");
+	createButton(30, ButtonSort, L"Sort / filter");
 	createButton(32, ButtonDiscard, L"Discard");
 	createButton(33, ButtonEquip, L"Use");
 	createButton(34, ButtonInventoryPrevious, L"<");
@@ -222,16 +221,19 @@ void Win32UI::RefreshControls() {
 	} else if (view_ == View::Inventory) {
 		inventoryEntryItems_.clear();
 		inventoryEntryDescriptions_.clear();
-		const auto items = player_.GetInventory().GetSortedItems(inventorySort_);
+		const auto items = player_.GetInventory().GetSortedItems(inventorySort_, inventoryFocusStat_);
 		for (const auto* item : items) {
+			if (inventoryFilter_ >= 0 && static_cast<int>(item->getCategory()) != inventoryFilter_) continue;
 			for (int quantity = 0; quantity < player_.GetInventory().GetQuantity(item->getName()); ++quantity) {
 				inventoryEntryItems_.push_back(const_cast<Item*>(item));
 				inventoryEntryDescriptions_.push_back(item->getDescription());
 			}
 		}
-		for (const auto& clue : player_.GetInventory().GetClues()) {
-			inventoryEntryItems_.push_back(nullptr);
-			inventoryEntryDescriptions_.push_back(clue.description);
+		if (inventoryFilter_ < 0 || inventoryFilter_ == static_cast<int>(ItemCategory::Clue)) {
+			for (const auto& clue : player_.GetInventory().GetClues()) {
+				inventoryEntryItems_.push_back(nullptr);
+				inventoryEntryDescriptions_.push_back(clue.description);
+			}
 		}
 		const int pageSize = 12;
 		const int pageCount = (static_cast<int>(inventoryEntryItems_.size()) + pageSize - 1) / pageSize;
@@ -248,7 +250,6 @@ void Win32UI::RefreshControls() {
 		}
 		ShowWindow(controls_[21], SW_SHOW);
 		ShowWindow(controls_[30], SW_SHOW);
-		ShowWindow(controls_[31], SW_SHOW);
 		ShowWindow(controls_[32], SW_SHOW);
 		ShowWindow(controls_[33], SW_SHOW);
 		ShowWindow(controls_[34], SW_SHOW);
@@ -287,8 +288,8 @@ void Win32UI::LayoutControls(int width, int height) {
 				   actionY + row * 54, inventoryWidth * 2 + inventoryGap, buttonHeight, TRUE);
 	}
 	for (int i = 0; i < 12; ++i) {
-		MoveWindow(controls_[8 + i], center + (i % 3) * (inventoryWidth + inventoryGap),
-				   132 + (i / 3) * 48, inventoryWidth, 38, TRUE);
+		MoveWindow(controls_[8 + i], center + (i % 4) * (inventoryWidth + inventoryGap),
+				   132 + (i / 4) * 48, inventoryWidth, 38, TRUE);
 	}
 	MoveWindow(controls_[20], center, roomActionY, buttonWidth, buttonHeight, TRUE);
 	MoveWindow(controls_[21], center + buttonWidth + 20, roomActionY, buttonWidth, buttonHeight, TRUE);
@@ -299,18 +300,75 @@ void Win32UI::LayoutControls(int width, int height) {
 	MoveWindow(controls_[24], center, actionY, 180, 44, TRUE);
 	MoveWindow(controls_[26], center + 190, actionY, 180, 44, TRUE);
 	MoveWindow(controls_[27], center + 380, actionY, 180, 44, TRUE);
-	for (int i = 0; i < 4; ++i) {
-		MoveWindow(controls_[30 + i], center + i * (inventoryWidth + inventoryGap), inventoryActionY,
-				   inventoryWidth, 42, TRUE);
-	}
+	MoveWindow(controls_[33], center, inventoryActionY, inventoryWidth, 42, TRUE);
+	MoveWindow(controls_[32], center + inventoryWidth + inventoryGap, inventoryActionY, inventoryWidth, 42, TRUE);
+	MoveWindow(controls_[21], center + (inventoryWidth + inventoryGap) * 2, inventoryActionY, inventoryWidth, 42, TRUE);
 	MoveWindow(controls_[34], center, inventoryActionY + 50, 70, 38, TRUE);
 	MoveWindow(controls_[35], panelRight - 70, inventoryActionY + 50, 70, 38, TRUE);
+}
+
+void Win32UI::ShowInventoryMenu() {
+	HMENU menu = CreatePopupMenu();
+	HMENU sortMenu = CreatePopupMenu();
+	HMENU statMenu = CreatePopupMenu();
+	HMENU filterMenu = CreatePopupMenu();
+	AppendMenuW(sortMenu, MF_STRING, SortModeBase + 0, L"A-Z");
+	AppendMenuW(sortMenu, MF_STRING, SortModeBase + 1, L"Z-A");
+	AppendMenuW(sortMenu, MF_STRING, SortModeBase + 2, L"Rarity: low to high");
+	AppendMenuW(sortMenu, MF_STRING, SortModeBase + 3, L"Rarity: high to low");
+	AppendMenuW(sortMenu, MF_STRING, SortModeBase + 4, L"Most recently obtained");
+	AppendMenuW(sortMenu, MF_STRING, SortModeBase + 5, L"Least recently obtained");
+	const std::pair<int, const wchar_t*> statOptions[] = {
+		{SortModeBase + 10, L"Highest HP"}, {SortModeBase + 11, L"Highest ATK"},
+		{SortModeBase + 12, L"Highest DEF"}, {SortModeBase + 13, L"Highest SPD"},
+		{SortModeBase + 14, L"Highest Accuracy"}, {SortModeBase + 15, L"Highest Resistance"},
+		{SortModeBase + 16, L"Highest Crit Rate"}, {SortModeBase + 17, L"Highest Evasion"}
+	};
+	for (const auto& option : statOptions) AppendMenuW(statMenu, MF_STRING, option.first, option.second);
+	AppendMenuW(sortMenu, MF_POPUP, reinterpret_cast<UINT_PTR>(statMenu), L"Highest selected stat");
+	AppendMenuW(filterMenu, MF_STRING, FilterModeBase + 0, L"All items");
+	AppendMenuW(filterMenu, MF_STRING, FilterModeBase + 1, L"Equipment");
+	AppendMenuW(filterMenu, MF_STRING, FilterModeBase + 2, L"Consumables");
+	AppendMenuW(filterMenu, MF_STRING, FilterModeBase + 3, L"Clues");
+	AppendMenuW(filterMenu, MF_STRING, FilterModeBase + 4, L"Crux items");
+	AppendMenuW(menu, MF_POPUP, reinterpret_cast<UINT_PTR>(sortMenu), L"Sort by");
+	AppendMenuW(menu, MF_POPUP, reinterpret_cast<UINT_PTR>(filterMenu), L"Filter by type");
+	POINT cursor{};
+	GetCursorPos(&cursor);
+	TrackPopupMenu(menu, TPM_LEFTALIGN | TPM_TOPALIGN, cursor.x, cursor.y, 0, window_, nullptr);
+	DestroyMenu(menu);
 }
 
 void Win32UI::HandleCommand(int controlId) {
 	if (handlingCommand_) return;
 	handlingCommand_ = true;
-	if (controlId >= RoomButtonBase && controlId < RoomButtonBase + 4) {
+	if (controlId >= SortModeBase && controlId < FilterModeBase) {
+		if (controlId == SortModeBase + 0) inventorySort_ = InventorySort::AlphabeticalAscending;
+		else if (controlId == SortModeBase + 1) inventorySort_ = InventorySort::AlphabeticalDescending;
+		else if (controlId == SortModeBase + 2) inventorySort_ = InventorySort::RarityAscending;
+		else if (controlId == SortModeBase + 3) inventorySort_ = InventorySort::RarityDescending;
+		else if (controlId == SortModeBase + 4) inventorySort_ = InventorySort::RecentlyObtained;
+		else if (controlId == SortModeBase + 5) inventorySort_ = InventorySort::LeastRecentlyObtained;
+		else {
+			inventorySort_ = InventorySort::HighestStat;
+			switch (controlId) {
+			case SortModeBase + 10: inventoryFocusStat_ = ItemStat::HP; break;
+			case SortModeBase + 11: inventoryFocusStat_ = ItemStat::ATK; break;
+			case SortModeBase + 12: inventoryFocusStat_ = ItemStat::DEF; break;
+			case SortModeBase + 13: inventoryFocusStat_ = ItemStat::SPD; break;
+			case SortModeBase + 14: inventoryFocusStat_ = ItemStat::Accuracy; break;
+			case SortModeBase + 15: inventoryFocusStat_ = ItemStat::Resistance; break;
+			case SortModeBase + 16: inventoryFocusStat_ = ItemStat::CritRate; break;
+			case SortModeBase + 17: inventoryFocusStat_ = ItemStat::Evasion; break;
+			}
+		}
+		selectedInventoryIndex_ = -1;
+		inventoryPage_ = 0;
+	} else if (controlId >= FilterModeBase && controlId < FilterModeBase + 5) {
+		inventoryFilter_ = controlId == FilterModeBase ? -1 : controlId - FilterModeBase - 1;
+		selectedInventoryIndex_ = -1;
+		inventoryPage_ = 0;
+	} else if (controlId >= RoomButtonBase && controlId < RoomButtonBase + 4) {
 		const int buttonIndex = controlId - RoomButtonBase;
 		if (buttonIndex < static_cast<int>(visibleRoomIndices_.size())) EnterRoom(visibleRoomIndices_[buttonIndex]);
 	} else if (controlId >= InspectButtonBase && controlId < InspectButtonBase + 4) {
@@ -344,18 +402,12 @@ void Win32UI::HandleCommand(int controlId) {
 	} else if (controlId == ButtonInventory) {
 		view_ = View::Inventory;
 	} else if (controlId == ButtonSort) {
-		inventorySort_ = inventorySort_ == InventorySort::RecentlyObtained ? InventorySort::Alphabetical
-			: inventorySort_ == InventorySort::Alphabetical ? InventorySort::Amount : InventorySort::RecentlyObtained;
-		selectedInventoryIndex_ = -1;
-		inventoryPage_ = 0;
-	} else if (controlId == ButtonLock || controlId == ButtonDiscard) {
+		ShowInventoryMenu();
+	} else if (controlId == ButtonDiscard) {
 		if (selectedInventoryIndex_ >= 0 && selectedInventoryIndex_ < static_cast<int>(inventoryEntryItems_.size()) &&
 			inventoryEntryItems_[selectedInventoryIndex_] != nullptr) {
 			const std::string name = inventoryEntryItems_[selectedInventoryIndex_]->getName();
-			if (controlId == ButtonLock) {
-				player_.GetInventory().SetLocked(name, !player_.GetInventory().IsLocked(name));
-				AddLog((player_.GetInventory().IsLocked(name) ? "Locked " : "Unlocked ") + name + ".");
-			} else if (player_.GetInventory().DiscardItem(name)) AddLog("Discarded " + name + ".");
+			if (player_.GetInventory().DiscardItem(name)) AddLog("Discarded " + name + ".");
 			selectedInventoryIndex_ = -1;
 		}
 	} else if (controlId == ButtonEquip) {
@@ -855,49 +907,48 @@ void Win32UI::Paint(HDC deviceContext) {
 					case EquipSlot::Torso: type += L"Torso"; break;
 					case EquipSlot::Boots: type += L"Feet"; break;
 					case EquipSlot::Hand: type += L"Hands"; break;
+					case EquipSlot::Accessory: type += L"Accessory"; break;
 					default: type += L"Equipment"; break;
 					}
 					break;
 				}
 				DrawTextLine(deviceContext, 425, eventTop + 74, type, Muted, 16);
-				const Stats& stats = selected->getStats();
-				const bool hasStats = stats.hp != 0 || stats.def != 0 || stats.spd != 0 || stats.atk != 0 ||
-					stats.acc != 0 || stats.res != 0 || stats.critRate != 0 || stats.critDamage != 0 ||
-					stats.evasion != 0 || stats.healingPotency != 0 || stats.barrierPotency != 0 ||
-					stats.dotPotency != 0 || stats.lifesteal != 0 || stats.debuffDurationReduction != 0;
 				int detailY = eventTop + 108;
-				if (hasStats) {
-					DrawTextLine(deviceContext, 425, detailY,
-						L"Stats: HP " + std::to_wstring(stats.hp) + L"  DEF " + std::to_wstring(stats.def) +
-						L"  ATK " + std::to_wstring(stats.atk) + L"  SPD " + std::to_wstring(stats.spd), Text, 16);
-					detailY += 20;
-					DrawTextLine(deviceContext, 425, detailY,
-						L"ACC " + std::to_wstring(stats.acc) + L"  RES " + std::to_wstring(stats.res) +
-						L"  CRIT " + std::to_wstring(stats.critRate) + L"  CDMG " + std::to_wstring(stats.critDamage) +
-						L"  EVA " + std::to_wstring(stats.evasion), Text, 16);
-					detailY += 18;
-					DrawTextLine(deviceContext, 425, detailY,
-						L"HEAL " + std::to_wstring(stats.healingPotency) + L"  BARRIER " + std::to_wstring(stats.barrierPotency) +
-						L"  DOT " + std::to_wstring(stats.dotPotency) + L"  LS " + std::to_wstring(stats.lifesteal), Text, 14);
-					detailY += 18;
-				}
+				const Stats& stats = selected->getStats();
+				auto drawStat = [&](const wchar_t* label, int value) {
+					if (value == 0) return;
+					DrawTextLine(deviceContext, 425, detailY, std::wstring(label) + L" " + std::to_wstring(value), Text, 15);
+					detailY += 21;
+				};
+				drawStat(L"HP", stats.hp);
+				drawStat(L"DEF", stats.def);
+				drawStat(L"SPD", stats.spd);
+				drawStat(L"ATK", stats.atk);
+				drawStat(L"ACC", stats.acc);
+				drawStat(L"RES", stats.res);
+				drawStat(L"CRIT", stats.critRate);
+				drawStat(L"CRIT DMG", stats.critDamage);
+				drawStat(L"EVASION", stats.evasion);
+				drawStat(L"HEALING", stats.healingPotency);
+			drawStat(L"HEALING RECEIVED", stats.healingReceived);
+				drawStat(L"BARRIER", stats.barrierPotency);
+				drawStat(L"DOT", stats.dotPotency);
+				drawStat(L"LIFESTEAL", stats.lifesteal);
+				drawStat(L"DEBUFF REDUCTION", stats.debuffDurationReduction);
 				if (selected->getCategory() == ItemCategory::Consumable) {
 					DrawTextLine(deviceContext, 425, detailY, L"Effect: " + ToWide(selected->getEffect()), Text, 16);
 					detailY += 20;
 				} else if (selected->getCategory() == ItemCategory::Crux) {
 					DrawTextLine(deviceContext, 425, detailY, L"Lore: " + ToWide(selected->getDescription()), Text, 16);
 					detailY += 20;
-				} else {
-					DrawTextLine(deviceContext, 425, detailY, L"Theme: " + ToWide(selected->getTheme()), Text, 16);
-					detailY += 20;
-					DrawTextLine(deviceContext, 425, detailY, L"Passive: " + ToWide(selected->getPassive()), Text, 16);
-					detailY += 18;
-					DrawTextLine(deviceContext, 425, detailY, L"Description: " + ToWide(description), Text, 16);
+				} else if (!selected->getPassive().empty()) {
+					DrawTextLine(deviceContext, 425, detailY, L"Passive: " + ToWide(selected->getPassive()), Text, 15);
+					detailY += 21;
 				}
 				if (!selected->getSetName().empty()) {
-					DrawTextLine(deviceContext, 425, detailY + 20, L"Set: " + ToWide(selected->getSetName()) + L" // Bonus: " + ToWide(selected->getSetPassive()), Muted, 13);
+					DrawTextLine(deviceContext, 425, detailY, L"Set: " + ToWide(selected->getSetName()) + L" // Bonus: " + ToWide(selected->getSetPassive()), Muted, 13);
 				} else if (!selected->getUniqueEffect().empty()) {
-					DrawTextLine(deviceContext, 425, detailY + 20, L"Special: " + ToWide(selected->getUniqueEffect()), Muted, 13);
+					DrawTextLine(deviceContext, 425, detailY, L"Special: " + ToWide(selected->getUniqueEffect()), Muted, 13);
 				}
 			}
 		}

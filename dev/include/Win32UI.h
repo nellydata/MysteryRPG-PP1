@@ -41,6 +41,8 @@ private:
 	static constexpr int ButtonInventoryNext = 511;
 	static constexpr int InventorySearch = 512;
 	static constexpr int SkillButtonBase = 800;
+	static constexpr int SkillSortBase = 740;
+	static constexpr int SkillFilterBase = 750;
 	static constexpr int SortModeBase = 600;
 	static constexpr int FilterModeBase = 620;
 	static constexpr UINT RefreshControlsMessage = WM_APP + 1;
@@ -88,7 +90,7 @@ private:
 	HWND window_;
 	HWND nameWindow_;
 	HWND nameEdit_;
-	HWND controls_[48];
+	HWND controls_[64];
 	HFONT font_;
 	HFONT headingFont_;
 	View view_;
@@ -120,6 +122,8 @@ private:
 	std::vector<std::string> combatItemNames_;
 	std::vector<std::string> skillNames_;
 	std::vector<std::string> equippedSkillNames_;
+	int skillSortMode_ = 0;
+	int skillFilter_ = 0;
 	std::vector<Enemy*> targetEnemies_;
 	std::string selectedCombatSkillName_;
 	bool combatSkillSelection_ = false;

@@ -148,5 +148,12 @@ Version 0.4.1
 •	Added level-weighted enemy tier selection, bounded level disparity, exact “Nothing Was Found.” investigation feedback, and active equipment-set status names.
 •	Validated the correction pass with a successful Debug x64 build.
 
+Version 0.4.2
+•	Reworked the Skills screen into separate skill-inventory and skill-information panels with selectable equip buttons.
+•	Added skill sorting by A-Z or cost and filtering by offense or support.
+•	Removed redundant single-enemy target presentation and kept target buttons for multi-enemy encounters.
+•	Converted equipment main-stat bonuses to level-scaled percentages while retaining flat SPD substats.
+•	Made investigation consumable outcomes reachable and room-aware, then validated the update with a successful Debug x64 build.
+
 
 

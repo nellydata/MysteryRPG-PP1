@@ -281,6 +281,17 @@ void Player::RecalculateStats() {
         totalStats_.dotPotency += stats.dotPotency;
         totalStats_.lifesteal += stats.lifesteal;
         totalStats_.debuffDurationReduction += stats.debuffDurationReduction;
+        const int percent = item->getMainStatPercent();
+        if (percent > 0) {
+            int baseValue = 0;
+            int* totalValue = nullptr;
+            if (item->getMainStat() == "hp") { baseValue = baseStats_.hp; totalValue = &totalStats_.hp; }
+            else if (item->getMainStat() == "def") { baseValue = baseStats_.def; totalValue = &totalStats_.def; }
+            else if (item->getMainStat() == "spd") { baseValue = baseStats_.spd; totalValue = &totalStats_.spd; }
+            else if (item->getMainStat() == "atk") { baseValue = baseStats_.atk; totalValue = &totalStats_.atk; }
+            else if (item->getMainStat() == "acc") { baseValue = 100; totalValue = &totalStats_.acc; }
+            if (totalValue != nullptr) *totalValue += baseValue * percent / 100;
+        }
     }
 
     for (const std::string& setName : GetActiveSets()) {

@@ -100,6 +100,7 @@ struct ItemDefinition {
 	std::string uniqueEffect;
 	std::string theme;
 	std::string mainStat;
+	int mainStatPercent = 0;
 	std::vector<ItemStat> allowedSubstats;
 	std::vector<ItemStat> forbiddenStats;
 	std::string setName;

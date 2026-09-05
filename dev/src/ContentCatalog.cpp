@@ -73,12 +73,8 @@ void AddEquippables(std::vector<ItemDefinition>& result, EquipSlot slot, const c
 		item.rarity = rarity;
 		item.slot = slot;
 		item.mainStat = resolvedMainStat;
-		const int scaledValue = resolvedMainStat == "spd" ? SpeedMainStatValue(rarity, value) : MainStatValue(rarity, value);
-		if (resolvedMainStat == "hp") item.stats.hp = scaledValue;
-		else if (resolvedMainStat == "def") item.stats.def = scaledValue;
-		else if (resolvedMainStat == "spd") item.stats.spd = scaledValue;
-		else if (resolvedMainStat == "atk") item.stats.atk = scaledValue;
-		else if (resolvedMainStat == "acc") item.stats.acc = scaledValue;
+		const int percentageValue = MainStatValue(rarity, value);
+		item.mainStatPercent = percentageValue;
 		const int substat = SubstatValue(rarity);
 		if (slot == EquipSlot::Head) {
 			if (resolvedMainStat == "acc") item.stats.critRate = rarity >= Rarity::Rare ? substat : 0;

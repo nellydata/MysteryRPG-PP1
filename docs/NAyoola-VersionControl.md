@@ -56,6 +56,7 @@ The milestone established a multi-file C++17 console project under `dev/include`
 - **2026-09-07 - Investigation, encounter, and recovery update:** Added previous-page navigation, investigation inventory access, area/level encounter scaling, fresh battle resets, named status events, immediate death logging, and zero-health recovery locks.
 - **2026-09-08 - Version `0.4.0` - Shimmer loadout update:** Added metadata-driven skill descriptions/effects, skill equip and unequip controls, equipped-skill presentation in the player panel, and selectable equipped skills in combat.
 - **2026-09-08 - Version `0.4.1` - Gameplay correction update:** Fixed starter skill availability and Skills presentation, bounded enemy scaling, corrected Verdigris Mark ownership and battle cleanup, added turn-gated target groups, weighted level-aware encounter selection, exact investigation no-result feedback, and active set-status presentation.
+- **2026-09-08 - Version `0.4.2` - Skills and item-stat balance update:** Split the Skills screen into inventory and information panels, added skill sorting/filtering, limited target buttons to multi-enemy battles, applied percentage-based level-scaled equipment main stats with flat SPD substats, and made investigation consumable rewards reachable and room-aware.
 - **Validation:** Debug x64 build completed successfully with zero errors; generated build output remains excluded by `.gitignore`.
 
 ## Reference Links

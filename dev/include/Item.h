@@ -19,6 +19,7 @@ public:
     const std::string& getUniqueEffect() const;
     const std::string& getTheme() const;
     const std::string& getMainStat() const;
+    int getMainStatPercent() const;
     const std::vector<ItemStat>& getAllowedSubstats() const;
     const std::vector<ItemStat>& getForbiddenStats() const;
     const std::string& getSetName() const;
@@ -37,6 +38,7 @@ private:
     std::string uniqueEffect_;
     std::string theme_;
     std::string mainStat_;
+    int mainStatPercent_;
     std::vector<ItemStat> allowedSubstats_;
     std::vector<ItemStat> forbiddenStats_;
     std::string setName_;

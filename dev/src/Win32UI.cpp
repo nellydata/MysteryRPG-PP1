@@ -9,6 +9,7 @@
 #include <cstdio>
 #include <array>
 #include <cctype>
+#include <tuple>
 #include <memory>
 
 namespace {
@@ -31,6 +32,19 @@ unsigned RoomSeed(const std::string& roomName) {
 	return seed;
 }
 
+bool IsSupportSkill(const std::string& effect) {
+	return effect == "barrier" || effect == "heal_cleanse" || effect == "extra_turn" || effect == "stat_boost";
+}
+
+const std::vector<std::string>& BuiltInShimmerSkills() {
+	static const std::vector<std::string> names = {
+		"Pulsus Luminis", "Velum Radiāns", "Gradus Coruscus", "Lucerna Echo",
+		"Fulgur Aurorae", "Flos Aeruginis", "Resonantia Chori", "Requiem Mechanicum",
+		"Scutum Coruscum", "Nota Luminosa", "Revelatio Occulta", "Catena Aeruginis",
+		"Onus Coruscum", "Lux Sanctorum", "Mutatio Horologii"
+	};
+	return names;
+}
 EnemyFaction RoomFaction(const std::string& roomName) {
 	if (roomName == "Archive Room") return EnemyFaction::Automata;
 	if (roomName == "Chapel") return EnemyFaction::Verdigris;
@@ -235,7 +249,7 @@ void Win32UI::CreateControls() {
 	for (int i = 0; i < 4; ++i) createButton(i, RoomButtonBase + i, L"Room");
 	for (int i = 0; i < 4; ++i) createButton(4 + i, InspectButtonBase + i, L"Inspect");
 	for (int i = 0; i < 12; ++i) createButton(8 + i, InventoryButtonBase + i, L"Item");
-	for (int i = 0; i < 12; ++i) createButton(36 + i, SkillButtonBase + i, L"Skill");
+	for (int i = 0; i < 15; ++i) createButton(36 + i, SkillButtonBase + i, L"Skill");
 	controls_[25] = CreateWindowW(L"EDIT", L"", WS_CHILD | WS_BORDER | ES_AUTOHSCROLL,
 		0, 0, 0, 0, window_, reinterpret_cast<HMENU>(InventorySearch), GetModuleHandleW(nullptr), nullptr);
 	SendMessageW(controls_[25], WM_SETFONT, reinterpret_cast<WPARAM>(font_), TRUE);
@@ -340,14 +354,29 @@ void Win32UI::RefreshControls() {
 		ShowWindow(controls_[34], SW_SHOW);
 		ShowWindow(controls_[35], SW_SHOW);
 	} else if (view_ == View::Skills) {
-		skillNames_ = progression_.GetUnlockedShimmerSkills();
-		for (std::size_t index = 0; index < skillNames_.size() && index < 12; ++index) {
+		skillNames_.clear();
+		for (const auto& name : progression_.GetUnlockedShimmerSkills()) {
+			auto skill = ShimmerSkill::Create(name);
+			if (skill == nullptr) continue;
+			const bool support = IsSupportSkill(skill->getEffect());
+			if ((skillFilter_ == 1 && support) || (skillFilter_ == 2 && !support)) continue;
+			skillNames_.push_back(name);
+		}
+		std::sort(skillNames_.begin(), skillNames_.end(), [&](const std::string& left, const std::string& right) {
+			if (skillSortMode_ == 1) return ShimmerSkill::Create(left)->getCost() < ShimmerSkill::Create(right)->getCost();
+			if (skillSortMode_ == 2) return ShimmerSkill::Create(left)->getCost() > ShimmerSkill::Create(right)->getCost();
+			return skillSortMode_ == 3 ? left > right : left < right;
+		});
+		if (selectedSkillIndex_ >= static_cast<int>(skillNames_.size())) selectedSkillIndex_ = -1;
+		for (std::size_t index = 0; index < skillNames_.size() && index < 15; ++index) {
 			SetWindowTextW(controls_[36 + index], FormatDisplayText(skillNames_[index]).c_str());
 			ShowWindow(controls_[36 + index], SW_SHOW);
 		}
 		ShowWindow(controls_[21], SW_SHOW);
 		ShowWindow(controls_[33], SW_SHOW);
+		ShowWindow(controls_[30], SW_SHOW);
 		SetWindowTextW(controls_[33], L"Equip / Unequip");
+		SetWindowTextW(controls_[30], L"Sort / filter");
 	} else if (view_ == View::Combat) {
 		if (combatDefeatRecovery_) {
 			SetWindowTextW(controls_[24], L"RESPAWN (10% HP)");
@@ -385,9 +414,11 @@ void Win32UI::RefreshControls() {
 					if (enemy != nullptr && enemy->isAlive() && targetEnemies_.size() < 3) targetEnemies_.push_back(enemy.get());
 				}
 			}
-			for (std::size_t index = 0; index < targetEnemies_.size(); ++index) {
-				SetWindowTextW(controls_[8 + index], (L"TARGET: " + FormatDisplayText(targetEnemies_[index]->getName())).c_str());
-				ShowWindow(controls_[8 + index], SW_SHOW);
+			if (targetEnemies_.size() > 1) {
+				for (std::size_t index = 0; index < targetEnemies_.size(); ++index) {
+					SetWindowTextW(controls_[8 + index], (L"TARGET: " + FormatDisplayText(targetEnemies_[index]->getName())).c_str());
+					ShowWindow(controls_[8 + index], SW_SHOW);
+				}
 			}
 			SetWindowTextW(controls_[24], L"ATTACK");
 			SetWindowTextW(controls_[31], L"ITEM");
@@ -507,6 +538,25 @@ void Win32UI::ShowInventoryMenu() {
 	DestroyMenu(menu);
 }
 
+void Win32UI::ShowSkillMenu() {
+	HMENU menu = CreatePopupMenu();
+	HMENU sortMenu = CreatePopupMenu();
+	HMENU filterMenu = CreatePopupMenu();
+	AppendMenuW(sortMenu, MF_STRING, SkillSortBase + 0, L"A-Z");
+	AppendMenuW(sortMenu, MF_STRING, SkillSortBase + 1, L"Cost: low to high");
+	AppendMenuW(sortMenu, MF_STRING, SkillSortBase + 2, L"Cost: high to low");
+	AppendMenuW(sortMenu, MF_STRING, SkillSortBase + 3, L"Z-A");
+	AppendMenuW(filterMenu, MF_STRING, SkillFilterBase + 0, L"All skills");
+	AppendMenuW(filterMenu, MF_STRING, SkillFilterBase + 1, L"Support");
+	AppendMenuW(filterMenu, MF_STRING, SkillFilterBase + 2, L"Offense");
+	AppendMenuW(menu, MF_POPUP, reinterpret_cast<UINT_PTR>(sortMenu), L"Sort by");
+	AppendMenuW(menu, MF_POPUP, reinterpret_cast<UINT_PTR>(filterMenu), L"Filter by type");
+	POINT cursor{};
+	GetCursorPos(&cursor);
+	TrackPopupMenu(menu, TPM_LEFTALIGN | TPM_TOPALIGN, cursor.x, cursor.y, 0, window_, nullptr);
+	DestroyMenu(menu);
+}
+
 void Win32UI::ShowCombatItems() {
 	if (activeEnemy_ == nullptr || !activeEnemy_->isAlive()) return;
 	HMENU menu = CreatePopupMenu();
@@ -595,6 +645,16 @@ void Win32UI::HandleCommand(int controlId) {
 		}
 		selectedInventoryIndex_ = -1;
 		inventoryPage_ = 0;
+	} else if (controlId >= SkillSortBase && controlId < SkillSortBase + 4) {
+		if (view_ == View::Skills) {
+			skillSortMode_ = controlId - SkillSortBase;
+			selectedSkillIndex_ = -1;
+		}
+	} else if (controlId >= SkillFilterBase && controlId < SkillFilterBase + 3) {
+		if (view_ == View::Skills) {
+			skillFilter_ = controlId - SkillFilterBase;
+			selectedSkillIndex_ = -1;
+		}
 	} else if (controlId >= FilterModeBase && controlId < FilterModeBase + 5) {
 		inventoryFilter_ = controlId == FilterModeBase ? -1 : controlId - FilterModeBase - 1;
 		selectedInventoryIndex_ = -1;
@@ -636,7 +696,7 @@ void Win32UI::HandleCommand(int controlId) {
 				inventoryEntryItems_[index]->getName() + " selected.";
 		}
 		}
-	} else if (controlId >= SkillButtonBase && controlId < SkillButtonBase + 12) {
+	} else if (controlId >= SkillButtonBase && controlId < SkillButtonBase + 15) {
 		const int index = controlId - SkillButtonBase;
 		if (view_ == View::Skills && index < static_cast<int>(skillNames_.size())) {
 			selectedSkillIndex_ = index;
@@ -671,7 +731,8 @@ void Win32UI::HandleCommand(int controlId) {
 	} else if (controlId == ButtonInventory) {
 		if (player_.isAlive() && !combatDefeatRecovery_) ChangeView(View::Inventory);
 	} else if (controlId == ButtonSort) {
-		ShowInventoryMenu();
+		if (view_ == View::Skills) ShowSkillMenu();
+		else ShowInventoryMenu();
 	} else if (controlId == ButtonDiscard) {
 		if (selectedInventoryIndex_ >= 0 && selectedInventoryIndex_ < static_cast<int>(inventoryEntryItems_.size()) &&
 			inventoryEntryItems_[selectedInventoryIndex_] != nullptr) {
@@ -762,6 +823,7 @@ void Win32UI::HandleCommand(int controlId) {
 
 void Win32UI::InitializeCompletionState() {
 	progression_.SetMaxLevel(player_);
+	for (const auto& skillName : BuiltInShimmerSkills()) progression_.UnlockShimmerSkill(skillName);
 	for (auto& room : mapManager_.GetRooms()) room.SetCleared(true);
 	for (const auto& definition : BuildEquippableCatalog()) player_.AddItem(std::make_unique<Item>(definition));
 	for (const auto& definition : BuildConsumableCatalog()) player_.AddItem(std::make_unique<Item>(definition));
@@ -826,6 +888,7 @@ void Win32UI::SearchRoom() {
 	const bool encounterAllowed = area.GetSpawnCondition() != EnemySpawnCondition::None &&
 		roll < SpawnChance(area.GetSpawnCondition());
 	const int enemyThreshold = cluesComplete ? 70 : 50;
+	const int consumableThreshold = (std::max)(35, 62 - playerLevel / 3);
 	if (activeEnemy_ == nullptr && roll >= 90) {
 		const int damage = (std::max)(1, player_.getMaxHP() * 5 / 100);
 		player_.takeDamage(damage);
@@ -916,6 +979,13 @@ void Win32UI::SearchRoom() {
 		view_ = View::Combat;
 		if (!player_.isAlive()) ShowDefeatRecovery();
 		AddLog("Search: an enemy ambushes you in " + area.getName() + ".");
+		return;
+	}
+	if (activeEnemy_ == nullptr && roll >= consumableThreshold && roll < enemyThreshold) {
+		if (!area.HasAllItems()) area.ConsumeItem();
+		const std::string itemName = area.getName() == "Archive Room" ? "blessed_bandages" : "cellar_rations";
+		AddNamedItem(player_, BuildConsumableCatalog(), itemName);
+		AddLog("Search: a consumable item was added to the inventory.");
 		return;
 	}
 	if (roll >= enemyThreshold && (cluesComplete || roll < 80)) {
@@ -1300,6 +1370,11 @@ void Win32UI::Paint(HDC deviceContext) {
 					if (value == 0) return;
 					detailY += DrawTextLine(deviceContext, detailX, detailY, std::wstring(label) + L"  " + std::to_wstring(value), Text, 18, false, detailWidth) + 6;
 				};
+				if (selected->getMainStatPercent() > 0) {
+					detailY += DrawTextLine(deviceContext, detailX, detailY,
+						L"Main stat: " + FormatDisplayText(selected->getMainStat()) + L" +" + std::to_wstring(selected->getMainStatPercent()) + L"%",
+						Shimmer, 17, false, detailWidth) + 6;
+				}
 				drawStat(L"HP", stats.hp); drawStat(L"DEF", stats.def); drawStat(L"SPD", stats.spd); drawStat(L"ATK", stats.atk);
 				drawStat(L"Accuracy", stats.acc); drawStat(L"Resistance", stats.res); drawStat(L"Crit rate", stats.critRate);
 				drawStat(L"Crit damage", stats.critDamage); drawStat(L"Evasion", stats.evasion);
@@ -1320,6 +1395,37 @@ void Win32UI::Paint(HDC deviceContext) {
 					DrawTextLine(deviceContext, detailX, detailY, L"Set bonus: " + FormatDisplayText(selected->getSetPassive()), Brass, 17, false, detailWidth);
 				}
 			}
+		}
+		return;
+	}
+	if (view_ == View::Skills) {
+		const int left = client.right / 3 < 395 ? (client.right / 3 < 20 ? 20 : client.right / 3) : 395;
+		const int right = client.right - 20 > left + 240 ? client.right - 20 : left + 240;
+		const int top = 20;
+		const int bottom = client.bottom - 20;
+		const int split = left + (right - left) * 48 / 100;
+		const int detailLeft = split + 16;
+		DrawPanel(deviceContext, {left, top, split, bottom}, L"SKILL INVENTORY");
+		DrawPanel(deviceContext, {detailLeft, top, right, bottom}, L"SKILL INFORMATION");
+		DrawTextLine(deviceContext, left + 20, top + 90,
+			L"Shimmer points: " + std::to_wstring(progression_.GetShimmerPoints()), Muted, 16);
+		const auto equipped = progression_.GetEquippedShimmerSkills();
+		if (selectedSkillIndex_ >= 0 && selectedSkillIndex_ < static_cast<int>(skillNames_.size())) {
+			const std::string& name = skillNames_[selectedSkillIndex_];
+			auto skill = ShimmerSkill::Create(name);
+			if (skill != nullptr) {
+				const bool active = std::find(equipped.begin(), equipped.end(), name) != equipped.end();
+				int infoY = top + 55;
+				infoY += DrawTextLine(deviceContext, detailLeft + 20, infoY, FormatDisplayText(name), Shimmer, 22, true, right - detailLeft - 40) + 12;
+				DrawTextLine(deviceContext, detailLeft + 20, infoY, active ? L"EQUIPPED" : L"NOT EQUIPPED", active ? RGB(90, 210, 110) : Muted, 16, true);
+				infoY += 32;
+				DrawTextLine(deviceContext, detailLeft + 20, infoY, L"Cost: " + std::to_wstring(skill->getCost()) + L"   Cooldown: " + std::to_wstring(skill->getCooldown()), Text, 17);
+				infoY += 34;
+				infoY += DrawTextLine(deviceContext, detailLeft + 20, infoY, L"Effect: " + FormatDisplayText(skill->getEffect()), Shimmer, 17, false, right - detailLeft - 40) + 10;
+				DrawTextLine(deviceContext, detailLeft + 20, infoY, FormatDisplayText(skill->getDescription()), Text, 17, false, right - detailLeft - 40);
+			}
+		} else {
+			DrawTextLine(deviceContext, detailLeft + 20, top + 70, L"Select a skill to view its information.", Muted, 17, false, right - detailLeft - 40);
 		}
 		return;
 	}
@@ -1353,7 +1459,7 @@ void Win32UI::Paint(HDC deviceContext) {
 		}
 	} else if (view_ == View::Combat && activeEnemy_ != nullptr) {
 		DrawTextLine(deviceContext, 425, contentY, L"HOSTILE: " + ToWide(activeEnemy_->getName()), Danger, 26, true);
-		DrawTextLine(deviceContext, 425, contentY + 25, L"Select a living target before acting.", Muted, 15);
+		if (targetEnemies_.size() > 1) DrawTextLine(deviceContext, 425, contentY + 25, L"Select a living target before acting.", Muted, 15);
 		DrawTextLine(deviceContext, 425, contentY + 48, L"HP  " + std::to_wstring(activeEnemy_->getHP()) + L" / " + std::to_wstring(activeEnemy_->getMaxHP()), Text, 20);
 		DrawTextLine(deviceContext, 425, contentY + 84, L"ATK " + std::to_wstring(activeEnemy_->getAtk()) + L"   DEF " + std::to_wstring(activeEnemy_->getDefense()) + L"   SPD " + std::to_wstring(activeEnemy_->getSpeed()), Muted, 17);
 		DrawTextLine(deviceContext, 425, contentY + 112, ToWide(std::string(EnemyFactionName(activeEnemy_->getFaction())) + " // " + EnemyTierName(activeEnemy_->getTier()) + " // Phase " + std::to_string(activeEnemy_->GetPhase())), Brass, 15);
@@ -1384,22 +1490,6 @@ void Win32UI::Paint(HDC deviceContext) {
 				DrawTextLine(deviceContext, 440, mapY, L"[ " + ToWide(room.getName()) + L" ]", Text, 18);
 				mapY += 32;
 			}
-		}
-	} else if (view_ == View::Skills) {
-		DrawTextLine(deviceContext, 425, contentY, L"SKILLS", Shimmer, 23, true);
-		contentY += 55;
-		DrawTextLine(deviceContext, 440, contentY, L"Shimmer points remaining: " + std::to_wstring(progression_.GetShimmerPoints()), Muted, 16);
-		contentY += 30;
-		const auto unlocked = progression_.GetUnlockedShimmerSkills();
-		const auto equipped = progression_.GetEquippedShimmerSkills();
-		for (const auto& name : unlocked) {
-			auto skill = ShimmerSkill::Create(name);
-			if (skill == nullptr) continue;
-			const bool active = std::find(equipped.begin(), equipped.end(), name) != equipped.end();
-			DrawTextLine(deviceContext, 440, contentY, FormatDisplayText(name) + (active ? L"  [EQUIPPED]" : L""), Shimmer, 18, true, client.right - 470);
-			contentY += 28;
-			DrawTextLine(deviceContext, 455, contentY, L"Effect: " + FormatDisplayText(skill->getEffect()) + L" | " + FormatDisplayText(skill->getDescription()), Text, 15, false, client.right - 485);
-			contentY += 34;
 		}
 	}
 

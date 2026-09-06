@@ -229,7 +229,12 @@ bool Player::UseConsumable(const std::string& itemName, Enemy* target) {
     if (item == nullptr || item->getCategory() != ItemCategory::Consumable) return false;
     const std::string& effect = item->getEffect();
     if (effect.find("restore_20") != std::string::npos) heal(maxHp_ * 20 / 100);
-    else if (effect.find("restore_35") != std::string::npos) heal(maxHp_ * 35 / 100);
+    else if (effect.find("restore_35") != std::string::npos) {
+        heal(maxHp_ * 35 / 100);
+        statuses_.erase(std::remove_if(statuses_.begin(), statuses_.end(), [](const StatusEffect& status) {
+            return status.type == StatusType::Bleed;
+        }), statuses_.end());
+    }
     else if (effect.find("restore_50") != std::string::npos) heal(maxHp_ * 50 / 100);
     else if (effect == "remove_all_debuffs") CleanseNegativeStatuses();
     else if (effect == "remove_burn_and_poison") {
@@ -267,9 +272,9 @@ void Player::ApplyStatus(const StatusEffect& status) {
 void Player::ProcessStatuses() {
     bool barrierExpired = false;
     for (auto& status : statuses_) {
-        if (status.type == StatusType::Bleed) takeDamage(AbsorbDamage(CombatMath::Mitigate(status.sourceAttack * 30 * (100 + totalStats_.dotPotency + status.dotPotency) / 10000, status.sourceDefense)));
-        else if (status.type == StatusType::Burn) takeDamage(AbsorbDamage(CombatMath::Mitigate(status.sourceAttack * 60 * (100 + totalStats_.dotPotency + status.dotPotency) / 10000, status.sourceDefense)));
-        else if (status.type == StatusType::Poison) takeDamage(AbsorbDamage(CombatMath::Mitigate(maxHp_ * (100 + totalStats_.dotPotency + status.dotPotency) / 20 / 100, status.sourceDefense)));
+        if (status.type == StatusType::Bleed) takeDamage(AbsorbDamage(CombatMath::Mitigate(status.sourceAttack * 30 * (100 + status.dotPotency) / 10000, status.sourceDefense)));
+        else if (status.type == StatusType::Burn) takeDamage(AbsorbDamage(CombatMath::Mitigate(status.sourceAttack * 60 * (100 + status.dotPotency) / 10000, status.sourceDefense)));
+        else if (status.type == StatusType::Poison) takeDamage(AbsorbDamage(CombatMath::Mitigate(maxHp_ * (100 + status.dotPotency) / 20 / 100, status.sourceDefense)));
         else if (status.type == StatusType::HealOverTime) heal(status.potency * (100 + totalStats_.healingPotency) / 100);
         --status.turns;
         if (status.type == StatusType::Barrier && status.turns <= 0) barrierExpired = true;
@@ -332,13 +337,6 @@ void Player::RecalculateStats() {
         totalStats_.dotPotency += stats.dotPotency;
         totalStats_.lifesteal += stats.lifesteal;
         totalStats_.debuffDurationReduction += stats.debuffDurationReduction;
-        const int flatMainValue = item->getMainStatValue();
-        if (flatMainValue > 0) {
-            if (item->getMainStat() == "hp") totalStats_.hp += flatMainValue;
-            else if (item->getMainStat() == "def") totalStats_.def += flatMainValue;
-            else if (item->getMainStat() == "spd") totalStats_.spd += flatMainValue;
-            else if (item->getMainStat() == "atk") totalStats_.atk += flatMainValue;
-        }
         for (const auto& substat : item->getSubstats()) {
             int baseValue = 0;
             int* totalValue = nullptr;
@@ -391,9 +389,6 @@ void Player::RecalculateStats() {
         } else if (setName == "Automaton Overlord") {
             totalStats_.acc += 20;
             totalStats_.critDamage += 20;
-        } else if (setName == "Oracle Automaton") {
-            totalStats_.acc += 10;
-            totalStats_.critDamage += 10;
         }
     }
     totalStats_.hp = CombatMath::ApplyPercent(totalStats_.hp, totalStats_.hpPercent);

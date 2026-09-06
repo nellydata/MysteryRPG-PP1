@@ -85,8 +85,8 @@ void Area::AddInteractable(const std::string& interactable) {
 }
 
 void Area::SetNPC(bool hasNPC) { hasNPC_ = hasNPC; }
-void Area::SetClues(bool hasClues) { hasClues_ = hasClues; cluesRemaining_ = hasClues ? 5 : 0; }
-void Area::SetItems(bool hasItems) { hasItems_ = hasItems; itemsRemaining_ = hasItems ? 5 : 0; }
+void Area::SetClues(bool hasClues) { hasClues_ = hasClues; cluesRemaining_ = hasClues ? static_cast<int>(interactables_.size()) : 0; }
+void Area::SetItems(bool hasItems) { hasItems_ = hasItems; itemsRemaining_ = hasItems ? static_cast<int>(interactables_.size()) : 0; }
 void Area::SetSpawnCondition(EnemySpawnCondition condition) { spawnCondition_ = condition; }
 
 const std::vector<std::string>& Area::GetInteractables() const { return interactables_; }

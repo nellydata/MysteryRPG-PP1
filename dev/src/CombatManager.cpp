@@ -163,14 +163,20 @@ bool CombatManager::resolve(CombatAction action, Player& player, Enemy& enemy,
     switch (action) {
     case CombatAction::Attack: {
         AddEvent(CombatEvent::Kind::Attack, player.getName() + " uses Attack on " + enemy.getName() + ".");
-        const unsigned roll = static_cast<unsigned>(turnNumber_ * 37 + player.getAttack() * 11 + enemy.getHP()) % 100;
-        if (roll < static_cast<unsigned>(enemy.getEvasion())) {
+        const unsigned hitRoll = static_cast<unsigned>(turnNumber_ * 37 + player.getAttack() * 11 + enemy.getHP()) % 100;
+        const int hitChance = CombatMath::AccuracyChance(100, player.getAccuracy(), enemy.getEvasion());
+        if (hitRoll >= static_cast<unsigned>(hitChance)) {
             std::cout << player.getName() << " attacks " << enemy.getName() << ", but the strike is evaded.\n";
+            playerGauge_ -= 1000;
             playerTurn_ = false;
             AddEvent(CombatEvent::Kind::Info, player.getName() + "'s attack was evaded.");
+            AccumulateGaugesUntilReady(playerGauge_, enemyGauge_, player.getSpeed(), enemy.getSpeed());
+            playerTurn_ = playerGauge_ >= 1000;
+            if (playerTurn_) StartPlayerTurn(player);
             return true;
         }
-        const bool critical = roll < static_cast<unsigned>((std::min)(100, player.getCritRate()));
+        const unsigned critRoll = static_cast<unsigned>(turnNumber_ * 53 + player.getAttack() * 7 + enemy.getHP() * 3) % 100;
+        const bool critical = critRoll < static_cast<unsigned>((std::min)(100, player.getCritRate()));
         const int rawDamage = critical
             ? player.getAttack() * player.getCritDamage() / 100
             : player.getAttack();
@@ -274,6 +280,7 @@ bool CombatManager::UseConsumable(const std::string& itemName, Player& player, E
 
 void CombatManager::enemyTurn(Player& player, Enemy& enemy) {
     if (!enemy.isAlive()) return;
+    enemy.TickSkillCooldowns();
 
     if (enemyGauge_ < 1000) {
         AccumulateGaugesUntilReady(playerGauge_, enemyGauge_, player.getSpeed(), enemy.getSpeed());
@@ -319,9 +326,9 @@ void CombatManager::enemyTurn(Player& player, Enemy& enemy) {
                 if (!hadStatus && player.HasStatus(type)) AddEvent(CombatEvent::Kind::Debuff, enemy.getName() + " inflicts " + std::string(StatusDisplayName(type)) + " on " + player.getName() + " for " + std::to_string(duration) + " turns.");
             }
         } else if (skill.effect == "def_down" || skill.effect == "accuracy_down") {
-            const bool hadStatus = enemy.HasStatus(StatusType::VerdigrisMark);
-            enemy.ApplyStatus({StatusType::VerdigrisMark, skill.duration > 0 ? skill.duration : 2, 0, player.getAttack()}, player.getAccuracy());
-            if (!hadStatus && enemy.HasStatus(StatusType::VerdigrisMark)) AddEvent(CombatEvent::Kind::Debuff, enemy.getName() + " suffers Verdigris Mark for " + std::to_string(skill.duration > 0 ? skill.duration : 2) + " turns!");
+            const bool hadStatus = player.HasStatus(StatusType::VerdigrisMark);
+            player.ApplyStatus({StatusType::VerdigrisMark, skill.duration > 0 ? skill.duration : 2, 0, enemy.getAtk(), 0, enemy.getDefense()});
+            if (!hadStatus && player.HasStatus(StatusType::VerdigrisMark)) AddEvent(CombatEvent::Kind::Debuff, player.getName() + " suffers Verdigris Mark for " + std::to_string(skill.duration > 0 ? skill.duration : 2) + " turns!");
         } else if (skill.effect == "heal_self" || skill.effect == "heal_cleanse") {
             const int amount = (std::max)(1, enemy.getMaxHP() * 15 / 100);
             const int before = enemy.getHP();

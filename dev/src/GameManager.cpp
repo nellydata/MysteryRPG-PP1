@@ -44,30 +44,31 @@ void GameManager::Run() {
     while (player.isAlive()) {
         const auto& rooms = mapManager.GetRooms();
         ui.RenderDashboard(player, progression, rooms, "Select a destination or panel.");
+        const int panelBase = static_cast<int>(rooms.size()) + 1;
         const int choice = ui.Prompt("Select a destination or panel.", 0,
-                                     ui.IsDeveloperMode() ? 8 : 7);
+                                    ui.IsDeveloperMode() ? panelBase + 3 : panelBase + 2);
         if (choice == -1) {
             ui.ShowMessage("Enter one of the displayed choices.");
             ui.Prompt("Press 0 to continue.", 0, 0);
             continue;
         }
         if (choice == 0) break;
-        if (choice == 5) {
+        if (choice == panelBase) {
             ui.ShowInventory(player);
             ui.Prompt("Press 0 to return.", 0, 0);
             continue;
         }
-        if (choice == 6) {
+        if (choice == panelBase + 1) {
             ui.ShowShimmerSkills(combat);
             ui.Prompt("Press 0 to return.", 0, 0);
             continue;
         }
-        if (choice == 7) {
+        if (choice == panelBase + 2) {
             ui.ShowMap(rooms);
             ui.Prompt("Press 0 to return.", 0, 0);
             continue;
         }
-        if (choice == 8 && ui.IsDeveloperMode()) {
+        if (choice == panelBase + 3 && ui.IsDeveloperMode()) {
             ui.ShowDeveloperPanel();
             ui.Prompt("Press 0 to return.", 0, 0);
             continue;
@@ -79,6 +80,11 @@ void GameManager::Run() {
         }
 
         Area& selectedRoom = mapManager.SelectRoom(choice - 1);
+        if (!selectedRoom.IsUnlocked()) {
+            ui.ShowMessage("That room is locked.");
+            ui.Prompt("Press 0 to continue.", 0, 0);
+            continue;
+        }
         encounterManager.Explore(selectedRoom, player, progression, combat);
     }
 

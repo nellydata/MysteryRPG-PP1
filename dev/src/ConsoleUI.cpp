@@ -87,13 +87,15 @@ void ConsoleUI::RenderDashboard(const Player& player, const ProgressionManager& 
 	std::cout << "Rooms on Floor I:\n";
 	for (std::size_t index = 0; index < rooms.size(); ++index) {
 		std::cout << "  " << index + 1 << ". " << rooms[index].getName();
+		if (!rooms[index].IsUnlocked()) std::cout << "  [LOCKED]";
 		if (rooms[index].hasEnemies()) std::cout << "  [HOSTILE]";
 		std::cout << "\n";
 	}
-	std::cout << "  5. Open inventory\n"
-			  << "  6. Shimmer skill bar\n"
-			  << "  7. View floor map\n";
-	if (IsDeveloperMode()) std::cout << "  8. Developer mode\n";
+	const int panelBase = static_cast<int>(rooms.size()) + 1;
+	std::cout << "  " << panelBase << ". Open inventory\n"
+			  << "  " << panelBase + 1 << ". Shimmer skill bar\n"
+			  << "  " << panelBase + 2 << ". View floor map\n";
+	if (IsDeveloperMode()) std::cout << "  " << panelBase + 3 << ". Developer mode\n";
 	std::cout << "  0. Leave the cathedral\n";
 }
 
@@ -144,8 +146,8 @@ void ConsoleUI::RenderRoom(const Area& area, const Player& player,
 			  << "| The cathedral holds its breath. Objects below may reveal clues.       |\n"
 			  << "+----------------------------------------------------------------------+\n"
 			  << "Objects and points of interest:\n";
-	for (std::size_t index = 0; index < area.GetInteractables().size(); ++index) {
-		std::cout << "  " << index + 1 << ". " << area.GetInteractables()[index] << "\n";
+	for (std::size_t index = 0; index < area.GetVisibleInteractables().size(); ++index) {
+		std::cout << "  " << index + 1 << ". " << area.GetVisibleInteractables()[index] << "\n";
 	}
 	std::cout << "\nActions:\n  1. Inspect environment\n  2. Search room\n"
 			  << "  3. Open inventory\n  4. View map\n  0. Leave room\n";
@@ -199,10 +201,10 @@ void ConsoleUI::ShowMap(const std::vector<Area>& rooms) const {
 	auto roomName = [&](std::size_t index, const std::string& fallback) -> std::string {
 		return index < rooms.size() ? rooms[index].getName() : fallback;
 	};
-	std::cout << "                    [" << roomName(1, "CHAPEL") << "]\n"
+	std::cout << "                    [" << roomName(3, "CHAPEL") << "]\n"
 			  << "                           |\n"
-			  << "[" << roomName(0, "STORAGE") << "] ---- [" << roomName(2, "ENTRANCE HALL")
-			  << "] ---- [" << roomName(3, "ARCHIVE") << "]\n\n"
+			  << "[" << roomName(0, "FOUNTAIN") << "] ---- [" << roomName(1, "ENTRANCE HALL")
+			  << "] ---- [" << roomName(2, "ARCHIVE") << "] ---- [" << roomName(4, "STORAGE") << "]\n\n"
 			  << "Room status:\n";
 	for (const auto& room : rooms) {
 		std::cout << "  " << (room.hasEnemies() ? "[!]" : "[ ]") << " " << room.getName();

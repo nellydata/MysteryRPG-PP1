@@ -19,6 +19,7 @@ Enemy::Enemy(const std::string& name, int hp, int atk, int xpReward, int level)
 	  defense_(0), speed_(5), level_(level), resistance_(0), evasion_(0),
 	  critRate_(5), critDamage_(150), accuracy_(100),
 	  faction_(EnemyFaction::Devotee), tier_(EnemyTier::Basic), phase_(1) {
+	skillCooldowns_.assign(skills_.size(), 0);
 	int baseSpeed = 10;
 	double growth = 1.0;
 	if (name.find("Automata") != std::string::npos) baseSpeed = 8;
@@ -43,6 +44,7 @@ Enemy::Enemy(const EnemyDefinition& definition, int level)
 	  critRate_(5), critDamage_(150), accuracy_(100),
 	  faction_(definition.faction), tier_(definition.tier), skills_(definition.skills),
 		phase_(1) {
+	skillCooldowns_.assign(skills_.size(), 0);
 }
 
 const std::vector<StatusEffect>& Enemy::GetStatuses() const { return statuses_; }
@@ -97,7 +99,7 @@ int Enemy::GetSkillCooldown(std::size_t index) const {
 }
 bool Enemy::IsSkillReady(std::size_t index) const { return GetSkillCooldown(index) == 0; }
 void Enemy::StartSkillCooldown(std::size_t index) {
-	if (index < skillCooldowns_.size()) skillCooldowns_[index] = skills_[index].cooldown + 1;
+	if (index < skillCooldowns_.size() && index < skills_.size()) skillCooldowns_[index] = skills_[index].cooldown + 1;
 }
 void Enemy::TickSkillCooldowns() {
 	for (int& cooldown : skillCooldowns_) if (cooldown > 0) --cooldown;

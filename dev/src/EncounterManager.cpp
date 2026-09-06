@@ -11,6 +11,7 @@
 #include "Nun.h"
 #include "Player.h"
 #include "ProgressionManager.h"
+#include "ShimmerSkill.h"
 #include <iostream>
 #include <memory>
 
@@ -42,7 +43,7 @@ void SpawnEnemy(Area& area, unsigned seed) {
 
 void InspectEnvironment(Area& area, Player& player, ProgressionManager& progression,
                         ConsoleUI& ui) {
-    const auto& interactables = area.GetInteractables();
+    const auto& interactables = area.GetVisibleInteractables();
     std::cout << "\nObjects:\n";
     for (std::size_t index = 0; index < interactables.size(); ++index)
         std::cout << "  " << index + 1 << ". " << interactables[index] << "\n";
@@ -56,6 +57,7 @@ void InspectEnvironment(Area& area, Player& player, ProgressionManager& progress
 
     const std::string& object = interactables[choice - 1];
     std::cout << "You inspect the " << object << ".\n";
+    area.RecordSearch();
     if (object == "Figure in the shadows" && area.HasNPC()) {
         ui.ShowMessage("You see an NPC here. Interaction system coming soon.");
     }
@@ -67,6 +69,8 @@ void InspectEnvironment(Area& area, Player& player, ProgressionManager& progress
     } else {
         ui.ShowMessage("Nothing new is revealed.");
     }
+    if (area.RevealNextInteractable()) ui.ShowMessage("Another interaction becomes visible.");
+    if (area.HasNPC() && !area.HasDiscoveredNPC() && area.IsFullySearched()) area.DiscoverNPC();
 }
 
 void SearchRoom(Area& area, Player& player) {
@@ -104,6 +108,7 @@ bool EncounterManager::Explore(Area& area, Player& player,
                                CombatManager& combat) {
     ConsoleUI ui;
     const unsigned seed = RoomSeed(area.getName());
+    if (area.GetVisibleInteractables().empty()) area.RevealNextInteractable();
     if (!area.hasEnemies()
         && static_cast<int>(seed % 100) < SpawnChance(area.GetSpawnCondition())) {
         SpawnEnemy(area, seed);
@@ -152,10 +157,28 @@ bool EncounterManager::Explore(Area& area, Player& player,
                 continue;
             }
 
+            if (choice == 3) {
+                const auto equipped = progression.GetEquippedShimmerSkills();
+                if (equipped.empty()) {
+                    ui.ShowMessage("No Shimmer skills are equipped.");
+                    continue;
+                }
+                std::cout << "\nEquipped Shimmer skills:\n";
+                for (std::size_t i = 0; i < equipped.size(); ++i)
+                    std::cout << "  " << i + 1 << ". " << equipped[i] << "\n";
+                const int skillChoice = ui.Prompt("Choose a skill, or 0 to cancel.", 0,
+                                                 static_cast<int>(equipped.size()));
+                if (skillChoice == 0) continue;
+                auto selectedSkill = ShimmerSkill::Create(equipped[static_cast<std::size_t>(skillChoice - 1)]);
+                if (!selectedSkill || !combat.resolve(CombatAction::Shimmer, player, *enemy, selectedSkill.get(), &progression))
+                    ui.ShowMessage("That Shimmer skill cannot be used right now.");
+                continue;
+            }
+
             CombatAction action;
             switch (choice) {
             case 1: action = CombatAction::Attack; break;
-            case 3: action = CombatAction::Shimmer; break;
+            case 3: continue;
             default:
                 std::cout << "That is not a combat action.\n";
                 continue;

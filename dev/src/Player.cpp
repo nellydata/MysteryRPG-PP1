@@ -398,7 +398,7 @@ void Player::RecalculateStats() {
     }
     totalStats_.hp = CombatMath::ApplyPercent(totalStats_.hp, totalStats_.hpPercent);
     totalStats_.def = CombatMath::ApplyPercent(totalStats_.def, totalStats_.defPercent);
-    totalStats_.spd = CombatMath::ApplyPercent(totalStats_.spd, totalStats_.spdPercent);
+    totalStats_.spd += totalStats_.spdPercent;
     totalStats_.atk = CombatMath::ApplyPercent(totalStats_.atk, totalStats_.atkPercent);
     totalStats_.acc = CombatMath::ClampPercent(totalStats_.acc + totalStats_.accuracyPercent);
     totalStats_.res = CombatMath::ClampPercent(totalStats_.res + totalStats_.resistancePercent);

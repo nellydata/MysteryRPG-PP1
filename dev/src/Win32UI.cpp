@@ -130,6 +130,8 @@ void Win32UI::ChangeView(View nextView) {
 }
 
 void Win32UI::LeaveCombat() {
+	KillTimer(window_, 1);
+	enemyTurnPending_ = false;
 	player_.ClearStatuses();
 	if (activeEnemy_ != nullptr) activeEnemy_->ClearStatuses();
 	activeEnemy_ = nullptr;
@@ -148,10 +150,19 @@ void Win32UI::LeaveCombat() {
 
 void Win32UI::ShowDefeatRecovery() {
 	if (player_.isAlive() || combatDefeatRecovery_) return;
-	combatDefeatRecovery_ = true;
-	view_ = View::Combat;
-	statusMessage_ = "Defeated at the fountain. Respawn with 10% HP or end the battle.";
-	AddLog(player_.getName() + " has fallen. Choose respawn or end battle.");
+	AddLog(player_.getName() + " has fallen.");
+	LeaveCombat();
+	for (std::size_t index = 0; index < mapManager_.GetRooms().size(); ++index) {
+		if (mapManager_.GetRooms()[index].getName() == "Fountain") {
+			selectedRoom_ = static_cast<int>(index);
+			break;
+		}
+	}
+	player_.RestoreHealth(player_.getMaxHP());
+	view_ = View::Room;
+	viewHistory_.clear();
+	statusMessage_ = "You awaken in the Fountain Room at full health.";
+	AddLog("You return to the Fountain Room and recover to full health.");
 }
 
 std::wstring Win32UI::FormatDisplayText(const std::string& text) const {
@@ -289,6 +300,10 @@ void Win32UI::RefreshControls() {
 	if (controls_[0] == nullptr || refreshingControls_) return;
 	refreshingControls_ = true;
 	for (HWND control : controls_) if (control != nullptr) ShowWindow(control, SW_HIDE);
+	EnableWindow(controls_[24], TRUE);
+	EnableWindow(controls_[31], TRUE);
+	EnableWindow(controls_[26], TRUE);
+	EnableWindow(controls_[27], TRUE);
 	RECT client{};
 	GetClientRect(window_, &client);
 	LayoutControls(client.right, client.bottom);
@@ -315,9 +330,8 @@ void Win32UI::RefreshControls() {
 	} else if (view_ == View::Room && selectedRoom_ >= 0) {
 		if (selectedRoom_ >= static_cast<int>(mapManager_.GetRooms().size())) {
 			view_ = View::Floor;
-		} else if (combatTransition_ || !combat_.IsPlayerTurn()) {
-			SetWindowTextW(controls_[21], L"...");
-			ShowWindow(controls_[21], SW_SHOW);
+		} else if (activeEnemy_ != nullptr && (combatTransition_ || !combat_.IsPlayerTurn())) {
+			ShowWindow(controls_[21], SW_HIDE);
 		} else {
 			const auto& interactables = mapManager_.GetRooms()[selectedRoom_].GetVisibleInteractables();
 			for (std::size_t i = 0; i < interactables.size() && i < 4; ++i) {
@@ -431,8 +445,14 @@ void Win32UI::RefreshControls() {
 			SetWindowTextW(controls_[21], L"CANCEL");
 			ShowWindow(controls_[21], SW_SHOW);
 		} else if (combatTransition_ || !combat_.IsPlayerTurn()) {
-			SetWindowTextW(controls_[21], L"...");
-			ShowWindow(controls_[21], SW_SHOW);
+			ShowWindow(controls_[24], SW_SHOW);
+			ShowWindow(controls_[31], SW_SHOW);
+			ShowWindow(controls_[26], SW_SHOW);
+			ShowWindow(controls_[27], SW_SHOW);
+			EnableWindow(controls_[24], FALSE);
+			EnableWindow(controls_[31], FALSE);
+			EnableWindow(controls_[26], FALSE);
+			EnableWindow(controls_[27], FALSE);
 		} else {
 			targetEnemies_.clear();
 			if (selectedRoom_ >= 0 && selectedRoom_ < static_cast<int>(mapManager_.GetRooms().size())) {
@@ -443,7 +463,10 @@ void Win32UI::RefreshControls() {
 			if (combatAttackSelection_ || !selectedCombatSkillName_.empty()) {
 				for (std::size_t index = 0; index < targetEnemies_.size(); ++index) {
 					const bool selected = combatTargetConfirmed_ && targetEnemies_[index] == activeEnemy_;
-					SetWindowTextW(controls_[8 + index], ((selected ? L"SELECTED: " : L"TARGET: ") + FormatDisplayText(targetEnemies_[index]->getName())).c_str());
+					const Enemy* enemy = targetEnemies_[index];
+					const std::wstring label = (selected ? L"SELECTED: " : L"TARGET: ") + FormatDisplayText(enemy->getName()) +
+						L"\nLV " + std::to_wstring(enemy->getLevel()) + L"  HP " + std::to_wstring(enemy->getHP()) + L"/" + std::to_wstring(enemy->getMaxHP());
+					SetWindowTextW(controls_[8 + index], label.c_str());
 					ShowWindow(controls_[8 + index], SW_SHOW);
 				}
 			}
@@ -458,6 +481,11 @@ void Win32UI::RefreshControls() {
 			ShowWindow(controls_[31], SW_SHOW);
 			ShowWindow(controls_[26], SW_SHOW);
 			ShowWindow(controls_[27], SW_SHOW);
+			const BOOL canAct = (combat_.IsPlayerTurn() && player_.isAlive()) ? TRUE : FALSE;
+			EnableWindow(controls_[24], canAct);
+			EnableWindow(controls_[31], canAct);
+			EnableWindow(controls_[26], canAct);
+			EnableWindow(controls_[27], canAct);
 		}
 	} else {
 			SetWindowTextW(controls_[21], L"Back");
@@ -520,8 +548,13 @@ void Win32UI::LayoutControls(int width, int height) {
 	}
 	if (view_ == View::Combat) {
 		const int combatButtonWidth = (std::max)(130, (panelRight - center - 48) / 4);
+		const int combatButtonY = height - 112;
 		for (int i = 0; i < 12; ++i)
 			MoveWindow(controls_[8 + i], center + (i % 4) * (combatButtonWidth + 10), actionY, combatButtonWidth, 52, TRUE);
+		MoveWindow(controls_[24], center, combatButtonY, combatButtonWidth, 44, TRUE);
+		MoveWindow(controls_[31], center + combatButtonWidth + 10, combatButtonY, combatButtonWidth, 44, TRUE);
+		MoveWindow(controls_[26], center + (combatButtonWidth + 10) * 2, combatButtonY, combatButtonWidth, 44, TRUE);
+		MoveWindow(controls_[27], center + (combatButtonWidth + 10) * 3, combatButtonY, combatButtonWidth, 44, TRUE);
 	}
 	if (view_ == View::Skills) {
 		const int left = (std::min)(395, (std::max)(20, width / 3));
@@ -1300,6 +1333,7 @@ void Win32UI::AddLog(const std::string& message) {
 }
 
 void Win32UI::InitializePlayer() {
+	player_.SetLevelStats(1);
 	player_.RestoreHealth(player_.getMaxHP());
 	progression_.UnlockShimmerSkill("Pulsus Luminis");
 	const auto equipment = BuildEquippableCatalog();
@@ -1310,6 +1344,7 @@ void Win32UI::InitializePlayer() {
 	AddNamedItem(player_, BuildClueCatalog(), "storage_key");
 	AddNamedItem(player_, BuildCruxCatalog(), "first_nuns_diary");
 	if (Item* hand = player_.FindItem("plain_rosary")) player_.Equip(*hand);
+	player_.RestoreHealth(player_.getMaxHP());
 }
 
 void Win32UI::Invalidate() {
@@ -1414,6 +1449,7 @@ LRESULT Win32UI::HandleMessage(UINT message, WPARAM wParam, LPARAM lParam) {
 		refreshPosted_ = false;
 		RefreshControls();
 		SyncCombatEvents();
+		Invalidate();
 		return 0;
 	case WM_TIMER:
 		if (wParam == 1 && enemyTurnPending_) {
@@ -1421,11 +1457,9 @@ LRESULT Win32UI::HandleMessage(UINT message, WPARAM wParam, LPARAM lParam) {
 			enemyTurnPending_ = false;
 			combatTransition_ = false;
 			if (view_ == View::Combat && activeEnemy_ != nullptr && activeEnemy_->isAlive() && player_.isAlive()) {
-				combat_.RecordInfo(activeEnemy_->getName() + "'s turn begins.");
-				SyncCombatEvents();
-				Invalidate();
 				combat_.enemyTurn(player_, *activeEnemy_);
 				SyncCombatEvents();
+				UpdateWindow(window_);
 				if (!combat_.IsPlayerTurn() && activeEnemy_->isAlive() && player_.isAlive()) ScheduleEnemyTurn();
 				if (!player_.isAlive()) ShowDefeatRecovery();
 				if (!refreshPosted_) {
@@ -1666,6 +1700,10 @@ void Win32UI::Paint(HDC deviceContext) {
 			contentY += 34;
 		}
 	} else if (view_ == View::Combat && activeEnemy_ != nullptr) {
+		if (combatTransition_ || !combat_.IsPlayerTurn()) {
+			DrawTextLine(deviceContext, 425, contentY, L"ENEMY TURN — AI ACTING", Muted, 18, true);
+			contentY += 34;
+		}
 		int cardX = 425;
 		for (Enemy* target : targetEnemies_) {
 			if (target == nullptr || !target->isAlive()) continue;
@@ -1679,6 +1717,15 @@ void Win32UI::Paint(HDC deviceContext) {
 			DrawTextLine(deviceContext, cardX, enemyStatusY, StatusName(status.type) + L" (" + std::to_wstring(status.turns) + L")",
 				healing ? RGB(90, 210, 110) : beneficial ? RGB(90, 160, 245) : Danger, 15);
 			enemyStatusY += 24;
+			}
+			if (target->getTier() == EnemyTier::Elite || target->getTier() == EnemyTier::Boss) {
+				for (std::size_t skillIndex = 0; skillIndex < target->GetSkills().size(); ++skillIndex) {
+					const int cooldown = target->GetSkillCooldown(skillIndex);
+					if (cooldown > 0) {
+						DrawTextLine(deviceContext, cardX, enemyStatusY, L"Skill " + std::to_wstring(skillIndex + 1) + L" CD " + std::to_wstring(cooldown), Muted, 14);
+						enemyStatusY += 22;
+					}
+				}
 			}
 			cardX += 205;
 		}
@@ -1694,11 +1741,7 @@ void Win32UI::Paint(HDC deviceContext) {
 			else if (event.kind == CombatManager::CombatEvent::Kind::Shield || event.kind == CombatManager::CombatEvent::Kind::Buff) eventColor = RGB(90, 160, 245);
 			else if (event.kind == CombatManager::CombatEvent::Kind::Debuff || event.kind == CombatManager::CombatEvent::Kind::DotTick) eventColor = Danger;
 			else if (event.kind == CombatManager::CombatEvent::Kind::Status || event.kind == CombatManager::CombatEvent::Kind::PhaseTransition || event.kind == CombatManager::CombatEvent::Kind::Mutation) eventColor = Shimmer;
-			const std::wstring symbol = event.kind == CombatManager::CombatEvent::Kind::Status || event.kind == CombatManager::CombatEvent::Kind::Buff || event.kind == CombatManager::CombatEvent::Kind::Debuff ? L"[STATUS] " :
-				event.kind == CombatManager::CombatEvent::Kind::Damage || event.kind == CombatManager::CombatEvent::Kind::Attack || event.kind == CombatManager::CombatEvent::Kind::Skill || event.kind == CombatManager::CombatEvent::Kind::DotTick ? L"[DAMAGE] " :
-				event.kind == CombatManager::CombatEvent::Kind::Heal ? L"[HEAL] " :
-				event.kind == CombatManager::CombatEvent::Kind::Shield ? L"[SHIELD] " : L"[INFO] ";
-			eventY += DrawTextLine(deviceContext, 425, eventY, symbol + FormatDisplayText(event.message), eventColor, 16, false,
+			eventY += DrawTextLine(deviceContext, 425, eventY, FormatDisplayText(event.message), eventColor, 16, false,
 				client.right - 449) + 5;
 			if (eventY > eventTop - 30) break;
 		}

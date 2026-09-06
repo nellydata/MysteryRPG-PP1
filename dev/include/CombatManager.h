@@ -67,4 +67,5 @@ private:
     std::map<std::string, int> shimmerCooldowns_;
 
     void AddEvent(CombatEvent::Kind kind, const std::string& message, int value = 0);
+    void StartPlayerTurn(Player& player);
 };

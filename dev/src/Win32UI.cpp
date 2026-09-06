@@ -1091,7 +1091,7 @@ void Win32UI::SearchRoom() {
 	area.RecordSearch();
 	const unsigned searchSeed = RoomSeed(area.getName()) + static_cast<unsigned>(area.GetSearchCount() * 31);
 	const int roll = static_cast<int>(searchSeed % 100);
-	const bool cluesComplete = area.HasAllClues();
+	const bool interactablesComplete = area.AreAllRequiredInteractablesRevealed();
 	const int playerLevel = progression_.GetLevel();
 	const RoomDefinition* roomDefinition = mapManager_.GetRoomDefinition(area);
 	const EnemyFaction roomFaction = RoomFaction(area.getName());
@@ -1100,7 +1100,7 @@ void Win32UI::SearchRoom() {
 	const int enemyLevel = (std::max)(1, (std::min)(100, playerLevel + levelDisparity));
 	const bool encounterAllowed = area.GetSpawnCondition() != EnemySpawnCondition::None &&
 		roll < SpawnChance(area.GetSpawnCondition());
-	const int enemyThreshold = cluesComplete ? 70 : 50;
+	const int enemyThreshold = interactablesComplete ? 70 : 50;
 	const int consumableThreshold = (std::max)(25, 62 - playerLevel / 3);
 	if (area.getName() == "Fountain" && !area.IsHealingUnlocked() && activeEnemy_ == nullptr && !area.hasEnemies() && area.GetSearchCount() == 1) {
 		if (auto enemy = CreateRandomCatalogueEnemy(searchSeed, 1, EnemyFaction::Devotee, EnemyTier::Basic)) {
@@ -1148,7 +1148,7 @@ void Win32UI::SearchRoom() {
 		AddLog("Investigation: a Shimmer anomaly rippled through the room.");
 		return;
 	}
-	if (activeEnemy_ == nullptr && roomDefinition != nullptr && playerLevel >= 6 && area.getName() == "Entrance Hall" && cluesComplete && area.HasAllItems() && !area.HasBossBeenDefeated() && roll < roomDefinition->firstBossSpawnChance) {
+	if (activeEnemy_ == nullptr && roomDefinition != nullptr && interactablesComplete && !area.HasBossBeenDefeated() && roll < roomDefinition->firstBossSpawnChance) {
 		area.MarkBossEncountered();
 		if (auto boss = CreateCatalogueEnemy(roomDefinition->bossId, enemyLevel)) area.addEnemy(std::move(boss));
 		activeEnemy_ = area.getFirstAliveEnemy();
@@ -1156,7 +1156,7 @@ void Win32UI::SearchRoom() {
 		combat_.PrepareTurn(player_, *activeEnemy_);
 		view_ = View::Combat;
 		if (!player_.isAlive()) ShowDefeatRecovery();
-		AddLog("Search: the Guard of the Catacombs emerges.");
+		AddLog("Search: " + roomDefinition->bossId + " emerges.");
 		return;
 	}
 	if (activeEnemy_ == nullptr && roll >= 50 && roll < 55) {
@@ -1166,7 +1166,7 @@ void Win32UI::SearchRoom() {
 	}
 	if (activeEnemy_ == nullptr && roomDefinition != nullptr && area.HasAllClues() && area.HasAllItems() && area.HasBossBeenDefeated()) {
 		const int repeatRoll = static_cast<int>(searchSeed % 100);
-		if (repeatRoll < 10 && playerLevel >= 6) {
+		if (repeatRoll < roomDefinition->farmBossStartingChance && playerLevel >= 1) {
 			const int enemyLevel = progression_.GetLevel();
 			if (auto boss = CreateCatalogueEnemy(roomDefinition->bossId, enemyLevel + 2)) area.addEnemy(std::move(boss));
 			AddLog("Search: the defeated boss returns in a stronger form.");
@@ -1224,14 +1224,14 @@ void Win32UI::SearchRoom() {
 		AddLog("Search: a consumable item was added to the inventory.");
 		return;
 	}
-	if (roll >= enemyThreshold && (cluesComplete || roll < 80)) {
+	if (roll >= enemyThreshold && (interactablesComplete || roll < 80)) {
 		if (!area.HasAllItems()) area.ConsumeItem();
 		const auto definition = BuildInvestigationConsumable(roomDefinition == nullptr ? ConsumableProfile::SupplyCache : roomDefinition->consumableProfile, playerLevel);
 		if (!definition.name.empty()) player_.AddItem(std::make_unique<Item>(definition));
 		AddLog("Search: a consumable item was added to the inventory.");
 		return;
 	}
-	if (!cluesComplete && roll >= 80) {
+	if (!interactablesComplete && roll >= 80) {
 		if (!area.HasAllClues()) {
 			if (area.ConsumeClue()) {
 				player_.AddClue({"A fragment recovered during the investigation."});
@@ -1301,9 +1301,11 @@ void Win32UI::PerformCombatAction(CombatAction action) {
 		const bool allEnemiesDefeated = !area.hasEnemies();
 		if (area.getName() == "Fountain" && !area.IsHealingUnlocked() && allEnemiesDefeated) {
 			area.SetHealingUnlocked(true);
-			if (selectedRoom_ + 1 < static_cast<int>(mapManager_.GetRooms().size())) {
-				mapManager_.GetRooms()[selectedRoom_ + 1].SetUnlocked(true);
-				AddLog("The Entrance Hall opens after the Fountain tutorial is cleared.");
+			if (roomDefinition != nullptr && !roomDefinition->nextRoomId.empty()) {
+				if (const RoomDefinition* nextDefinition = mapManager_.GetRoomDefinition(roomDefinition->nextRoomId)) {
+					for (Area& nextRoom : mapManager_.GetRooms()) if (nextRoom.getName() == nextDefinition->displayName) nextRoom.SetUnlocked(true);
+				}
+				AddLog("The next room opens after the Fountain tutorial is cleared.");
 			}
 			AddLog("The Fountain is purified. Full healing is now available.");
 		}
@@ -1312,8 +1314,8 @@ void Win32UI::PerformCombatAction(CombatAction action) {
 		if (wasBoss) {
 			if (progression_.UnlockShimmerFromTrigger(defeatedName)) AddLog("Shimmer skill unlocked from the boss: " + defeatedName + ".");
 			area.SetBossDefeated(true);
-			if (selectedRoom_ + 1 < static_cast<int>(mapManager_.GetRooms().size())) {
-				mapManager_.GetRooms()[selectedRoom_ + 1].SetUnlocked(true);
+			if (roomDefinition != nullptr && !roomDefinition->nextRoomId.empty()) {
+				for (Area& nextRoom : mapManager_.GetRooms()) if (nextRoom.getName() == roomDefinition->nextRoomId) nextRoom.SetUnlocked(true);
 				AddLog("The next area is now visible on the map.");
 			}
 		}
@@ -1329,6 +1331,10 @@ void Win32UI::PerformCombatAction(CombatAction action) {
 			statusMessage_ += " Item dropped: " + item.name + ".";
 		}
 		if (allEnemiesDefeated) {
+			if (roomDefinition != nullptr && roomDefinition->nextRoomId.empty() && area.HasBossBeenDefeated()) {
+				statusMessage_ = "Floor I cleared. The cathedral falls silent.";
+				AddLog("Floor I cleared. The cathedral falls silent.");
+			}
 			LeaveCombat();
 			view_ = View::Room;
 		} else {
@@ -1749,8 +1755,7 @@ void Win32UI::Paint(HDC deviceContext) {
 			if (target == nullptr || !target->isAlive()) continue;
 			DrawTextLine(deviceContext, cardX, contentY, ToWide(target->getName()), EnemyTierColor(target->getTier()), 18, true, 170);
 			DrawHealthBar(deviceContext, cardX, contentY + 28, 170, 12, target->getHP(), target->getMaxHP(), Danger);
-			DrawTextLine(deviceContext, cardX, contentY + 46, L"HP " + std::to_wstring(target->getHP()) + L" / " + std::to_wstring(target->getMaxHP()), Text, 14);
-			DrawTextLine(deviceContext, cardX, contentY + 66, L"LV " + std::to_wstring(target->getLevel()), Text, 15);
+			DrawTextLine(deviceContext, cardX, contentY + 46, L"LV " + std::to_wstring(target->getLevel()), Text, 15);
 			std::wstring statusText;
 			for (const auto& status : target->GetStatuses()) {
 				statusText += CombatStatusSymbol(status.type);
@@ -1759,7 +1764,7 @@ void Win32UI::Paint(HDC deviceContext) {
 			if (!statusText.empty()) {
 				DrawTextLine(deviceContext, cardX, contentY + 88, statusText, Text, 17, false, 170, true);
 			}
-			int enemyStatusY = contentY + 110;
+			int enemyStatusY = contentY + 90;
 			if (target->getTier() == EnemyTier::Elite || target->getTier() == EnemyTier::Boss) {
 				for (std::size_t skillIndex = 0; skillIndex < target->GetSkills().size(); ++skillIndex) {
 					const int cooldown = target->GetSkillCooldown(skillIndex);

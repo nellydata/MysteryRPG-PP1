@@ -170,3 +170,18 @@ Build with Visual Studio using the C++17 configuration in [`COS-PP1.vcxproj`](..
 - [Microsoft smart pointers overview](https://learn.microsoft.com/cpp/cpp/smart-pointers-modern-cpp)
 - [Microsoft `std::vector` reference](https://learn.microsoft.com/cpp/standard-library/vector-class)
 - [Git documentation](https://git-scm.com/docs)
+
+## Cleanup implementation status
+
+The current cleanup pass aligned the runtime with the catalogue and UI promises:
+
+- `Player::SetLevelStats` preserves the normalized 100 SPD baseline from [`CombatMath.h`](../dev/include/CombatMath.h), and boot main stats use the 5/8/12/16/20/25 rarity scale in [`ContentCatalog.cpp`](../dev/src/ContentCatalog.cpp).
+- `Player::RecalculateStats` applies flat HP, DEF, SPD, and ATK main-stat values as well as percentage and substat values.
+- Healing received, barrier potency, damage reduction, lifesteal, resistance, evasion, slow, and debuff-duration reduction now participate in runtime mechanics.
+- Enemy skills use typed status effects for buffs, barriers, cleanses, healing resistance, and accuracy-related effects; enemy turns check Stun before skill selection.
+- Room bosses and progression use `RoomDefinition` data, including required-interactable completion, `bossId`, `firstBossSpawnChance`, `farmBossStartingChance`, and `nextRoomId`.
+- Loot favors Epic equipment for bosses, keeps Legendary and Artifact rare, can include consumables, and applies family-aware per-drop rolls. Inventory stores same-name equipment as separate owned instances.
+- Shimmer stat boosts are temporary statuses, and the former fake long-duration revival has been replaced with a timed emergency barrier.
+- The desktop combat view uses health bars without exposing exact enemy HP values.
+
+Validation completed with a successful Visual Studio build and the `MICARE_VALIDATE=1` deterministic content-validation mode.

@@ -113,11 +113,11 @@ int SpeedMainStatValue(Rarity rarity, int value) {
 	(void)value;
 	switch (rarity) {
 	case Rarity::Common: return 5;
-	case Rarity::Uncommon: return 40;
-	case Rarity::Rare: return 60;
-	case Rarity::Epic: return 80;
-	case Rarity::Legendary: return 100;
-	case Rarity::Artifact: return 120;
+	case Rarity::Uncommon: return 8;
+	case Rarity::Rare: return 12;
+	case Rarity::Epic: return 16;
+	case Rarity::Legendary: return 20;
+	case Rarity::Artifact: return 25;
 	}
 	return 20;
 }
@@ -156,7 +156,8 @@ void AddEquippables(std::vector<ItemDefinition>& result, EquipSlot slot, const c
 		else item.mainStatValue = mainStatValue;
 		const int substatCount = SubstatCount(rarity);
 		for (int roll = 0; roll < substatCount && !item.allowedSubstats.empty(); ++roll) {
-			const ItemStat stat = item.allowedSubstats[static_cast<std::size_t>((i + roll * 3) % item.allowedSubstats.size())];
+			std::size_t familyOffset = static_cast<std::size_t>(item.family) * 2;
+			const ItemStat stat = item.allowedSubstats[(familyOffset + static_cast<std::size_t>(i + roll * 3)) % item.allowedSubstats.size()];
 			AddSubstat(item, stat, CombatMath::SubstatRoll(stat, rarity,
 				static_cast<unsigned>(i * 17 + roll * 31 + static_cast<int>(rarity) * 13)));
 		}
@@ -247,12 +248,20 @@ std::vector<ItemDefinition> GenerateLoot(const LootContext& context, unsigned se
 		if (static_cast<int>(roll % 100) >= dropChance) continue;
 		const int rarityRoll = static_cast<int>((roll / 7) % 100);
 		Rarity rarity = Rarity::Common;
-		if (boss) rarity = rarityRoll < (context.bossFirstClear ? 35 : 20) ? Rarity::Artifact : rarityRoll < 70 ? Rarity::Legendary : rarityRoll < 92 ? Rarity::Epic : Rarity::Rare;
-		else if (elite) rarity = rarityRoll < 20 ? Rarity::Epic : rarityRoll < 70 ? Rarity::Epic : Rarity::Rare;
+		if (boss) rarity = rarityRoll < 1 ? Rarity::Artifact : rarityRoll < 11 ? Rarity::Legendary : rarityRoll < 85 ? Rarity::Epic : Rarity::Rare;
+		else if (elite) rarity = rarityRoll < 8 ? Rarity::Epic : rarityRoll < 60 ? Rarity::Rare : Rarity::Uncommon;
 		else rarity = rarityRoll < (level / 5) ? Rarity::Epic : rarityRoll < 35 ? Rarity::Rare : rarityRoll < 75 ? Rarity::Uncommon : Rarity::Common;
 		std::vector<ItemDefinition> candidates;
-		for (const auto& item : BuildEquippableCatalog()) if (item.rarity == rarity) candidates.push_back(item);
+		for (const auto& item : BuildEquippableCatalog()) {
+			if (item.rarity != rarity) continue;
+			if (!context.roomId.empty() && item.name.find(context.roomId.substr(0, 4)) != std::string::npos) candidates.push_back(item);
+		}
+		if (candidates.empty()) for (const auto& item : BuildEquippableCatalog()) if (item.rarity == rarity) candidates.push_back(item);
 		if (!candidates.empty()) result.push_back(RollLootInstance(candidates[(roll / 13) % candidates.size()], roll + 97));
+		if ((roll / 19) % 100 < (boss ? 35 : elite ? 20 : 8)) {
+			const auto consumables = BuildConsumableCatalog();
+			if (!consumables.empty()) result.push_back(consumables[(roll / 23) % consumables.size()]);
+		}
 	}
 	return result;
 }

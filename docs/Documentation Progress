@@ -163,5 +163,17 @@ Version 0.4.2
 •	Converted equipment main-stat bonuses to level-scaled percentages while retaining flat SPD substats.
 •	Made investigation consumable outcomes reachable and room-aware, then validated the update with a successful Debug x64 build.
 
+Cleanup pass
+
+• Fixed the player speed regression by preserving the normalized 100 SPD baseline during level initialization.
+• Normalized boot rarity values to 5/8/12/16/20/25 and applied flat equipment main-stat values during player stat recalculation.
+• Wired healing received, barrier potency, damage reduction, lifesteal, resistance, evasion, slow, and debuff-duration reduction into runtime mechanics.
+• Implemented typed enemy buffs, barriers, cleanses, healing resistance, enemy hit checks, evasion, critical attacks, and stun-before-AI handling.
+• Replaced hard-coded boss and progression rules with room-definition interactable completion, boss IDs, spawn chances, farm weights, and next-room IDs.
+• Corrected boss/elite loot rarity, added consumable drops, applied equipment-family roll offsets, and preserved separate same-name item instances.
+• Replaced permanent Shimmer stat mutation and fake revival behavior with temporary defensive statuses.
+• Added explicit Floor I completion messaging and removed exact enemy HP numbers from desktop combat cards.
+• Validated the cleanup with a successful Debug x64 build, `MICARE_VALIDATE=1`, and `git diff --check`.
+
 
 

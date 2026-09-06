@@ -8,13 +8,6 @@ void Inventory::AddClue(const Clue& clue) {
 
 void Inventory::AddItem(std::unique_ptr<Item> item) {
 	if (!item) return;
-	for (std::size_t index = 0; index < items_.size(); ++index) {
-		if (items_[index] && items_[index]->getName() == item->getName()) {
-			++quantities_[index];
-			acquisitionOrder_[index] = ++nextAcquisitionOrder_;
-			return;
-		}
-	}
 	items_.push_back(std::move(item));
 	quantities_.push_back(1);
 	locked_.push_back(false);
@@ -39,9 +32,10 @@ bool Inventory::RemoveItem(const std::string& name) {
 }
 
 int Inventory::GetQuantity(const std::string& name) const {
+	int quantity = 0;
 	for (std::size_t index = 0; index < items_.size(); ++index)
-		if (items_[index] && items_[index]->getName() == name) return quantities_[index];
-	return 0;
+		if (items_[index] && items_[index]->getName() == name) quantity += quantities_[index];
+	return quantity;
 }
 
 bool Inventory::IsLocked(const std::string& name) const {

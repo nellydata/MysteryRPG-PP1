@@ -43,6 +43,12 @@ Player::~Player() = default;
 
 void Player::takeDamage(int amount) {
     if (amount <= 0) return;
+    int damageReduction = 0;
+    for (const auto& status : statuses_) {
+        if (status.type == StatusType::DamageReduction) damageReduction += status.potency;
+    }
+    amount = amount * (100 - (std::min)(CombatMath::Balance::MaximumDamageReduction, damageReduction)) / 100;
+    if (amount <= 0) return;
     const auto activeSets = GetActiveSets();
     const bool verdigrisSet = std::find(activeSets.begin(), activeSets.end(), "Verdigris Matron") != activeSets.end();
     const int healthBefore = hp_;
@@ -66,6 +72,7 @@ bool Player::ToggleEquip(Item& item) {
 
 void Player::heal(int amount) {
     if (amount <= 0) return;
+    amount = amount * (100 + (std::min)(CombatMath::Balance::MaximumHealingPotency, totalStats_.healingReceived)) / 100;
     hp_ += amount;
     if (hp_ > maxHp_) hp_ = maxHp_;
 }
@@ -78,6 +85,7 @@ int Player::GetBarrier() const { return barrier_; }
 
 int Player::AddBarrier(int amount, int duration) {
     if (amount <= 0) return barrier_;
+    amount = amount * (100 + (std::min)(CombatMath::Balance::MaximumBarrierPotency, totalStats_.barrierPotency)) / 100;
     barrier_ += amount;
     if (duration > 0) statuses_.push_back({StatusType::Barrier, duration, 0, 0});
     return barrier_;
@@ -104,7 +112,11 @@ int Player::getMaxHP() const { return maxHp_; }
 int Player::getAttack() const { return totalStats_.atk; }
 int Player::getDefense() const { return totalStats_.def; }
 int Player::getSP() const { return sp_; }
-int Player::getSpeed() const { return totalStats_.spd; }
+int Player::getSpeed() const {
+    int slow = 0;
+    for (const auto& status : statuses_) if (status.type == StatusType::Slow) slow += status.potency;
+    return (std::max)(1, totalStats_.spd * (100 - (std::min)(75, slow)) / 100);
+}
 int Player::getAccuracy() const { return (std::min)(100, totalStats_.acc); }
 int Player::getResistance() const { return (std::min)(100, totalStats_.res); }
 int Player::getCritRate() const { return (std::min)(100, totalStats_.critRate); }
@@ -146,7 +158,7 @@ void Player::SetLevelStats(int level) {
     baseStats_.hp = 100 + levelOffset * 25;
     baseStats_.def = 10 + levelOffset * 10;
     baseStats_.atk = 20 + levelOffset * 15;
-    baseStats_.spd = 10;
+    baseStats_.spd = CombatMath::Balance::BasePlayerSpeed;
     RecalculateStats();
     maxHp_ = totalStats_.hp;
     hp_ += maxHp_ - previousMaxHp;
@@ -269,16 +281,24 @@ bool Player::HasStatus(StatusType type) const {
     return false;
 }
 
-void Player::ApplyStatus(const StatusEffect& status) {
-    if (GetStatusStackPolicy(status.type) != StackPolicy::IndependentStacks) {
+void Player::ApplyStatus(const StatusEffect& status, int accuracy) {
+    StatusEffect adjusted = status;
+    if (adjusted.type == StatusType::Stun || adjusted.type == StatusType::Bleed || adjusted.type == StatusType::Burn ||
+        adjusted.type == StatusType::Poison || adjusted.type == StatusType::Slow || adjusted.type == StatusType::VerdigrisMark) {
+        const int resistance = (std::min)(CombatMath::Balance::MaximumResistance, totalStats_.res);
+        const unsigned roll = static_cast<unsigned>((hp_ * 17 + maxHp_ * 31 + static_cast<int>(adjusted.type) * 13) % 100);
+        if (roll >= static_cast<unsigned>(CombatMath::AccuracyChance(100, accuracy, resistance))) return;
+        adjusted.turns = (std::max)(1, adjusted.turns * (100 - (std::min)(CombatMath::Balance::MaximumDebuffReduction, totalStats_.debuffDurationReduction)) / 100);
+    }
+    if (GetStatusStackPolicy(adjusted.type) != StackPolicy::IndependentStacks) {
         for (auto& existing : statuses_) {
-            if (existing.type == status.type) {
-                existing = status;
+            if (existing.type == adjusted.type) {
+                existing = adjusted;
                 return;
             }
         }
     }
-    statuses_.push_back(status);
+    statuses_.push_back(adjusted);
 }
 
 void Player::ProcessStatuses() {
@@ -349,6 +369,10 @@ void Player::RecalculateStats() {
         totalStats_.dotPotency += stats.dotPotency;
         totalStats_.lifesteal += stats.lifesteal;
         totalStats_.debuffDurationReduction += stats.debuffDurationReduction;
+        if (item->getMainStat() == "hp") totalStats_.hp += item->getMainStatValue();
+        else if (item->getMainStat() == "def") totalStats_.def += item->getMainStatValue();
+        else if (item->getMainStat() == "spd") totalStats_.spd += item->getMainStatValue();
+        else if (item->getMainStat() == "atk") totalStats_.atk += item->getMainStatValue();
         for (const auto& substat : item->getSubstats()) {
             int baseValue = 0;
             int* totalValue = nullptr;

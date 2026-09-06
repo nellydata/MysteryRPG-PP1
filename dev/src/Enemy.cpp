@@ -37,6 +37,7 @@ Enemy::Enemy(const std::string& name, int hp, int atk, int xpReward, int level)
 
 void Enemy::heal(int amount) {
 	if (amount <= 0) return;
+	for (const auto& status : statuses_) if (status.type == StatusType::HealResistance) amount = amount * (100 - status.potency) / 100;
 	hp_ = (std::min)(maxHp_, hp_ + amount);
 }
 
@@ -88,15 +89,27 @@ bool Enemy::isAlive() const { return hp_ > 0; }
 const std::string& Enemy::getName() const { return name_; }
 int Enemy::getHP() const { return hp_; }
 int Enemy::getMaxHP() const { return maxHp_; }
-int Enemy::getAtk() const { return atk_; }
+int Enemy::getAtk() const {
+	int bonus = 0;
+	for (const auto& status : statuses_) if (status.type == StatusType::AttackUp) bonus += status.potency;
+	return atk_ * (100 + bonus) / 100;
+}
 int Enemy::getXPReward() const { return xpReward_; }
 int Enemy::getDefense() const { return defense_; }
-int Enemy::getSpeed() const { return speed_; }
+int Enemy::getSpeed() const {
+	int slow = 0;
+	for (const auto& status : statuses_) if (status.type == StatusType::Slow) slow += status.potency;
+	return (std::max)(1, speed_ * (100 - (std::min)(75, slow)) / 100);
+}
 int Enemy::getLevel() const { return level_; }
 int Enemy::getResistance() const { return resistance_; }
 int Enemy::getCritRate() const { return critRate_; }
 int Enemy::getCritDamage() const { return critDamage_; }
-int Enemy::getAccuracy() const { return accuracy_; }
+int Enemy::getAccuracy() const {
+	int bonus = 0;
+	for (const auto& status : statuses_) if (status.type == StatusType::AccuracyUp) bonus += status.potency;
+	return (std::min)(100, accuracy_ + bonus);
+}
 int Enemy::getEvasion() const { return evasion_; }
 EnemyFaction Enemy::getFaction() const { return faction_; }
 EnemyTier Enemy::getTier() const { return tier_; }

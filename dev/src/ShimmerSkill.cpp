@@ -40,9 +40,10 @@ public:
 			enemy.takeDamage(CombatMath::Mitigate((std::max)(1, player.getAttack() * powerPercent_ / 100), enemy.getDefense()));
 			enemy.ApplyStatus({StatusType::VerdigrisMark, duration_, 60, player.getAttack()}, player.getAccuracy());
 		} else if (effect_ == "stat_boost") {
-			player.ModifyStats({0, 0, 50, 50, 0, 0, 20, 0});
+			player.ApplyStatus({StatusType::AttackUp, duration_ > 0 ? duration_ : 2, 25});
+			player.ApplyStatus({StatusType::DamageReduction, duration_ > 0 ? duration_ : 2, 15});
 		} else if (effect_ == "revive") {
-			player.ApplyStatus({StatusType::HealOverTime, 99, player.getMaxHP() / 2, 0});
+			player.AddBarrier(player.getMaxHP() * powerPercent_ / 100, 1);
 		}
 	}
 
@@ -83,7 +84,7 @@ std::unique_ptr<ShimmerSkill> ShimmerSkill::Create(const std::string& skillName)
 	if (skillName == "Prism Step") return std::make_unique<DefinedShimmerSkill>(skillName, 1, 4, "Gain a 10% damage reduction barrier for 1 turn.", "defensive_buff", 100, 1);
 	if (skillName == "Gleam Needle") return std::make_unique<DefinedShimmerSkill>(skillName, 1, 3, "Deal 180% ATK as a precise Shimmer strike.", "damage_ignore", 180, 0);
 	if (skillName == "Therapeía Anakláseōs" || skillName == "Lux Sanctorum") return std::make_unique<DefinedShimmerSkill>(skillName, 5, 8, "Heal 70% max HP and gain a 20% max HP HoT for 3 turns.", "heal_hot", 70, 3);
-	if (skillName == "Anástasis Phōtós") return std::make_unique<DefinedShimmerSkill>(skillName, 5, 0, "Prepare a once-per-battle 50% max HP revival.", "revive", 50, 0);
+	if (skillName == "Anástasis Phōtós") return std::make_unique<DefinedShimmerSkill>(skillName, 5, 8, "Gain a one-turn emergency barrier equal to 50% max HP.", "revive", 50, 1);
 	if (skillName == "Phthorá Phōtós") return std::make_unique<DefinedShimmerSkill>(skillName, 4, 7, "Reduce enemy ATK and DEF by 60% for 4 turns.", "damage_defdown", 600, 4);
 	if (skillName == "Phōteinḕ Kátharsis") return std::make_unique<DefinedShimmerSkill>(skillName, 3, 5, "Cleanse debuffs and gain 30% damage resistance for 3 turns.", "cleanse_resist", 0, 3);
 	if (skillName == "Phōteinòs Thṓrax") return std::make_unique<DefinedShimmerSkill>(skillName, 2, 4, "Gain a 500% max HP barrier and 20% damage reduction for 3 turns.", "defensive_buff", 500, 3);

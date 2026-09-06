@@ -13,6 +13,10 @@ void Area::addEnemy(std::unique_ptr<Enemy> enemy) {
     if (enemy) enemies_.push_back(std::move(enemy));
 }
 
+bool Area::AreAllRequiredInteractablesRevealed() const {
+    return visibleInteractables_.size() >= interactables_.size();
+}
+
 const std::vector<std::unique_ptr<Enemy>>& Area::GetEnemies() const { return enemies_; }
 
 bool Area::IsUnlocked() const { return unlocked_; }

@@ -2,7 +2,7 @@
 
 ## Version 0.4.0
 
-This version records the finalized rarity-driven itemization system. Boots always roll flat SPD as their main stat: Common +20, Uncommon +40, Rare +60, Epic +80, Legendary +100, and Artifact +120. Non-boot main stats use fixed rarity values: ATK 100/150/200/300/400/500, HP 1000/1500/2000/3000/4000/5000, and DEF 75/100/150/200/250/300 from Common through Artifact.
+This version records the finalized rarity-driven itemization system. Boots roll flat SPD as their main stat: Common +5, Uncommon +8, Rare +12, Epic +16, Legendary +20, and Artifact +25. Non-boot main stats use rarity values: ATK 100/150/200/300/400/500, HP 1000/1500/2000/3000/4000/5000, and DEF 75/100/150/200/250/300 from Common through Artifact. Equipment main stats and per-drop rolls are applied to runtime player stats.
 
 Equippable substats are percentage-based and use slot-specific pools. Head items use Crit Rate, Crit Damage, ATK, DEF, and HP; torso items use HP, DEF, Resistance, and ATK; hand items use ATK, Crit Rate, Crit Damage, and Accuracy; boots use SPD, Evasion, Accuracy, ATK, and DEF; accessories use ATK, DEF, HP, Resistance, DOT Potency, Healing Potency, and Barrier Potency. Common and Uncommon items have no substats, Rare has one, Epic has two, Legendary has three, and Artifact has four. Substat rolls are Rare 5–7%, Epic 7–10%, Legendary 10–12%, and Artifact 12–15%. Upgrade-roll persistence is not yet part of the current item model.
 
@@ -55,6 +55,11 @@ See [`docs/Micare-System-Design.md`](docs/Micare-System-Design.md) for an explan
 - Tier-specific enemy scaling, fixed archetype speed, catalogue skills, cooldowns, passives, and drop metadata
 - Data-driven enemy spawning, faction skill behavior, elite Shimmer Surge escalation, and boss phase transitions
 - Structured combat events for attacks, skills, damage, DOT effects, healing, debuffs, deaths, and phase changes
+- Runtime combat support for healing received, barrier potency, damage reduction, lifesteal, resistance, evasion, slow, debuff reduction, enemy criticals, and stun handling
+- Room-definition-driven boss spawning and next-room progression based on required interactables
+- Boss loot weighted toward Epic equipment with rare Legendary/Artifact outcomes and occasional consumable drops
+- Separate owned equipment instances, including same-name drops with different rolled stats
+- Temporary Shimmer buffs and an explicit Floor I completion state
 - Shimmer unlock triggers and a 10-point Shimmer loadout tracker
 
 ## Building and Running
@@ -71,6 +76,8 @@ Open `COS-PP1.vcxproj` in Visual Studio and build Debug x64. The project uses C+
 - [Microsoft smart pointers overview](https://learn.microsoft.com/cpp/cpp/smart-pointers-modern-cpp)
 - [Microsoft `std::vector` reference](https://learn.microsoft.com/cpp/standard-library/vector-class)
 - [Git documentation](https://git-scm.com/docs)
+
+The detailed cleanup implementation is recorded in [`docs/Documentation Progress`](docs/Documentation%20Progress) and [`docs/Micare-System-Design.md`](docs/Micare-System-Design.md), with source links to the relevant C++ headers and implementations.
 
 ## Milestone Stand-Up
 

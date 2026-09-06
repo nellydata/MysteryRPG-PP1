@@ -59,7 +59,7 @@ public:
     bool ToggleEquip(Item& item);
     bool UseConsumable(const std::string& itemName, class Enemy* target = nullptr);
     bool HasStatus(StatusType type) const;
-    void ApplyStatus(const StatusEffect& status);
+    void ApplyStatus(const StatusEffect& status, int accuracy = 100);
     void ProcessStatuses();
     void ClearStatuses();
     int CleanseNegativeStatuses();

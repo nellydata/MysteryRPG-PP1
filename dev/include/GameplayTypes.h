@@ -41,7 +41,15 @@ enum class StatusType {
 	Slow,
 	VerdigrisMark,
 	DamageReduction,
-	Barrier
+	Barrier,
+	AttackUp,
+	AccuracyUp,
+	CritUp,
+	CritDamageUp,
+	GuaranteedCrit,
+	DotUp,
+	HealResistance,
+	AccuracyFloor
 };
 
 struct StatusEffect {
@@ -73,6 +81,14 @@ inline StackPolicy GetStatusStackPolicy(StatusType type) {
 	case StatusType::VerdigrisMark:
 	case StatusType::DamageReduction:
 	case StatusType::Barrier:
+	case StatusType::AttackUp:
+	case StatusType::AccuracyUp:
+	case StatusType::CritUp:
+	case StatusType::CritDamageUp:
+	case StatusType::GuaranteedCrit:
+	case StatusType::DotUp:
+	case StatusType::HealResistance:
+	case StatusType::AccuracyFloor:
 		return StackPolicy::RefreshDuration;
 	}
 	return StackPolicy::Unique;

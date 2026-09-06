@@ -52,6 +52,7 @@ public:
     bool RevealNextInteractable();
     const std::vector<std::string>& GetVisibleInteractables() const;
     bool IsFullySearched() const;
+    bool AreAllRequiredInteractablesRevealed() const;
     bool HasDiscoveredNPC() const;
     void DiscoverNPC();
     bool HasBossBeenDefeated() const;

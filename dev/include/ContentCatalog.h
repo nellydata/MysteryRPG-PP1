@@ -12,5 +12,6 @@ std::vector<std::string> BuildLatinShimmerSkillNames();
 std::string InvestigationConsumableName(ConsumableProfile profile, int playerLevel);
 ItemDefinition BuildInvestigationConsumable(ConsumableProfile profile, int playerLevel);
 std::vector<ItemDefinition> GenerateLoot(const LootContext& context, unsigned seed);
+ItemDefinition RollLootInstance(ItemDefinition item, unsigned seed);
 bool ValidateContentCatalog(std::string* error = nullptr);
 bool ValidateMicareContent(std::string* error = nullptr);

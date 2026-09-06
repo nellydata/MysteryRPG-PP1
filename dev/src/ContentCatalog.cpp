@@ -252,9 +252,25 @@ std::vector<ItemDefinition> GenerateLoot(const LootContext& context, unsigned se
 		else rarity = rarityRoll < (level / 5) ? Rarity::Epic : rarityRoll < 35 ? Rarity::Rare : rarityRoll < 75 ? Rarity::Uncommon : Rarity::Common;
 		std::vector<ItemDefinition> candidates;
 		for (const auto& item : BuildEquippableCatalog()) if (item.rarity == rarity) candidates.push_back(item);
-		if (!candidates.empty()) result.push_back(candidates[(roll / 13) % candidates.size()]);
+		if (!candidates.empty()) result.push_back(RollLootInstance(candidates[(roll / 13) % candidates.size()], roll + 97));
 	}
 	return result;
+}
+
+ItemDefinition RollLootInstance(ItemDefinition item, unsigned seed) {
+	const int variation = 90 + static_cast<int>(seed % 21);
+	if (item.mainStatValue > 0) item.mainStatValue = (std::max)(1, item.mainStatValue * variation / 100);
+	if (item.mainStatPercent > 0) item.mainStatPercent = (std::max)(1, item.mainStatPercent * variation / 100);
+	item.stats.hp = item.stats.hp * variation / 100;
+	item.stats.def = item.stats.def * variation / 100;
+	item.stats.spd = item.stats.spd * variation / 100;
+	item.stats.atk = item.stats.atk * variation / 100;
+	item.substats.clear();
+	for (std::size_t index = 0; index < item.allowedSubstats.size() && index < static_cast<std::size_t>(SubstatCount(item.rarity)); ++index) {
+		const ItemStat stat = item.allowedSubstats[(index + seed) % item.allowedSubstats.size()];
+		AddSubstat(item, stat, CombatMath::SubstatRoll(stat, item.rarity, seed + static_cast<unsigned>(index * 37)));
+	}
+	return item;
 }
 
 bool ValidateContentCatalog(std::string* error) {

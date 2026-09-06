@@ -15,6 +15,16 @@ Micare is a C++17 noir roguelike RPG with both a native Win32 desktop UI and a c
 - `docs/` - project and course documentation
 - `COS-PP1.vcxproj` - Visual Studio project
 
+## Architecture Documentation
+
+See [`docs/Micare-System-Design.md`](docs/Micare-System-Design.md) for an explanation of:
+
+- Class responsibilities and manager relationships
+- `std::vector` usage and deterministic collection ordering
+- Ownership, smart pointers, references, and non-owning pointer decisions
+- Exploration, combat, progression, loot, UI, and validation flow
+- Direct links to the relevant implementation files in `dev/include/` and `dev/src/`
+
 ## Current Features
 
 - Deterministic Floor 1 map with Entrance Hall, Archive Room, Chapel, and Storage Room
@@ -58,6 +68,8 @@ Open `COS-PP1.vcxproj` in Visual Studio and build Debug x64. The project uses C+
 - [Microsoft GDI drawing documentation](https://learn.microsoft.com/windows/win32/gdi/windows-gdi)
 - [Visual Studio C++ project documentation](https://learn.microsoft.com/cpp/build/projects-and-build-systems-cpp)
 - [C++ standard library documentation](https://en.cppreference.com/w/cpp)
+- [Microsoft smart pointers overview](https://learn.microsoft.com/cpp/cpp/smart-pointers-modern-cpp)
+- [Microsoft `std::vector` reference](https://learn.microsoft.com/cpp/standard-library/vector-class)
 - [Git documentation](https://git-scm.com/docs)
 
 ## Milestone Stand-Up

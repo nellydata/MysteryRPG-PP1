@@ -44,8 +44,6 @@ void MapManager::GenerateFloor1() {
 
     rooms_.emplace_back("Entrance Hall");
     Area& entrance = rooms_.back();
-    // The opening route includes the fountain and entrance hall.
-    entrance.SetUnlocked(true);
     entrance.AddInteractable("Broken statue");
     entrance.AddInteractable("Old banner");
     entrance.SetClues(true);

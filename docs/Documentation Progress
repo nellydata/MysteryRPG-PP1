@@ -138,6 +138,14 @@ Spent ~1 hour wrangling scaffolding and resolving small issues to ensure everyth
 •	Added metadata-driven Shimmer skill descriptions and effects to the Skills view.
 •	Added Shimmer skill equip and unequip controls using the progression loadout budget.
 •	Displayed equipped Shimmer skills in the player equipment panel.
+
+
+• Added [`docs/Micare-System-Design.md`](Micare-System-Design.md), documenting the current C++17 architecture.
+• Documented class responsibilities for Player, Enemy, Area, MapManager, CombatManager, Inventory, ContentCatalog, ProgressionManager, EncounterManager, GameManager, and Win32UI.
+• Documented `std::vector` usage for deterministic room order, owned runtime objects, statuses, skills, combat events, and UI views.
+• Documented `std::unique_ptr`, references, raw non-owning pointers, and value semantics, including ownership and lifetime boundaries.
+• Added source links to the relevant files under [`dev/include`](../dev/include/) and [`dev/src`](../dev/src/).
+• Added C++17, Win32, GDI, Visual Studio, smart-pointer, vector, and Git reference sources to the design documentation.
 •	Added selectable equipped Shimmer skills to combat and connected selections to combat resolution.
 •	Validated the Shimmer loadout update with a successful Debug x64 build.
 Version 0.4.1

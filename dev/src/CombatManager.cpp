@@ -110,7 +110,6 @@ void CombatManager::PrepareTurn(Player& player, Enemy& enemy) {
         playerTurn_ = playerGauge_ >= 1000;
         if (playerTurn_) StartPlayerTurn(player);
     }
-    while (!playerTurn_ && player.isAlive() && enemy.isAlive() && enemyGauge_ >= 1000) enemyTurn(player, enemy);
     if (playerTurn_ && player.isAlive()) AddEvent(CombatEvent::Kind::Info, "Waiting for " + player.getName() + " to choose an action.");
 }
 
@@ -293,7 +292,7 @@ void CombatManager::enemyTurn(Player& player, Enemy& enemy) {
     if (enemyGauge_ < 1000) {
         AccumulateGaugesUntilReady(playerGauge_, enemyGauge_, player.getSpeed(), enemy.getSpeed());
         playerTurn_ = playerGauge_ >= 1000;
-        if (playerTurn_) return;
+        if (playerTurn_ && !groupEnemyTurn_) return;
     }
 
     AddEvent(CombatEvent::Kind::Turn, enemy.getName() + "'s turn.");
@@ -310,13 +309,24 @@ void CombatManager::enemyTurn(Player& player, Enemy& enemy) {
         if (!enemy.IsSkillReady(index)) continue;
         if (skill.effect == "heal_self" && enemy.getHP() >= enemy.getMaxHP() / 2) continue;
         if (skill.effect == "cleanse_self" && enemy.GetStatuses().empty()) continue;
-            const int damage = skill.multiplier > 0
+        AddEvent(CombatEvent::Kind::Skill, enemy.getName() + " uses " + skill.name + ".");
+        Enemy* allyTarget = nullptr;
+        if (skill.effect.find("ally") != std::string::npos) {
+            for (Enemy* ally : currentEnemyParty_) {
+                if (ally != nullptr && ally != &enemy && ally->isAlive()) { allyTarget = ally; break; }
+            }
+        }
+        if (allyTarget != nullptr && skill.effect.find("heal") != std::string::npos) {
+            const int before = allyTarget->getHP();
+            allyTarget->heal((std::max)(1, allyTarget->getMaxHP() * 15 / 100));
+            AddEvent(CombatEvent::Kind::Heal, enemy.getName() + " heals ally " + allyTarget->getName() + " for " + std::to_string(allyTarget->getHP() - before) + " HP.");
+        }
+        const int damage = skill.multiplier > 0
                 ? CombatMath::Mitigate((std::max)(1, enemy.getAtk() * skill.multiplier / 100), player.getDefense())
             : 0;
         if (damage > 0) {
             const int finalDamage = player.AbsorbDamage(damage);
             player.takeDamage(finalDamage);
-            AddEvent(CombatEvent::Kind::Skill, enemy.getName() + " uses " + skill.name + " on " + player.getName() + ".", finalDamage);
             AddEvent(CombatEvent::Kind::Damage, enemy.getName() + " deals " + std::to_string(finalDamage) + " damage to " + player.getName() + ".", finalDamage);
         }
         if (skill.effect == "bleed" || skill.effect == "burn" || skill.effect == "poison") {
@@ -349,7 +359,7 @@ void CombatManager::enemyTurn(Player& player, Enemy& enemy) {
         playerTurn_ = false;
         AccumulateGaugesUntilReady(playerGauge_, enemyGauge_, player.getSpeed(), enemy.getSpeed());
         playerTurn_ = playerGauge_ >= 1000;
-        if (playerTurn_) StartPlayerTurn(player);
+        if (playerTurn_ && !groupEnemyTurn_) StartPlayerTurn(player);
         return;
     }
 
@@ -359,7 +369,7 @@ void CombatManager::enemyTurn(Player& player, Enemy& enemy) {
         playerTurn_ = false;
         AccumulateGaugesUntilReady(playerGauge_, enemyGauge_, player.getSpeed(), enemy.getSpeed());
         playerTurn_ = playerGauge_ >= 1000;
-        if (playerTurn_) StartPlayerTurn(player);
+        if (playerTurn_ && !groupEnemyTurn_) StartPlayerTurn(player);
         return;
     }
     const int attackDamage = enemy.getAtk();
@@ -374,7 +384,31 @@ void CombatManager::enemyTurn(Player& player, Enemy& enemy) {
     playerTurn_ = false;
     AccumulateGaugesUntilReady(playerGauge_, enemyGauge_, player.getSpeed(), enemy.getSpeed());
     playerTurn_ = playerGauge_ >= 1000;
-    if (playerTurn_) StartPlayerTurn(player);
+    if (playerTurn_ && !groupEnemyTurn_) StartPlayerTurn(player);
+}
+
+void CombatManager::enemyTurn(Player& player, Enemy& enemy, const std::vector<Enemy*>& enemies) {
+    std::vector<Enemy*> order;
+    for (Enemy* candidate : enemies) if (candidate != nullptr && candidate->isAlive()) order.push_back(candidate);
+    std::sort(order.begin(), order.end(), [](const Enemy* left, const Enemy* right) {
+        if (left->getSpeed() != right->getSpeed()) return left->getSpeed() > right->getSpeed();
+        return left->getName() < right->getName();
+    });
+    groupEnemyTurn_ = true;
+    playerTurn_ = false;
+    for (Enemy* candidate : order) {
+        if (!player.isAlive()) break;
+        enemyGauge_ = 1000;
+        enemyTurn(player, *candidate);
+        playerTurn_ = false;
+    }
+    groupEnemyTurn_ = false;
+    enemyGauge_ = 0;
+    playerGauge_ = 1000;
+    if (player.isAlive()) {
+        playerTurn_ = true;
+        StartPlayerTurn(player);
+    }
 }
 
 bool CombatManager::IsPlayerTurn() const { return playerTurn_; }

@@ -35,12 +35,14 @@ public:
     void BeginEncounter(Enemy& enemy);
     void ContinueEncounter(Enemy& enemy);
     void PrepareTurn(Player& player, Enemy& enemy);
+    void PrepareGroupTurn(Player& player, const std::vector<Enemy*>& enemies);
     void ResumeAfterRespawn(Player& player, Enemy& enemy);
     bool resolve(CombatAction action, Player& player, Enemy& enemy,
                  ShimmerSkill* skill = nullptr,
                  ProgressionManager* progression = nullptr);
     bool UseConsumable(const std::string& itemName, Player& player, Enemy& enemy);
     void enemyTurn(Player& player, Enemy& enemy);
+    void enemyTurn(Player& player, Enemy& enemy, const std::vector<Enemy*>& enemies);
     const ShimmerSkill* GetDefaultSkill() const;
     bool IsPlayerTurn() const;
     bool HasUsedConsumableThisTurn() const;
@@ -64,7 +66,9 @@ private:
     std::unique_ptr<ShimmerSkill> defaultSkill_;
     std::vector<CombatEvent> events_;
     bool consumableUsedThisTurn_;
+    bool groupEnemyTurn_ = false;
     std::map<std::string, int> shimmerCooldowns_;
+    std::vector<Enemy*> currentEnemyParty_;
 
     void AddEvent(CombatEvent::Kind kind, const std::string& message, int value = 0);
     void StartPlayerTurn(Player& player);

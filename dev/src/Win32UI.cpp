@@ -1057,7 +1057,7 @@ void Win32UI::ScheduleEnemyTurn() {
 	if (enemyTurnPending_ || activeEnemy_ == nullptr || !activeEnemy_->isAlive() || !player_.isAlive()) return;
 	enemyTurnPending_ = true;
 	combatTransition_ = true;
-	AddLog(activeEnemy_->getName() + " is preparing its turn...");
+	AddLog("The enemy party is preparing its turns...");
 	SyncCombatEvents();
 	Invalidate();
 	SetTimer(window_, 1, 1000, nullptr);
@@ -1092,7 +1092,6 @@ void Win32UI::SearchRoom() {
 	const unsigned searchSeed = RoomSeed(area.getName()) + static_cast<unsigned>(area.GetSearchCount() * 31);
 	const int roll = static_cast<int>(searchSeed % 100);
 	const bool cluesComplete = area.HasAllClues();
-	const int bossThreshold = 18;
 	const int playerLevel = progression_.GetLevel();
 	const RoomDefinition* roomDefinition = mapManager_.GetRoomDefinition(area);
 	const EnemyFaction roomFaction = RoomFaction(area.getName());
@@ -1149,9 +1148,9 @@ void Win32UI::SearchRoom() {
 		AddLog("Investigation: a Shimmer anomaly rippled through the room.");
 		return;
 	}
-	if (activeEnemy_ == nullptr && playerLevel >= 6 && area.getName() == "Entrance Hall" && cluesComplete && area.HasAllItems() && !area.HasBossBeenDefeated() && roll < bossThreshold) {
+	if (activeEnemy_ == nullptr && roomDefinition != nullptr && playerLevel >= 6 && area.getName() == "Entrance Hall" && cluesComplete && area.HasAllItems() && !area.HasBossBeenDefeated() && roll < roomDefinition->firstBossSpawnChance) {
 		area.MarkBossEncountered();
-		if (auto boss = CreateCatalogueEnemy("Matron of the Catacombs", enemyLevel)) area.addEnemy(std::move(boss));
+		if (auto boss = CreateCatalogueEnemy(roomDefinition->bossId, enemyLevel)) area.addEnemy(std::move(boss));
 		activeEnemy_ = area.getFirstAliveEnemy();
 		combat_.BeginEncounter(*activeEnemy_);
 		combat_.PrepareTurn(player_, *activeEnemy_);
@@ -1302,6 +1301,10 @@ void Win32UI::PerformCombatAction(CombatAction action) {
 		const bool allEnemiesDefeated = !area.hasEnemies();
 		if (area.getName() == "Fountain" && !area.IsHealingUnlocked() && allEnemiesDefeated) {
 			area.SetHealingUnlocked(true);
+			if (selectedRoom_ + 1 < static_cast<int>(mapManager_.GetRooms().size())) {
+				mapManager_.GetRooms()[selectedRoom_ + 1].SetUnlocked(true);
+				AddLog("The Entrance Hall opens after the Fountain tutorial is cleared.");
+			}
 			AddLog("The Fountain is purified. Full healing is now available.");
 		}
 		statusMessage_ = defeatedName + " defeated. XP gained: " + std::to_string(xpReward) + ".";
@@ -1482,7 +1485,10 @@ LRESULT Win32UI::HandleMessage(UINT message, WPARAM wParam, LPARAM lParam) {
 			enemyTurnPending_ = false;
 			combatTransition_ = false;
 			if (view_ == View::Combat && activeEnemy_ != nullptr && activeEnemy_->isAlive() && player_.isAlive()) {
-				combat_.enemyTurn(player_, *activeEnemy_);
+				std::vector<Enemy*> enemies;
+				Area& area = mapManager_.GetRooms()[selectedRoom_];
+				for (const auto& enemy : area.GetEnemies()) if (enemy != nullptr && enemy->isAlive()) enemies.push_back(enemy.get());
+				combat_.enemyTurn(player_, *activeEnemy_, enemies);
 				SyncCombatEvents();
 				RefreshControls();
 				UpdateWindow(window_);

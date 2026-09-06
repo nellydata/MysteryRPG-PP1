@@ -144,6 +144,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <None Include=".gitignore" />
+    <None Include="docs\Micare-System-Design.md" />
     <None Include="README.md" />
   </ItemGroup>
   <ItemGroup>

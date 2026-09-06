@@ -5,7 +5,8 @@
 
 namespace {
 EnemySkillDefinition Skill(const char* name, const char* effect, int multiplier, int cooldown, int duration = 0) {
-	return {name, effect, multiplier, cooldown, duration};
+	const int scaledMultiplier = multiplier > 0 ? multiplier * 3 / 2 : multiplier;
+	return {name, effect, scaledMultiplier, cooldown, duration};
 }
 
 namespace {

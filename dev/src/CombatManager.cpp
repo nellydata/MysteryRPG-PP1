@@ -142,18 +142,18 @@ bool CombatManager::resolve(CombatAction action, Player& player, Enemy& enemy,
         playerTurn_ = playerGauge_ >= 1000;
     }
 
+    AddEvent(CombatEvent::Kind::Turn, player.getName() + "'s turn begins.");
     const int playerHealthBeforeStatuses = player.getHP();
-    const auto statusesBefore = player.GetStatuses();
     player.ProcessStatuses();
-    for (const auto& status : statusesBefore) {
-        const int healthLost = playerHealthBeforeStatuses - player.getHP();
-        if (healthLost > 0 && (status.type == StatusType::Bleed || status.type == StatusType::Burn || status.type == StatusType::Poison)) {
-            AddEvent(CombatEvent::Kind::DotTick, player.getName() + " takes " + std::to_string(healthLost) + " " + std::string(StatusDisplayName(status.type)) + " damage.", healthLost);
-            break;
-        }
-    }
+    const int playerStatusDamage = playerHealthBeforeStatuses - player.getHP();
+    if (playerStatusDamage > 0) AddEvent(CombatEvent::Kind::DotTick, player.getName() + " takes " + std::to_string(playerStatusDamage) + " damage from ongoing effects.", playerStatusDamage);
+    if (player.getHP() > playerHealthBeforeStatuses) AddEvent(CombatEvent::Kind::Heal, player.getName() + " recovers HP from a healing-over-time effect.", player.getHP() - playerHealthBeforeStatuses);
     if (!player.isAlive()) AddEvent(CombatEvent::Kind::Death, player.getName() + " has fallen from status damage.");
-    enemy.ProcessStatuses();
+    std::vector<std::pair<StatusType, int>> enemyDamageEvents;
+    int enemyHealing = 0;
+    enemy.ProcessStatuses(enemyDamageEvents, enemyHealing);
+    for (const auto& tick : enemyDamageEvents) AddEvent(CombatEvent::Kind::DotTick, enemy.getName() + " takes " + std::to_string(tick.second) + " " + StatusDisplayName(tick.first) + " damage.", tick.second);
+    if (enemyHealing > 0) AddEvent(CombatEvent::Kind::Heal, enemy.getName() + " recovers " + std::to_string(enemyHealing) + " HP from healing-over-time.", enemyHealing);
     if (!player.isAlive() || !enemy.isAlive()) return false;
     if (!playerTurn_) return false;
     ++turnNumber_;

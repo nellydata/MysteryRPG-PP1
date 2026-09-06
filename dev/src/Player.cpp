@@ -230,7 +230,7 @@ bool Player::UseConsumable(const std::string& itemName, Enemy* target) {
     if (effect.find("restore_20") != std::string::npos) heal(maxHp_ * 20 / 100);
     else if (effect.find("restore_35") != std::string::npos) heal(maxHp_ * 35 / 100);
     else if (effect.find("restore_50") != std::string::npos) heal(maxHp_ * 50 / 100);
-    else if (effect == "remove_all_debuffs") ClearStatuses();
+    else if (effect == "remove_all_debuffs") CleanseNegativeStatuses();
     else if (effect == "remove_burn_and_poison") {
         statuses_.erase(std::remove_if(statuses_.begin(), statuses_.end(), [](const StatusEffect& status) {
             return status.type == StatusType::Burn || status.type == StatusType::Poison;
@@ -242,6 +242,15 @@ bool Player::UseConsumable(const std::string& itemName, Enemy* target) {
     } else return false;
     inventory_.RemoveItem(itemName);
     return true;
+}
+
+int Player::CleanseNegativeStatuses() {
+    const auto oldSize = statuses_.size();
+    statuses_.erase(std::remove_if(statuses_.begin(), statuses_.end(), [](const StatusEffect& status) {
+        return status.type == StatusType::Stun || status.type == StatusType::Bleed || status.type == StatusType::Burn ||
+            status.type == StatusType::Poison || status.type == StatusType::Slow || status.type == StatusType::VerdigrisMark;
+    }), statuses_.end());
+    return static_cast<int>(oldSize - statuses_.size());
 }
 
 bool Player::HasStatus(StatusType type) const {

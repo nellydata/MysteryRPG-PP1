@@ -36,6 +36,7 @@ public:
     const std::vector<StatusEffect>& GetStatuses() const;
     bool ApplyStatus(const StatusEffect& status, int accuracy = 100);
     void ProcessStatuses();
+    void ProcessStatuses(std::vector<std::pair<StatusType, int>>& damageEvents, int& healing);
     void ClearStatuses();
 
 protected:

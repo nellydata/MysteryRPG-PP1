@@ -17,7 +17,7 @@ public:
 			player.heal(player.getMaxHP() * powerPercent_ / 100);
 			player.ApplyStatus({StatusType::HealOverTime, duration_, player.getMaxHP() * 20 / 100, 0});
 		} else if (effect_ == "cleanse_resist") {
-			player.ClearStatuses();
+			player.CleanseNegativeStatuses();
 			player.ApplyStatus({StatusType::DamageReduction, duration_, 30, 0});
 		} else if (effect_ == "defensive_buff") {
 			player.AddBarrier(player.getMaxHP() * powerPercent_ / 100, duration_);

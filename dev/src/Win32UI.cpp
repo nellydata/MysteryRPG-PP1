@@ -770,19 +770,13 @@ void Win32UI::HandleCommand(int controlId) {
 				if (targetIndex < static_cast<int>(targetEnemies_.size())) {
 					Enemy* target = targetEnemies_[targetIndex];
 					if (combatAttackSelection_ || !selectedCombatSkillName_.empty()) {
-						if (combatTargetConfirmed_ && activeEnemy_ == target) {
-							combatAttackSelection_ = false;
-							PerformCombatAction(selectedCombatSkillName_.empty() ? CombatAction::Attack : CombatAction::Shimmer);
-						} else {
-							activeEnemy_ = target;
-							combatTargetConfirmed_ = true;
-							combat_.RecordInfo(selectedCombatSkillName_.empty()
-								? player_.getName() + " selected " + activeEnemy_->getName() + "."
-								: selectedCombatSkillName_ + " selected; target is " + activeEnemy_->getName() + ".");
-							statusMessage_ = selectedCombatSkillName_.empty()
-								? player_.getName() + " selected " + activeEnemy_->getName() + ". Select it again to confirm the attack."
-								: selectedCombatSkillName_ + " selected; targeting " + activeEnemy_->getName() + ". Select it again to confirm.";
-						}
+						activeEnemy_ = target;
+						combatTargetConfirmed_ = true;
+						combat_.RecordInfo(selectedCombatSkillName_.empty()
+							? player_.getName() + " attacks " + activeEnemy_->getName() + "."
+							: selectedCombatSkillName_ + " targets " + activeEnemy_->getName() + ".");
+						combatAttackSelection_ = false;
+						PerformCombatAction(selectedCombatSkillName_.empty() ? CombatAction::Attack : CombatAction::Shimmer);
 					} else {
 						activeEnemy_ = target;
 						statusMessage_ = activeEnemy_->getName() + " selected.";
@@ -1001,7 +995,9 @@ void Win32UI::ScheduleEnemyTurn() {
 	if (enemyTurnPending_ || activeEnemy_ == nullptr || !activeEnemy_->isAlive() || !player_.isAlive()) return;
 	enemyTurnPending_ = true;
 	combatTransition_ = true;
-	AddLog("...");
+	AddLog(activeEnemy_->getName() + " is preparing its turn...");
+	SyncCombatEvents();
+	Invalidate();
 	SetTimer(window_, 1, 1000, nullptr);
 }
 
@@ -1425,6 +1421,9 @@ LRESULT Win32UI::HandleMessage(UINT message, WPARAM wParam, LPARAM lParam) {
 			enemyTurnPending_ = false;
 			combatTransition_ = false;
 			if (view_ == View::Combat && activeEnemy_ != nullptr && activeEnemy_->isAlive() && player_.isAlive()) {
+				combat_.RecordInfo(activeEnemy_->getName() + "'s turn begins.");
+				SyncCombatEvents();
+				Invalidate();
 				combat_.enemyTurn(player_, *activeEnemy_);
 				SyncCombatEvents();
 				if (!combat_.IsPlayerTurn() && activeEnemy_->isAlive() && player_.isAlive()) ScheduleEnemyTurn();

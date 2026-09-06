@@ -6,9 +6,11 @@
 namespace {
 int ScaleStat(int base, double growth, int level, int cap) {
 	const int relativeLevel = (std::max)(0, (std::min)(100, level) - 1);
-	const int scaled = static_cast<int>(std::lround(base * std::pow(growth, relativeLevel / 10.0)));
+	const double levelScale = 0.35 + 0.65 * (relativeLevel / 10.0);
+	const int scaled = static_cast<int>(std::lround(base * levelScale * std::pow(growth, relativeLevel / 10.0)));
 	return (std::max)(1, (std::min)(cap, scaled));
 }
+
 }
 
 Enemy::Enemy(const std::string& name, int hp, int atk, int xpReward, int level)
@@ -37,7 +39,8 @@ Enemy::Enemy(const EnemyDefinition& definition, int level)
 	  defense_(ScaleStat(definition.defBase, definition.tier == EnemyTier::Boss ? 1.22 : definition.tier == EnemyTier::Elite ? 1.18 : 1.14, level, 5000)),
 	  speed_(definition.speed), level_(level), resistance_(0), evasion_(0),
 	  faction_(definition.faction), tier_(definition.tier), skills_(definition.skills),
-	  skillCooldowns_(definition.skills.size(), 0), phase_(1) {}
+		phase_(1) {
+}
 
 const std::vector<StatusEffect>& Enemy::GetStatuses() const { return statuses_; }
 
@@ -47,6 +50,26 @@ void Enemy::takeDamage(int amount) {
 	if (amount <= 0) return;
 	hp_ -= amount;
 	if (hp_ < 0) hp_ = 0;
+}
+
+void Enemy::ProcessStatuses(std::vector<std::pair<StatusType, int>>& damageEvents, int& healing) {
+	healing = 0;
+	for (auto& status : statuses_) {
+		int damage = 0;
+		if (status.type == StatusType::Bleed) damage = status.sourceAttack * 30 * (100 + status.dotPotency) / 10000;
+		else if (status.type == StatusType::Burn) damage = status.sourceAttack * 60 * (100 + status.dotPotency) / 10000;
+		else if (status.type == StatusType::Poison) damage = maxHp_ * 5 / 100;
+		else if (status.type == StatusType::HealOverTime) healing += status.potency;
+		if (damage > 0) {
+			takeDamage(damage);
+			damageEvents.emplace_back(status.type, damage);
+		}
+		--status.turns;
+	}
+	statuses_.erase(std::remove_if(statuses_.begin(), statuses_.end(), [](const StatusEffect& status) {
+		return status.turns <= 0;
+	}), statuses_.end());
+	if (healing > 0) heal(healing);
 }
 
 bool Enemy::isAlive() const { return hp_ > 0; }

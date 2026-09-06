@@ -62,6 +62,7 @@ public:
     void ApplyStatus(const StatusEffect& status);
     void ProcessStatuses();
     void ClearStatuses();
+    int CleanseNegativeStatuses();
     void ModifyStats(const Stats& delta);
     const Inventory& GetInventory() const;
     Inventory& GetInventory();

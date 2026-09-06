@@ -22,6 +22,9 @@ public:
     int getSpeed() const;
     int getLevel() const;
     int getResistance() const;
+    int getCritRate() const;
+    int getCritDamage() const;
+    int getAccuracy() const;
     int getEvasion() const;
     EnemyFaction getFaction() const;
     EnemyTier getTier() const;
@@ -49,6 +52,9 @@ protected:
     int speed_;
     int level_;
     int resistance_;
+    int critRate_;
+    int critDamage_;
+    int accuracy_;
     int evasion_;
     std::vector<StatusEffect> statuses_;
     EnemyFaction faction_;

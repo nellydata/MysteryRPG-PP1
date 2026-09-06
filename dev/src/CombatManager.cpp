@@ -4,6 +4,7 @@
 #include "ProgressionManager.h"
 #include <cmath>
 #include "ShimmerSkill.h"
+#include "CombatMath.h"
 #include <algorithm>
 #include <iostream>
 #include <string>
@@ -172,9 +173,7 @@ bool CombatManager::resolve(CombatAction action, Player& player, Enemy& enemy,
         const int rawDamage = critical
             ? player.getAttack() * player.getCritDamage() / 100
             : player.getAttack();
-        const int damage = std::max(1, static_cast<int>(std::lround(
-            static_cast<double>(rawDamage) * 100.0 / (100.0 + enemy.getDefense())))
-            + (weaknessExposed_ ? 2 : 0));
+        const int damage = CombatMath::Mitigate(rawDamage, enemy.getDefense()) + (weaknessExposed_ ? 2 : 0);
         enemy.takeDamage(damage);
         AddEvent(CombatEvent::Kind::Damage, player.getName() + " inflicted " + std::to_string(damage) + " damage!", damage);
         if (enemy.UpdatePhase()) {
@@ -284,12 +283,11 @@ void CombatManager::enemyTurn(Player& player, Enemy& enemy) {
         if (!enemy.IsSkillReady(index)) continue;
         if (skill.effect == "heal_self" && enemy.getHP() >= enemy.getMaxHP() / 2) continue;
         if (skill.effect == "cleanse_self" && enemy.GetStatuses().empty()) continue;
-        const int damage = skill.multiplier > 0
-            ? (std::max)(1, enemy.getAtk() * skill.multiplier / 100)
+            const int damage = skill.multiplier > 0
+                ? CombatMath::Mitigate((std::max)(1, enemy.getAtk() * skill.multiplier / 100), player.getDefense())
             : 0;
         if (damage > 0) {
-            const int finalDamage = player.AbsorbDamage((std::max)(1, static_cast<int>(std::lround(
-                static_cast<double>(damage) * 70.0 / (100.0 + player.getDefense())))));
+            const int finalDamage = player.AbsorbDamage(damage);
             player.takeDamage(finalDamage);
             AddEvent(CombatEvent::Kind::Skill, enemy.getName() + " uses " + skill.name + ". " + enemy.getName() + " dealt " + std::to_string(finalDamage) +
                 " damage to " + player.getName() + " with " + skill.name + ".", finalDamage);
@@ -297,7 +295,7 @@ void CombatManager::enemyTurn(Player& player, Enemy& enemy) {
         if (skill.effect == "bleed" || skill.effect == "burn" || skill.effect == "poison") {
             StatusType type = skill.effect == "bleed" ? StatusType::Bleed : skill.effect == "burn" ? StatusType::Burn : StatusType::Poison;
             const bool hadStatus = player.HasStatus(type);
-            player.ApplyStatus({type, skill.duration > 0 ? skill.duration : 2, 0, enemy.getAtk()});
+            player.ApplyStatus({type, skill.duration > 0 ? skill.duration : 2, 0, enemy.getAtk(), 0, enemy.getDefense()});
             if (!hadStatus && player.HasStatus(type)) AddEvent(CombatEvent::Kind::Debuff, enemy.getName() + " inflicts " + std::string(StatusDisplayName(type)) + " on " + player.getName() + " for " +
                 std::to_string(skill.duration > 0 ? skill.duration : 2) + " turns!");
         } else if (skill.effect == "tri_dot" || skill.effect == "burn_bleed") {
@@ -305,12 +303,12 @@ void CombatManager::enemyTurn(Player& player, Enemy& enemy) {
             for (StatusType type : {StatusType::Burn, StatusType::Bleed, StatusType::Poison}) {
                 if (skill.effect == "burn_bleed" && type == StatusType::Poison) continue;
                 const bool hadStatus = player.HasStatus(type);
-                player.ApplyStatus({type, duration, 0, enemy.getAtk()});
+                player.ApplyStatus({type, duration, 0, enemy.getAtk(), 0, enemy.getDefense()});
                 if (!hadStatus && player.HasStatus(type)) AddEvent(CombatEvent::Kind::Debuff, enemy.getName() + " inflicts " + std::string(StatusDisplayName(type)) + " on " + player.getName() + " for " + std::to_string(duration) + " turns!");
             }
         } else if (skill.effect == "def_down" || skill.effect == "accuracy_down") {
             const bool hadStatus = enemy.HasStatus(StatusType::VerdigrisMark);
-            enemy.ApplyStatus({StatusType::VerdigrisMark, skill.duration > 0 ? skill.duration : 2, 0, enemy.getAtk()}, player.getAccuracy());
+            enemy.ApplyStatus({StatusType::VerdigrisMark, skill.duration > 0 ? skill.duration : 2, 0, player.getAttack()}, player.getAccuracy());
             if (!hadStatus && enemy.HasStatus(StatusType::VerdigrisMark)) AddEvent(CombatEvent::Kind::Debuff, enemy.getName() + " suffers Verdigris Mark for " + std::to_string(skill.duration > 0 ? skill.duration : 2) + " turns!");
         } else if (skill.effect == "heal_self" || skill.effect == "heal_cleanse") {
             const int amount = (std::max)(1, enemy.getMaxHP() * 15 / 100);
@@ -338,8 +336,7 @@ void CombatManager::enemyTurn(Player& player, Enemy& enemy) {
         return;
     }
     const int attackDamage = enemy.getAtk();
-    const int damage = (std::max)(1, static_cast<int>(std::lround(
-        static_cast<double>(attackDamage) * 70.0 / (100.0 + player.getDefense()))));
+    const int damage = CombatMath::Mitigate(attackDamage, player.getDefense());
     const int finalDamage = player.AbsorbDamage(damage);
     player.takeDamage(finalDamage);
     AddEvent(CombatEvent::Kind::Attack, enemy.getName() + " uses Basic Attack and inflicted " + std::to_string(finalDamage) + " damage!", finalDamage);

@@ -1,6 +1,7 @@
 #include "ShimmerSkill.h"
 #include "Enemy.h"
 #include "Player.h"
+#include "CombatMath.h"
 #include <algorithm>
 
 namespace {
@@ -23,20 +24,20 @@ public:
 			player.AddBarrier(player.getMaxHP() * powerPercent_ / 100, duration_);
 			player.ApplyStatus({StatusType::DamageReduction, duration_, 20, 0});
 		} else if (effect_ == "damage_ignore") {
-			enemy.takeDamage(player.getAttack() * powerPercent_ / 100);
+			enemy.takeDamage((std::max)(1, player.getAttack() * powerPercent_ / 100));
 		} else if (effect_ == "damage_burn") {
-			enemy.takeDamage(player.getAttack() * powerPercent_ / 100);
-			enemy.ApplyStatus({StatusType::Burn, duration_, 0, player.getAttack(), 50}, player.getAccuracy());
+			enemy.takeDamage(CombatMath::Mitigate((std::max)(1, player.getAttack() * powerPercent_ / 100), enemy.getDefense()));
+				enemy.ApplyStatus({StatusType::Burn, duration_, 0, player.getAttack(), 50, player.getDefense()}, player.getAccuracy());
 		} else if (effect_ == "damage_tridot") {
-			enemy.takeDamage(player.getAttack() * powerPercent_ / 100);
+			enemy.takeDamage(CombatMath::Mitigate((std::max)(1, player.getAttack() * powerPercent_ / 100), enemy.getDefense()));
 			for (StatusType type : {StatusType::Burn, StatusType::Bleed, StatusType::Poison})
-				enemy.ApplyStatus({type, duration_, 0, player.getAttack(), 40}, player.getAccuracy());
+				enemy.ApplyStatus({type, duration_, 0, player.getAttack(), 40, player.getDefense()}, player.getAccuracy());
 		} else if (effect_ == "damage_lifesteal") {
-			const int damage = player.getAttack() * powerPercent_ / 100;
+			const int damage = CombatMath::Mitigate((std::max)(1, player.getAttack() * powerPercent_ / 100), enemy.getDefense());
 			enemy.takeDamage(damage);
 			player.heal(damage * 25 / 100);
 		} else if (effect_ == "damage_defdown") {
-			enemy.takeDamage(player.getAttack() * powerPercent_ / 100);
+			enemy.takeDamage(CombatMath::Mitigate((std::max)(1, player.getAttack() * powerPercent_ / 100), enemy.getDefense()));
 			enemy.ApplyStatus({StatusType::VerdigrisMark, duration_, 60, player.getAttack()}, player.getAccuracy());
 		} else if (effect_ == "stat_boost") {
 			player.ModifyStats({0, 0, 50, 50, 0, 0, 20, 0});

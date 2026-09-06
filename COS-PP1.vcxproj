@@ -147,6 +147,7 @@
     <None Include="README.md" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="dev\include\CombatMath.h" />
     <ClInclude Include="dev\include\ContentCatalog.h" />
     <ClInclude Include="dev\include\GameplayTypes.h" />
     <ClInclude Include="dev\include\ConsoleUI.h" />

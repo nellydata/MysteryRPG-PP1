@@ -20,6 +20,16 @@ struct Stats {
 	int dotPotency = 0;
 	int lifesteal = 0;
 	int debuffDurationReduction = 0;
+	int hpPercent = 0;
+	int defPercent = 0;
+	int spdPercent = 0;
+	int atkPercent = 0;
+	int accuracyPercent = 0;
+	int resistancePercent = 0;
+	int critRatePercent = 0;
+	int critDamagePercent = 0;
+	int damagePercent = 0;
+	int damageTakenPercent = 0;
 };
 
 enum class StatusType {
@@ -40,6 +50,7 @@ struct StatusEffect {
 	int potency = 0;
 	int sourceAttack = 0;
 	int dotPotency = 0;
+	int sourceDefense = 0;
 };
 
 enum class Rarity { Common, Uncommon, Rare, Epic, Legendary, Artifact };

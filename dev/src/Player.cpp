@@ -1,5 +1,6 @@
 #include "Player.h"
 #include "Enemy.h"
+#include "CombatMath.h"
 #include <iostream>
 #include <algorithm>
 
@@ -266,10 +267,10 @@ void Player::ApplyStatus(const StatusEffect& status) {
 void Player::ProcessStatuses() {
     bool barrierExpired = false;
     for (auto& status : statuses_) {
-        if (status.type == StatusType::Bleed) takeDamage(AbsorbDamage(status.sourceAttack * 30 * (100 + status.dotPotency) / 10000));
-        else if (status.type == StatusType::Burn) takeDamage(AbsorbDamage(status.sourceAttack * 60 * (100 + status.dotPotency) / 10000));
-        else if (status.type == StatusType::Poison) takeDamage(AbsorbDamage(maxHp_ * 5 / 100));
-        else if (status.type == StatusType::HealOverTime) heal(status.potency);
+        if (status.type == StatusType::Bleed) takeDamage(AbsorbDamage(CombatMath::Mitigate(status.sourceAttack * 30 * (100 + totalStats_.dotPotency + status.dotPotency) / 10000, status.sourceDefense)));
+        else if (status.type == StatusType::Burn) takeDamage(AbsorbDamage(CombatMath::Mitigate(status.sourceAttack * 60 * (100 + totalStats_.dotPotency + status.dotPotency) / 10000, status.sourceDefense)));
+        else if (status.type == StatusType::Poison) takeDamage(AbsorbDamage(CombatMath::Mitigate(maxHp_ * (100 + totalStats_.dotPotency + status.dotPotency) / 20 / 100, status.sourceDefense)));
+        else if (status.type == StatusType::HealOverTime) heal(status.potency * (100 + totalStats_.healingPotency) / 100);
         --status.turns;
         if (status.type == StatusType::Barrier && status.turns <= 0) barrierExpired = true;
     }
@@ -361,14 +362,13 @@ void Player::RecalculateStats() {
         }
         const int percent = item->getMainStatPercent();
         if (percent > 0) {
-            int baseValue = 0;
-            int* totalValue = nullptr;
-            if (item->getMainStat() == "hp") { baseValue = baseStats_.hp; totalValue = &totalStats_.hp; }
-            else if (item->getMainStat() == "def") { baseValue = baseStats_.def; totalValue = &totalStats_.def; }
-            else if (item->getMainStat() == "spd") { baseValue = baseStats_.spd; totalValue = &totalStats_.spd; }
-            else if (item->getMainStat() == "atk") { baseValue = baseStats_.atk; totalValue = &totalStats_.atk; }
-            else if (item->getMainStat() == "acc") { baseValue = 100; totalValue = &totalStats_.acc; }
-            if (totalValue != nullptr) *totalValue += baseValue * percent / 100;
+            if (item->getMainStat() == "hp") totalStats_.hpPercent += percent;
+            else if (item->getMainStat() == "def") totalStats_.defPercent += percent;
+            else if (item->getMainStat() == "spd") totalStats_.spdPercent += percent;
+            else if (item->getMainStat() == "atk") totalStats_.atkPercent += percent;
+            else if (item->getMainStat() == "acc") totalStats_.accuracyPercent += percent;
+            else if (item->getMainStat() == "res") totalStats_.resistancePercent += percent;
+            else if (item->getMainStat() == "crit") totalStats_.critRatePercent += percent;
         }
     }
 
@@ -396,6 +396,14 @@ void Player::RecalculateStats() {
             totalStats_.critDamage += 10;
         }
     }
+    totalStats_.hp = CombatMath::ApplyPercent(totalStats_.hp, totalStats_.hpPercent);
+    totalStats_.def = CombatMath::ApplyPercent(totalStats_.def, totalStats_.defPercent);
+    totalStats_.spd = CombatMath::ApplyPercent(totalStats_.spd, totalStats_.spdPercent);
+    totalStats_.atk = CombatMath::ApplyPercent(totalStats_.atk, totalStats_.atkPercent);
+    totalStats_.acc = CombatMath::ClampPercent(totalStats_.acc + totalStats_.accuracyPercent);
+    totalStats_.res = CombatMath::ClampPercent(totalStats_.res + totalStats_.resistancePercent);
+    totalStats_.critRate = CombatMath::ClampPercent(totalStats_.critRate + totalStats_.critRatePercent);
+    totalStats_.critDamage = CombatMath::ApplyPercent(totalStats_.critDamage, totalStats_.critDamagePercent);
     maxHp_ = totalStats_.hp;
     if (hp_ > maxHp_) hp_ = maxHp_;
 }

@@ -4,6 +4,7 @@
 #include "EnemyCatalog.h"
 #include "Nun.h"
 #include "ShimmerSkill.h"
+#include "MapManager.h"
 #include <algorithm>
 #include <cstdlib>
 #include <cstdio>
@@ -501,13 +502,14 @@ void Win32UI::RefreshControls() {
 void Win32UI::LayoutControls(int width, int height) {
 	const int center = 425;
 	const int panelRight = (std::max)(center + 620, width - 35);
-	const int buttonWidth = 180;
+	const int contentRight = (std::max)(center + 220, panelRight - 16);
+	const int availableWidth = (std::max)(220, contentRight - center);
 	const int buttonHeight = 42;
-	const int eventTop = (std::max)(120, height - 380);
-	const int actionY = eventTop + 28;
-	const int roomActionY = actionY + 124;
-	const int inventoryActionY = eventTop + 260;
-	const int inventoryWidth = (std::max)(150, (panelRight - center - 36) / 4);
+	const int actionY = (std::max)(20, height - buttonHeight - 14);
+	const int roomActionY = actionY;
+	const int eventTop = (std::max)(120, actionY - 20);
+	const int inventoryActionY = (std::max)(20, height - 112);
+	const int inventoryWidth = (std::max)(50, (availableWidth - 36) / 4);
 	const int inventoryGap = 12;
 	if (view_ == View::Inventory) {
 		const int left = (std::min)(395, (std::max)(20, width / 3));
@@ -583,14 +585,20 @@ void Win32UI::LayoutControls(int width, int height) {
 	}
 
 	for (int i = 0; i < 5; ++i) {
-		MoveWindow(roomButtons_[i], center + (i % 2) * 225, actionY + (i / 2) * 50,
-				   buttonWidth, buttonHeight, TRUE);
+		const int roomColumns = availableWidth >= 500 ? 2 : 1;
+		const int roomGap = 12;
+		const int roomWidth = (std::max)(80, (availableWidth - roomGap * (roomColumns - 1)) / roomColumns);
+		MoveWindow(roomButtons_[i], center + (i % roomColumns) * (roomWidth + roomGap),
+				   (std::max)(20, actionY - 3 * 50) + (i / roomColumns) * 50,
+				   roomWidth, buttonHeight, TRUE);
 	}
 	for (int i = 0; i < 5; ++i) {
-		const int column = i % 2;
-		const int row = i / 2;
-		MoveWindow(inspectButtons_[i], center + column * (inventoryWidth * 2 + inventoryGap * 2),
-				   actionY + row * 54, inventoryWidth * 2 + inventoryGap, buttonHeight, TRUE);
+		const int inspectColumns = availableWidth >= 500 ? 2 : 1;
+		const int inspectGap = 12;
+		const int inspectWidth = (std::max)(80, (availableWidth - inspectGap * (inspectColumns - 1)) / inspectColumns);
+		const int inspectTop = (std::max)(20, roomActionY - 3 * 46);
+		MoveWindow(inspectButtons_[i], center + (i % inspectColumns) * (inspectWidth + inspectGap),
+				   inspectTop + (i / inspectColumns) * 46, inspectWidth, buttonHeight, TRUE);
 	}
 	for (int i = 0; i < 12; ++i) {
 		MoveWindow(controls_[8 + i], center + (i % 4) * (inventoryWidth + inventoryGap),
@@ -598,16 +606,21 @@ void Win32UI::LayoutControls(int width, int height) {
 		MoveWindow(controls_[36 + i], center + (i % 4) * (inventoryWidth + inventoryGap),
 					132 + (i / 4) * 68, inventoryWidth, 58, TRUE);
 	}
-	MoveWindow(controls_[20], center, roomActionY, buttonWidth, buttonHeight, TRUE);
-	MoveWindow(controls_[21], center + buttonWidth + 20, roomActionY, buttonWidth, buttonHeight, TRUE);
-	MoveWindow(controls_[22], panelRight - 180, 40, 180, buttonHeight, TRUE);
-	MoveWindow(controls_[29], panelRight - 180, 92, 180, buttonHeight, TRUE);
-	MoveWindow(controls_[23], panelRight - 180, 144, 180, buttonHeight, TRUE);
-	MoveWindow(controls_[28], panelRight - 180, 196, 180, buttonHeight, TRUE);
-	MoveWindow(controls_[24], center, actionY, 180, 44, TRUE);
-	MoveWindow(controls_[31], center + 190, actionY, 180, 44, TRUE);
-	MoveWindow(controls_[26], center + 380, actionY, 180, 44, TRUE);
-	MoveWindow(controls_[27], center + 570, actionY, 180, 44, TRUE);
+	const int roomActionGap = 12;
+	const int roomActionWidth = (std::max)(80, (availableWidth - roomActionGap) / 2);
+	MoveWindow(controls_[20], center, roomActionY, roomActionWidth, buttonHeight, TRUE);
+	MoveWindow(controls_[21], center + roomActionWidth + roomActionGap, roomActionY, roomActionWidth, buttonHeight, TRUE);
+	const int utilityWidth = (std::min)(180, (std::max)(110, availableWidth / 4 - 12));
+	const int utilityX = (std::max)(center, contentRight - utilityWidth);
+	MoveWindow(controls_[22], utilityX, 40, utilityWidth, buttonHeight, TRUE);
+	MoveWindow(controls_[29], utilityX, 92, utilityWidth, buttonHeight, TRUE);
+	MoveWindow(controls_[23], utilityX, 144, utilityWidth, buttonHeight, TRUE);
+	MoveWindow(controls_[28], utilityX, 196, utilityWidth, buttonHeight, TRUE);
+	const int combatActionWidth = (availableWidth - 30) / 4;
+	MoveWindow(controls_[24], center, actionY, combatActionWidth, 44, TRUE);
+	MoveWindow(controls_[31], center + combatActionWidth + 10, actionY, combatActionWidth, 44, TRUE);
+	MoveWindow(controls_[26], center + (combatActionWidth + 10) * 2, actionY, combatActionWidth, 44, TRUE);
+	MoveWindow(controls_[27], center + (combatActionWidth + 10) * 3, actionY, combatActionWidth, 44, TRUE);
 	MoveWindow(controls_[33], center, inventoryActionY, inventoryWidth, 42, TRUE);
 	MoveWindow(controls_[32], center + inventoryWidth + inventoryGap, inventoryActionY, inventoryWidth, 42, TRUE);
 	MoveWindow(controls_[21], center + (inventoryWidth + inventoryGap) * 2, inventoryActionY, inventoryWidth, 42, TRUE);
@@ -1081,6 +1094,7 @@ void Win32UI::SearchRoom() {
 	const bool cluesComplete = area.HasAllClues();
 	const int bossThreshold = 18;
 	const int playerLevel = progression_.GetLevel();
+	const RoomDefinition* roomDefinition = mapManager_.GetRoomDefinition(area);
 	const EnemyFaction roomFaction = RoomFaction(area.getName());
 	const EnemyTier encounterTier = MaximumEncounterTier(playerLevel);
 	const int levelDisparity = static_cast<int>((searchSeed / 7) % 8) - 2;
@@ -1151,19 +1165,19 @@ void Win32UI::SearchRoom() {
 		statusMessage_ = "Nothing Was Found.";
 		return;
 	}
-	if (activeEnemy_ == nullptr && area.HasAllClues() && area.HasAllItems() && area.HasBossBeenDefeated()) {
+	if (activeEnemy_ == nullptr && roomDefinition != nullptr && area.HasAllClues() && area.HasAllItems() && area.HasBossBeenDefeated()) {
 		const int repeatRoll = static_cast<int>(searchSeed % 100);
 		if (repeatRoll < 10 && playerLevel >= 6) {
 			const int enemyLevel = progression_.GetLevel();
-			if (auto boss = CreateCatalogueEnemy("Overlord-Prime", enemyLevel)) area.addEnemy(std::move(boss));
+			if (auto boss = CreateCatalogueEnemy(roomDefinition->bossId, enemyLevel + 2)) area.addEnemy(std::move(boss));
 			AddLog("Search: the defeated boss returns in a stronger form.");
 		} else if (repeatRoll < 60) {
 			const int enemyLevel = (std::max)(1, progression_.GetLevel() + static_cast<int>(searchSeed % 3) - 1);
-			if (auto enemy = CreateRandomCatalogueEnemy(searchSeed, enemyLevel, roomFaction, encounterTier)) area.addEnemy(std::move(enemy));
+			if (auto enemy = roomDefinition == nullptr ? nullptr : CreateRoomEnemy(*roomDefinition, searchSeed, enemyLevel, true)) area.addEnemy(std::move(enemy));
 			AddLog("Search: a Nun emerges from the cleared room.");
 		} else {
 			const int enemyLevel = (std::max)(1, progression_.GetLevel() + static_cast<int>(searchSeed % 3) - 1);
-			if (auto enemy = CreateRandomCatalogueEnemy(searchSeed + 1, enemyLevel, roomFaction, encounterTier)) area.addEnemy(std::move(enemy));
+			if (auto enemy = roomDefinition == nullptr ? nullptr : CreateRoomEnemy(*roomDefinition, searchSeed + 1, enemyLevel, true)) area.addEnemy(std::move(enemy));
 			AddLog("Search: an Automata stirs in the cleared room.");
 		}
 		activeEnemy_ = area.getFirstAliveEnemy();
@@ -1193,7 +1207,7 @@ void Win32UI::SearchRoom() {
 			if (rarityRoll < 8 && playerLevel >= 20) rolledTier = EnemyTier::Elite;
 			else if (rarityRoll < 25 && playerLevel >= 6) rolledTier = EnemyTier::Epic;
 			const int rolledLevel = (std::max)(1, (std::min)(100, playerLevel + static_cast<int>((enemySeed / 7) % 5) - 2));
-			if (auto enemy = CreateRandomCatalogueEnemy(enemySeed, rolledLevel, roomFaction, rolledTier)) area.addEnemy(std::move(enemy));
+			if (auto enemy = roomDefinition == nullptr ? nullptr : CreateRoomEnemy(*roomDefinition, enemySeed, rolledLevel, false)) area.addEnemy(std::move(enemy));
 		}
 		activeEnemy_ = area.getFirstAliveEnemy();
 		if (activeEnemy_ == nullptr) return;
@@ -1206,14 +1220,15 @@ void Win32UI::SearchRoom() {
 	}
 	if (activeEnemy_ == nullptr && roll >= consumableThreshold && roll < enemyThreshold) {
 		if (!area.HasAllItems()) area.ConsumeItem();
-		const std::string itemName = area.getName() == "Archive Room" ? "blessed_bandages" : "cellar_rations";
-		AddNamedItem(player_, BuildConsumableCatalog(), itemName);
+		const auto definition = BuildInvestigationConsumable(roomDefinition == nullptr ? ConsumableProfile::SupplyCache : roomDefinition->consumableProfile, playerLevel);
+		if (!definition.name.empty()) player_.AddItem(std::make_unique<Item>(definition));
 		AddLog("Search: a consumable item was added to the inventory.");
 		return;
 	}
 	if (roll >= enemyThreshold && (cluesComplete || roll < 80)) {
 		if (!area.HasAllItems()) area.ConsumeItem();
-		AddNamedItem(player_, BuildConsumableCatalog(), "cellar_rations");
+		const auto definition = BuildInvestigationConsumable(roomDefinition == nullptr ? ConsumableProfile::SupplyCache : roomDefinition->consumableProfile, playerLevel);
+		if (!definition.name.empty()) player_.AddItem(std::make_unique<Item>(definition));
 		AddLog("Search: a consumable item was added to the inventory.");
 		return;
 	}
@@ -1234,8 +1249,8 @@ void Win32UI::SearchRoom() {
 		area.DiscoverNPC();
 		AddLog("Search: an NPC steps from the shadows.");
 	} else if (area.ConsumeItem()) {
-		if (area.getName() == "Archive Room") AddNamedItem(player_, BuildClueCatalog(), "choir_logbook");
-		else AddNamedItem(player_, BuildConsumableCatalog(), "cellar_rations");
+		const auto definition = BuildInvestigationConsumable(roomDefinition == nullptr ? ConsumableProfile::SupplyCache : roomDefinition->consumableProfile, playerLevel);
+		if (!definition.name.empty()) player_.AddItem(std::make_unique<Item>(definition));
 		AddLog("Search: an item was added to the inventory.");
 	} else {
 		AddLog(area.IsFullySearched() ? "Search: the room is fully investigated." : "Search: nothing useful found.");
@@ -1282,6 +1297,8 @@ void Win32UI::PerformCombatAction(CombatAction action) {
 		const int xpReward = activeEnemy_->getXPReward();
 		const EnemyTier defeatedTier = activeEnemy_->getTier();
 		const bool wasBoss = defeatedTier == EnemyTier::Boss;
+		const bool firstBossClear = wasBoss && !area.HasBossBeenDefeated();
+		const RoomDefinition* roomDefinition = mapManager_.GetRoomDefinition(area);
 		const bool allEnemiesDefeated = !area.hasEnemies();
 		if (area.getName() == "Fountain" && !area.IsHealingUnlocked() && allEnemiesDefeated) {
 			area.SetHealingUnlocked(true);
@@ -1297,24 +1314,16 @@ void Win32UI::PerformCombatAction(CombatAction action) {
 				AddLog("The next area is now visible on the map.");
 			}
 		}
-		const unsigned dropRoll = RoomSeed(defeatedName) + static_cast<unsigned>(defeatedLevel * 17 + area.GetSearchCount());
-		const int dropChance = defeatedTier == EnemyTier::Elite ? 100 : (std::min)(90, 15 + defeatedLevel);
-		const int dropCount = defeatedTier == EnemyTier::Boss ? 3 : defeatedTier == EnemyTier::Elite ? 2 : defeatedLevel >= 20 ? 2 : 1;
-		for (int drop = 0; drop < dropCount; ++drop) {
-		const unsigned currentRoll = dropRoll + static_cast<unsigned>(drop * 41);
-		if (currentRoll % 100 < dropChance) {
-			const auto catalog = BuildEquippableCatalog();
-			const int index = static_cast<int>(currentRoll % catalog.size());
-			const bool allowed = defeatedTier == EnemyTier::Boss ? catalog[index].rarity != Rarity::Artifact
-				: defeatedTier == EnemyTier::Elite ? catalog[index].rarity == Rarity::Rare || catalog[index].rarity == Rarity::Epic || catalog[index].rarity == Rarity::Legendary
-				: wasBoss ? catalog[index].rarity != Rarity::Legendary && catalog[index].rarity != Rarity::Artifact
-				: catalog[index].rarity == Rarity::Common || catalog[index].rarity == Rarity::Uncommon || catalog[index].rarity == Rarity::Rare;
-			if (allowed) {
-				player_.AddItem(std::make_unique<Item>(catalog[index]));
-				AddLog("Drop: " + catalog[index].name + ".");
-				statusMessage_ += " Item dropped: " + catalog[index].name + ".";
-			}
-		}
+		LootContext loot;
+		loot.playerLevel = progression_.GetLevel();
+		loot.roomId = roomDefinition == nullptr ? area.getName() : roomDefinition->id;
+		loot.enemyId = defeatedName;
+		loot.enemyTier = defeatedTier;
+		loot.bossFirstClear = firstBossClear;
+		for (const auto& item : GenerateLoot(loot, RoomSeed(defeatedName) + static_cast<unsigned>(defeatedLevel * 17 + area.GetSearchCount()))) {
+			player_.AddItem(std::make_unique<Item>(item));
+			AddLog("Drop: " + item.name + ".");
+			statusMessage_ += " Item dropped: " + item.name + ".";
 		}
 		if (allEnemiesDefeated) {
 			LeaveCombat();
@@ -1589,14 +1598,15 @@ void Win32UI::Paint(HDC deviceContext) {
 			y += 25;
 		}
 	}
-	DrawTextLine(deviceContext, 42, 430, L"EQUIPMENT", Brass, 17, true);
+	const int equipmentTitleY = (std::max)(430, y + 28);
+	DrawTextLine(deviceContext, 42, equipmentTitleY, L"EQUIPMENT", Brass, 17, true);
 	const std::pair<EquipSlot, const wchar_t*> slots[] = {{EquipSlot::Head, L"Head"}, {EquipSlot::Torso, L"Torso"}, {EquipSlot::Boots, L"Boots"}, {EquipSlot::Hand, L"Hand"}, {EquipSlot::Accessory, L"Accessory"}};
-	y = 460;
+	y = equipmentTitleY + 30;
 	for (const auto& slot : slots) {
 		const Item* item = player_.GetEquipped(slot.first);
-		DrawTextLine(deviceContext, 48, y, std::wstring(slot.second) + L": ", Muted, 14);
-		if (item != nullptr) DrawTextLine(deviceContext, 105, y, FormatDisplayText(item->getName()), RarityColor(item->getRarity()), 14, false, 235);
-		else DrawTextLine(deviceContext, 105, y, L"--", Muted, 14);
+		DrawTextLine(deviceContext, 48, y, std::wstring(slot.second) + L": ", Muted, 14, false, 78);
+		if (item != nullptr) DrawTextLine(deviceContext, 130, y, FormatDisplayText(item->getName()), RarityColor(item->getRarity()), 14, false, 205);
+		else DrawTextLine(deviceContext, 130, y, L"--", Muted, 14);
 		y += 25;
 	}
 	DrawTextLine(deviceContext, 42, y + 12, L"SHIMMER LOADOUT", Brass, 17, true);
@@ -1696,7 +1706,7 @@ void Win32UI::Paint(HDC deviceContext) {
 		return;
 	}
 
-	const int eventTop = client.bottom > 500 ? static_cast<int>(client.bottom) - 380 : 120;
+	const int eventTop = client.bottom > 500 ? static_cast<int>(client.bottom) - 180 : 120;
 	DrawPanel(deviceContext, {395, 20, client.right - 20, eventTop - 15},
 			  view_ == View::Combat ? L"COMBAT VIEW" : L"GAMEPLAY VIEW");
 	int contentY = 70;
@@ -1741,7 +1751,7 @@ void Win32UI::Paint(HDC deviceContext) {
 				statusText += std::to_wstring(status.turns) + L"  ";
 			}
 			if (!statusText.empty()) {
-				DrawTextLine(deviceContext, cardX, contentY + 88, statusText, Text, 17, false, 170);
+				DrawTextLine(deviceContext, cardX, contentY + 88, statusText, Text, 17, false, 170, true);
 			}
 			int enemyStatusY = contentY + 110;
 			if (target->getTier() == EnemyTier::Elite || target->getTier() == EnemyTier::Boss) {
@@ -1755,11 +1765,10 @@ void Win32UI::Paint(HDC deviceContext) {
 			}
 			cardX += 205;
 		}
-		DrawTextLine(deviceContext, 425, contentY + 145, L"Battle event log", Brass, 18, true);
+		DrawTextLine(deviceContext, 425, contentY + 145, L"Battle event log (newest first)", Brass, 18, true);
 		int eventY = contentY + 180;
 		const auto& events = combat_.GetEvents();
-		const int firstEvent = events.size() > 10 ? static_cast<int>(events.size()) - 10 : 0;
-		for (int index = firstEvent; index < static_cast<int>(events.size()); ++index) {
+		for (int index = static_cast<int>(events.size()) - 1; index >= 0; --index) {
 			const auto& event = events[static_cast<std::size_t>(index)];
 			COLORREF eventColor = Text;
 			if (event.kind == CombatManager::CombatEvent::Kind::Damage || event.kind == CombatManager::CombatEvent::Kind::Attack || event.kind == CombatManager::CombatEvent::Kind::Skill || event.kind == CombatManager::CombatEvent::Kind::DotTick || event.kind == CombatManager::CombatEvent::Kind::Death) eventColor = Danger;
@@ -1842,13 +1851,8 @@ void Win32UI::DrawHealthBar(HDC deviceContext, int x, int y, int width, int heig
 }
 
 int Win32UI::DrawTextLine(HDC deviceContext, int x, int y, const std::wstring& text,
-						  COLORREF color, int size, bool bold, int maxWidth) const {
-	const bool emojiText = text.find(L"🔥") != std::wstring::npos || text.find(L"🩸") != std::wstring::npos ||
-		text.find(L"☠") != std::wstring::npos || text.find(L"⚡") != std::wstring::npos ||
-		text.find(L"🐌") != std::wstring::npos || text.find(L"☣") != std::wstring::npos ||
-		text.find(L"🛡") != std::wstring::npos || text.find(L"🔰") != std::wstring::npos ||
-		text.find(L"💚") != std::wstring::npos;
-	HFONT selected = emojiText ? statusFont_ : bold && size >= 24 ? headingFont_ : font_;
+						  COLORREF color, int size, bool bold, int maxWidth, bool emoji) const {
+	HFONT selected = emoji ? statusFont_ : bold && size >= 24 ? headingFont_ : font_;
 	HGDIOBJ oldFont = SelectObject(deviceContext, selected);
 	SetTextColor(deviceContext, color);
 	SetBkMode(deviceContext, TRANSPARENT);
@@ -1900,15 +1904,15 @@ std::wstring Win32UI::StatusName(StatusType type) const {
 
 std::wstring Win32UI::CombatStatusSymbol(StatusType type) const {
 	switch (type) {
-	case StatusType::Burn: return L"🔥";
-	case StatusType::Bleed: return L"🩸";
-	case StatusType::Poison: return L"☠️";
-	case StatusType::Stun: return L"⚡";
-	case StatusType::Slow: return L"🐌";
-	case StatusType::VerdigrisMark: return L"☣️";
-	case StatusType::Barrier: return L"🛡️";
-	case StatusType::DamageReduction: return L"🔰";
-	case StatusType::HealOverTime: return L"💚";
+	case StatusType::Burn: return L"\U0001F525";
+	case StatusType::Bleed: return L"\U0001FA78";
+	case StatusType::Poison: return L"\u2620\uFE0F";
+	case StatusType::Stun: return L"\u26A1";
+	case StatusType::Slow: return L"\U0001F40C";
+	case StatusType::VerdigrisMark: return L"\u2623\uFE0F";
+	case StatusType::Barrier: return L"\U0001F6E1\uFE0F";
+	case StatusType::DamageReduction: return L"\U0001F6E1\uFE0F";
+	case StatusType::HealOverTime: return L"\U0001F49A";
 	}
 	return L"•";
 }

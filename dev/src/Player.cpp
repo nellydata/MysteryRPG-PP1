@@ -228,14 +228,19 @@ bool Player::UseConsumable(const std::string& itemName, Enemy* target) {
     Item* item = inventory_.FindItem(itemName);
     if (item == nullptr || item->getCategory() != ItemCategory::Consumable) return false;
     const std::string& effect = item->getEffect();
-    if (effect.find("restore_20") != std::string::npos) heal(maxHp_ * 20 / 100);
-    else if (effect.find("restore_35") != std::string::npos) {
+    if (effect.find("restore_35") != std::string::npos) {
         heal(maxHp_ * 35 / 100);
         statuses_.erase(std::remove_if(statuses_.begin(), statuses_.end(), [](const StatusEffect& status) {
             return status.type == StatusType::Bleed;
         }), statuses_.end());
     }
-    else if (effect.find("restore_50") != std::string::npos) heal(maxHp_ * 50 / 100);
+    else if (effect.find("restore_") == 0) {
+        const std::size_t start = 8;
+        const std::size_t end = effect.find('_', start);
+        const int percent = end == std::string::npos ? 0 : std::stoi(effect.substr(start, end - start));
+        if (percent <= 0) return false;
+        heal(maxHp_ * percent / 100);
+    }
     else if (effect == "remove_all_debuffs") CleanseNegativeStatuses();
     else if (effect == "remove_burn_and_poison") {
         statuses_.erase(std::remove_if(statuses_.begin(), statuses_.end(), [](const StatusEffect& status) {

@@ -8,6 +8,7 @@
 #include "Enemy.h"
 #include "EnemyCatalog.h"
 #include "Item.h"
+#include "MapManager.h"
 #include "Nun.h"
 #include "Player.h"
 #include "ProgressionManager.h"
@@ -37,7 +38,11 @@ int SpawnChance(EnemySpawnCondition condition) {
 
 void SpawnEnemy(Area& area, unsigned seed) {
     const int level = 1 + static_cast<int>((seed / 3) % 5);
-    if (auto enemy = CreateRandomCatalogueEnemy(seed, level, false, false))
+    MapManager map;
+    const RoomDefinition* definition = map.GetRoomDefinition(area);
+    if (definition != nullptr) {
+        if (auto enemy = CreateRoomEnemy(*definition, seed, level, area.HasBossBeenDefeated())) area.addEnemy(std::move(enemy));
+    } else if (auto enemy = CreateRandomCatalogueEnemy(seed, level, false, false))
         area.addEnemy(std::move(enemy));
 }
 
@@ -79,9 +84,10 @@ void SearchRoom(Area& area, Player& player) {
         return;
     }
 
-    const auto consumables = BuildConsumableCatalog();
-    const auto clues = BuildClueCatalog();
+    MapManager map;
+    const RoomDefinition* definition = map.GetRoomDefinition(area);
     const std::string& room = area.getName();
+    const auto clues = BuildClueCatalog();
     if (room == "Archive Room") {
         for (const auto& definition : clues) {
             if (definition.name == "choir_logbook") {
@@ -90,12 +96,9 @@ void SearchRoom(Area& area, Player& player) {
             }
         }
     } else {
-        for (const auto& definition : consumables) {
-            if (definition.name == "cellar_rations") {
-                player.AddItem(std::make_unique<Item>(definition));
-                break;
-            }
-        }
+        const ItemDefinition reward = BuildInvestigationConsumable(
+            definition == nullptr ? ConsumableProfile::SupplyCache : definition->consumableProfile, 1);
+        if (!reward.name.empty()) player.AddItem(std::make_unique<Item>(reward));
     }
     std::cout << "\nYou found something useful. It was added to your inventory.\n";
 }

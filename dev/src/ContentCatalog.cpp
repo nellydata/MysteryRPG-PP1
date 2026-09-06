@@ -2,8 +2,20 @@
 #include <algorithm>
 #include <random>
 #include "CombatMath.h"
+#include "EnemyCatalog.h"
+#include "MapManager.h"
 
 namespace {
+EquipmentFamily FamilyForName(const std::string& name) {
+	if (name.find("verdigris") != std::string::npos) return EquipmentFamily::Verdigris;
+	if (name.find("mechan") != std::string::npos || name.find("clockwork") != std::string::npos) return EquipmentFamily::Mechanica;
+	if (name.find("choir") != std::string::npos) return EquipmentFamily::Choir;
+	if (name.find("shimmer") != std::string::npos) return EquipmentFamily::Shimmer;
+	if (name.find("occult") != std::string::npos) return EquipmentFamily::Occultist;
+	if (name.find("iron") != std::string::npos) return EquipmentFamily::Ironbound;
+	return EquipmentFamily::Plain;
+}
+
 void SetSlotRules(ItemDefinition& item, EquipSlot slot, const std::string& mainStat) {
 	item.mainStat = mainStat;
 	switch (slot) {
@@ -29,6 +41,7 @@ void SetSlotRules(ItemDefinition& item, EquipSlot slot, const std::string& mainS
 		break;
 	default: break;
 	}
+
 			if (!item.setName.empty()) item.theme = item.setName + ": " + item.theme;
 }
 
@@ -122,6 +135,7 @@ void AddEquippables(std::vector<ItemDefinition>& result, EquipSlot slot, const c
 			else resolvedMainStat = "hp";
 		}
 		item.name = name;
+		item.family = FamilyForName(name);
 		item.description = "Micare " + resolvedMainStat + " equipment.";
 		item.category = ItemCategory::Equippable;
 		item.rarity = rarity;
@@ -136,6 +150,7 @@ void AddEquippables(std::vector<ItemDefinition>& result, EquipSlot slot, const c
 			item.mainStatValue = mainStatValue;
 			item.stats.spd = mainStatValue;
 		}
+
 		else if (resolvedMainStat == "acc" || resolvedMainStat == "res") item.mainStatPercent = PercentMainStatValue(rarity);
 		else if (resolvedMainStat == "hp") item.mainStatPercent = static_cast<int>(rarity) * 5 + 5;
 		else item.mainStatValue = mainStatValue;
@@ -161,6 +176,97 @@ void AddEquippables(std::vector<ItemDefinition>& result, EquipSlot slot, const c
 		result.push_back(item);
 	}
 }
+}
+
+bool ValidateMicareContent(std::string* error) {
+	if (!ValidateContentCatalog(error)) return false;
+	if (!ValidateEnemyCatalogue(error)) return false;
+	for (const auto& room : MapManager::GetFloor1Definitions()) {
+		if (room.id.empty() || room.bossId.empty() || room.firstBossSpawnChance != 50) {
+			if (error) *error = "Room profile has invalid boss progression: " + room.id;
+			return false;
+		}
+		if (FindEnemyDefinition(room.bossId) == nullptr) {
+			if (error) *error = "Room boss is missing from enemy catalogue: " + room.bossId;
+			return false;
+		}
+		for (const auto& entry : room.enemiesBeforeClear) if (FindEnemyDefinition(entry.enemyId) == nullptr) {
+			if (error) *error = "Room pool enemy is missing: " + entry.enemyId;
+			return false;
+		}
+		for (const auto& entry : room.enemiesAfterClear) if (FindEnemyDefinition(entry.enemyId) == nullptr) {
+			if (error) *error = "Farm pool enemy is missing: " + entry.enemyId;
+			return false;
+		}
+	}
+	return true;
+}
+
+std::string InvestigationConsumableName(ConsumableProfile profile, int playerLevel) {
+	if (playerLevel >= 20) {
+		switch (profile) {
+		case ConsumableProfile::Restorative: return "lumen_draught";
+		case ConsumableProfile::OccultMechanica: return "shimmer_vial";
+		case ConsumableProfile::Ritual: return "ritual_powder";
+		default: break;
+		}
+	}
+	switch (profile) {
+	case ConsumableProfile::Restorative: return "blessed_bandages";
+	case ConsumableProfile::OccultMechanica: return "mechanical_charge";
+	case ConsumableProfile::Ritual: return "ritual_powder";
+	case ConsumableProfile::SupplyCache:
+	case ConsumableProfile::Devotional: return playerLevel >= 10 ? "blessed_bandages" : "cellar_rations";
+	}
+	return "cellar_rations";
+}
+
+ItemDefinition BuildInvestigationConsumable(ConsumableProfile profile, int playerLevel) {
+	const std::string name = InvestigationConsumableName(profile, playerLevel);
+	for (auto definition : BuildConsumableCatalog()) {
+		if (definition.name != name) continue;
+		if (definition.effect.find("restore_") == 0) {
+			const int percent = (std::min)(80, 20 + (std::max)(0, playerLevel - 1) / 4);
+			definition.effect = "restore_" + std::to_string(percent) + "_percent_hp";
+			definition.description = "Restore " + std::to_string(percent) + " percent HP.";
+		}
+		return definition;
+	}
+	return {};
+}
+
+std::vector<ItemDefinition> GenerateLoot(const LootContext& context, unsigned seed) {
+	std::vector<ItemDefinition> result;
+	const bool boss = context.enemyTier == EnemyTier::Boss;
+	const bool elite = context.enemyTier == EnemyTier::Elite;
+	const int level = (std::max)(1, context.playerLevel);
+	const int count = boss ? (context.bossFirstClear ? 4 : 3) : elite ? 2 : level >= 20 ? 2 : 1;
+	for (int drop = 0; drop < count; ++drop) {
+		const unsigned roll = seed + static_cast<unsigned>(drop * 41);
+		const int dropChance = boss || elite ? 100 : (std::min)(90, 15 + level);
+		if (static_cast<int>(roll % 100) >= dropChance) continue;
+		const int rarityRoll = static_cast<int>((roll / 7) % 100);
+		Rarity rarity = Rarity::Common;
+		if (boss) rarity = rarityRoll < (context.bossFirstClear ? 35 : 20) ? Rarity::Artifact : rarityRoll < 70 ? Rarity::Legendary : rarityRoll < 92 ? Rarity::Epic : Rarity::Rare;
+		else if (elite) rarity = rarityRoll < 20 ? Rarity::Epic : rarityRoll < 70 ? Rarity::Epic : Rarity::Rare;
+		else rarity = rarityRoll < (level / 5) ? Rarity::Epic : rarityRoll < 35 ? Rarity::Rare : rarityRoll < 75 ? Rarity::Uncommon : Rarity::Common;
+		std::vector<ItemDefinition> candidates;
+		for (const auto& item : BuildEquippableCatalog()) if (item.rarity == rarity) candidates.push_back(item);
+		if (!candidates.empty()) result.push_back(candidates[(roll / 13) % candidates.size()]);
+	}
+	return result;
+}
+
+bool ValidateContentCatalog(std::string* error) {
+	const auto validate = [](const std::vector<ItemDefinition>& items) {
+		for (const auto& item : items) if (item.name.empty()) return false;
+		return true;
+	};
+	if (!validate(BuildEquippableCatalog()) || !validate(BuildConsumableCatalog()) || !validate(BuildClueCatalog()) || !validate(BuildCruxCatalog())) {
+		if (error) *error = "Content catalogue contains an unnamed item.";
+		return false;
+	}
+	return true;
 }
 
 std::vector<ItemDefinition> BuildEquippableCatalog() {

@@ -82,7 +82,7 @@ private:
 	void DrawPanel(HDC deviceContext, RECT bounds, const std::wstring& title);
 	void DrawHealthBar(HDC deviceContext, int x, int y, int width, int height, int current, int maximum, COLORREF fillColor) const;
 	int DrawTextLine(HDC deviceContext, int x, int y, const std::wstring& text,
-					 COLORREF color, int size = 18, bool bold = false, int maxWidth = 0) const;
+						 COLORREF color, int size = 18, bool bold = false, int maxWidth = 0, bool emoji = false) const;
 	void DrawRainbowText(HDC deviceContext, int x, int y, const std::wstring& text,
 					 int size = 18, bool bold = false) const;
 	std::wstring ToWide(const std::string& text) const;

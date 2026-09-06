@@ -8,6 +8,20 @@ EnemySkillDefinition Skill(const char* name, const char* effect, int multiplier,
 	return {name, effect, multiplier, cooldown, duration};
 }
 
+namespace {
+const WeightedEnemyEntry* SelectPoolEntry(const std::vector<WeightedEnemyEntry>& pool, unsigned seed) {
+	int total = 0;
+	for (const auto& entry : pool) total += (std::max)(0, entry.weight);
+	if (total <= 0) return nullptr;
+	int roll = static_cast<int>(seed % static_cast<unsigned>(total));
+	for (const auto& entry : pool) {
+		if (roll < entry.weight) return &entry;
+		roll -= entry.weight;
+	}
+	return nullptr;
+}
+}
+
 std::vector<EnemyDefinition> BuildCatalogue() {
 	return {
 		{"Devotee Acolyte", EnemyFaction::Devotee, EnemyTier::Basic, 800, 24, 40, 50, 35,
@@ -57,14 +71,35 @@ std::vector<EnemyDefinition> BuildCatalogue() {
 		{"Overlord-Prime", EnemyFaction::Automata, EnemyTier::Boss, 6000, 250, 200, 160, 350,
 			{Skill("Prime Execution", "crit_damage_up", 450, 5, 3), Skill("Overclock Core", "extra_turn", 0, 4), Skill("Prime Directive", "accuracy_up", 0, 6, 3)}, "Boss Phases", 20, 70, 10},
 		{"Matron of Rot", EnemyFaction::Verdigris, EnemyTier::Boss, 6500, 260, 210, 150, 375,
-			{Skill("Rot Nova", "poison", 0, 5, 4), Skill("Hemorrhage Wave", "bleed", 0, 5, 4), Skill("Pyre Collapse", "burn", 0, 5, 4), Skill("Toxic Benediction", "dot_up", 0, 6, 2)}, "Boss Phases", 20, 70, 10}
+			{Skill("Rot Nova", "poison", 0, 5, 4), Skill("Hemorrhage Wave", "bleed", 0, 5, 4), Skill("Pyre Collapse", "burn", 0, 5, 4), Skill("Toxic Benediction", "dot_up", 0, 6, 2)}, "Boss Phases", 20, 70, 10},
+		{"Sister Caligo, Keeper of the Font", EnemyFaction::Devotee, EnemyTier::Boss, 4200, 175, 170, 145, 260,
+			{Skill("Caligo's Benediction", "heal_cleanse", 0, 4), Skill("Font's Judgment", "def_down", 300, 4, 3), Skill("Drowning Litany", "burn_bleed", 0, 6, 3)}, "Sanctuary Phases", 20, 70, 10},
+		{"The Reliquary Engine", EnemyFaction::Automata, EnemyTier::Boss, 5600, 240, 220, 125, 340,
+			{Skill("Vault Protocol", "barrier", 0, 5), Skill("Reliquary Beam", "guaranteed_crit", 360, 5), Skill("Overload Cascade", "extra_turn", 0, 4)}, "Vault Phases", 20, 70, 10}
 	};
 }
+
 }
 
 const std::vector<EnemyDefinition>& GetEnemyCatalogue() {
 	static const std::vector<EnemyDefinition> catalogue = BuildCatalogue();
 	return catalogue;
+}
+
+std::unique_ptr<Enemy> CreateRoomEnemy(const RoomDefinition& room, unsigned seed, int level, bool afterClear) {
+	const auto& pool = afterClear ? room.enemiesAfterClear : room.enemiesBeforeClear;
+	const auto* entry = SelectPoolEntry(pool, seed);
+	return entry == nullptr ? nullptr : CreateCatalogueEnemy(entry->enemyId, level);
+}
+
+bool ValidateEnemyCatalogue(std::string* error) {
+	for (const auto& definition : GetEnemyCatalogue()) {
+		if (definition.name.empty() || definition.hpBase <= 0 || definition.atkBase <= 0) {
+			if (error) *error = "Invalid enemy definition: " + definition.name;
+			return false;
+		}
+	}
+	return true;
 }
 
 const EnemyDefinition* FindEnemyDefinition(const std::string& name) {

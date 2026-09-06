@@ -84,6 +84,45 @@ enum class ItemCategory { Equippable, Consumable, Clue, Crux, ShimmerSkill };
 
 enum class EnemyFaction { Devotee, Automata, Verdigris };
 enum class EnemyTier { Basic, Rare, Epic, Elite, Boss };
+enum class EnemyRole { Balanced, Tank, Striker, Speedster, Support, Controller, DotCaster, Executioner };
+enum class RoomType { Sanctuary, Entrance, Archive, Chapel, Storage };
+enum class ConsumableProfile { Restorative, Devotional, OccultMechanica, Ritual, SupplyCache };
+enum class EquipmentFamily { Plain, Choir, Occultist, Shimmer, Verdigris, Mechanica, Ironbound, Sanctum, Martyr, Clockwork };
+
+struct WeightedEnemyEntry {
+	std::string enemyId;
+	int weight = 1;
+};
+
+struct RoomDefinition {
+	std::string id;
+	std::string displayName;
+	RoomType type = RoomType::Entrance;
+	std::vector<WeightedEnemyEntry> enemiesBeforeClear;
+	std::vector<WeightedEnemyEntry> enemiesAfterClear;
+	std::string bossId;
+	int firstBossSpawnChance = 50;
+	int farmBossStartingChance = 8;
+	ConsumableProfile consumableProfile = ConsumableProfile::Devotional;
+	std::string nextRoomId;
+};
+
+struct LootContext {
+	int playerLevel = 1;
+	std::string roomId;
+	std::string enemyId;
+	EnemyFaction faction = EnemyFaction::Devotee;
+	EnemyTier enemyTier = EnemyTier::Basic;
+	bool bossFirstClear = false;
+	bool bossFarmEcho = false;
+};
+
+struct DropProfile {
+	int equipmentChance = 0;
+	int consumableChance = 0;
+	int guaranteedEquipment = 0;
+	int bonusEquipmentChance = 0;
+};
 
 struct EnemySkillDefinition {
 	std::string name;
@@ -107,6 +146,8 @@ struct EnemyDefinition {
 	int rareDropChance = 0;
 	int epicDropChance = 0;
 	int legendaryDropChance = 0;
+	EnemyRole role = EnemyRole::Balanced;
+	std::string lootTag;
 };
 
 enum class ItemStat {
@@ -145,4 +186,5 @@ struct ItemDefinition {
 	std::string setPassive;
 	int mainStatValue = 0;
 	std::vector<std::pair<ItemStat, int>> substats;
+	EquipmentFamily family = EquipmentFamily::Plain;
 };

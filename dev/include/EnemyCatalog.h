@@ -11,6 +11,8 @@ std::unique_ptr<class Enemy> CreateCatalogueEnemy(const std::string& name, int l
 std::unique_ptr<class Enemy> CreateRandomCatalogueEnemy(unsigned seed, int level, bool allowElite = true, bool allowBoss = false);
 std::unique_ptr<class Enemy> CreateRandomCatalogueEnemy(unsigned seed, int level,
 	EnemyFaction faction, EnemyTier maximumTier);
+std::unique_ptr<class Enemy> CreateRoomEnemy(const RoomDefinition& room, unsigned seed, int level, bool afterClear);
+bool ValidateEnemyCatalogue(std::string* error = nullptr);
 
 const char* EnemyFactionName(EnemyFaction faction);
 const char* EnemyTierName(EnemyTier tier);

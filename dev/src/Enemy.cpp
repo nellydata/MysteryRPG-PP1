@@ -12,6 +12,13 @@ int ScaleStat(int base, double growth, int level, int cap) {
 	return (std::max)(1, (std::min)(cap, scaled));
 }
 
+int NormalizeSpeed(int legacySpeed, EnemyFaction faction) {
+	const int factionAdjustment = faction == EnemyFaction::Automata ? 5 :
+		faction == EnemyFaction::Devotee ? -3 : 0;
+	return (std::max)(CombatMath::Balance::MinimumEnemySpeed,
+		(std::min)(CombatMath::Balance::MaximumEnemySpeed, 75 + legacySpeed * 35 / 100 + factionAdjustment));
+}
+
 }
 
 Enemy::Enemy(const std::string& name, int hp, int atk, int xpReward, int level)
@@ -40,7 +47,7 @@ Enemy::Enemy(const EnemyDefinition& definition, int level)
 	  atk_(ScaleStat(definition.atkBase, definition.tier == EnemyTier::Boss ? 1.22 : definition.tier == EnemyTier::Elite ? 1.18 : 1.14, level, 5000)),
 	  xpReward_(definition.xpReward * (std::max)(1, level)),
 	  defense_(ScaleStat(definition.defBase, definition.tier == EnemyTier::Boss ? 1.22 : definition.tier == EnemyTier::Elite ? 1.18 : 1.14, level, 5000)),
-	  speed_(definition.speed), level_(level), resistance_(0), evasion_(0),
+	  speed_(NormalizeSpeed(definition.speed, definition.faction)), level_(level), resistance_(0), evasion_(0),
 	  critRate_(5), critDamage_(150), accuracy_(100),
 	  faction_(definition.faction), tier_(definition.tier), skills_(definition.skills),
 		phase_(1) {
@@ -61,9 +68,9 @@ void Enemy::ProcessStatuses(std::vector<std::pair<StatusType, int>>& damageEvent
 	healing = 0;
 	for (auto& status : statuses_) {
 		int damage = 0;
-		if (status.type == StatusType::Bleed) damage = CombatMath::Mitigate(status.sourceAttack * 30 * (100 + status.dotPotency) / 10000, status.sourceDefense);
-		else if (status.type == StatusType::Burn) damage = CombatMath::Mitigate(status.sourceAttack * 60 * (100 + status.dotPotency) / 10000, status.sourceDefense);
-		else if (status.type == StatusType::Poison) damage = CombatMath::Mitigate(maxHp_ * 5 * (100 + status.dotPotency) / 10000, status.sourceDefense);
+		if (status.type == StatusType::Bleed) damage = status.sourceAttack * 30 * (100 + status.dotPotency) / 10000;
+		else if (status.type == StatusType::Burn) damage = status.sourceAttack * 60 * (100 + status.dotPotency) / 10000;
+		else if (status.type == StatusType::Poison) damage = maxHp_ * 5 * (100 + status.dotPotency) / 10000;
 		else if (status.type == StatusType::HealOverTime) healing += status.potency;
 		if (damage > 0) {
 			takeDamage(damage);
@@ -130,11 +137,19 @@ bool Enemy::HasStatus(StatusType type) const {
 
 bool Enemy::ApplyStatus(const StatusEffect& status, int accuracy) {
 	const unsigned roll = static_cast<unsigned>((hp_ * 17 + level_ * 31 + static_cast<int>(status.type) * 13) % 100);
-	if (status.type != StatusType::HealOverTime) {
+	if (GetStatusStackPolicy(status.type) != StackPolicy::IndependentStacks) {
 		const int hitChance = CombatMath::AccuracyChance(100, accuracy, resistance_);
 		if (roll >= static_cast<unsigned>(hitChance)) return false;
 	}
-	if (status.type != StatusType::HealOverTime && HasStatus(status.type)) return false;
+	if (status.type != StatusType::HealOverTime &&
+		GetStatusStackPolicy(status.type) != StackPolicy::IndependentStacks) {
+		for (auto& existing : statuses_) {
+			if (existing.type == status.type) {
+				existing = status;
+				return true;
+			}
+		}
+	}
 	statuses_.push_back(status);
 	return true;
 }
@@ -143,7 +158,7 @@ void Enemy::ProcessStatuses() {
 	for (auto& status : statuses_) {
 		if (status.type == StatusType::Bleed) takeDamage(status.sourceAttack * 30 * (100 + status.dotPotency) / 10000);
 		else if (status.type == StatusType::Burn) takeDamage(status.sourceAttack * 60 * (100 + status.dotPotency) / 10000);
-		else if (status.type == StatusType::Poison) takeDamage(maxHp_ * 5 / 100);
+		else if (status.type == StatusType::Poison) takeDamage(maxHp_ * 5 * (100 + status.dotPotency) / 10000);
 		--status.turns;
 	}
 	statuses_.erase(std::remove_if(statuses_.begin(), statuses_.end(), [](const StatusEffect& status) {

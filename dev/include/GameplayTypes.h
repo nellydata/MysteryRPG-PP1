@@ -53,6 +53,31 @@ struct StatusEffect {
 	int sourceDefense = 0;
 };
 
+enum class StackPolicy {
+	IndependentStacks,
+	RefreshDuration,
+	ExtendDuration,
+	ReplaceIfStronger,
+	Unique
+};
+
+inline StackPolicy GetStatusStackPolicy(StatusType type) {
+	switch (type) {
+	case StatusType::Burn:
+	case StatusType::Bleed:
+	case StatusType::Poison:
+		return StackPolicy::IndependentStacks;
+	case StatusType::HealOverTime:
+	case StatusType::Stun:
+	case StatusType::Slow:
+	case StatusType::VerdigrisMark:
+	case StatusType::DamageReduction:
+	case StatusType::Barrier:
+		return StackPolicy::RefreshDuration;
+	}
+	return StackPolicy::Unique;
+}
+
 enum class Rarity { Common, Uncommon, Rare, Epic, Legendary, Artifact };
 enum class EquipSlot { Head, Torso, Boots, Hand, Accessory, None };
 enum class ItemCategory { Equippable, Consumable, Clue, Crux, ShimmerSkill };

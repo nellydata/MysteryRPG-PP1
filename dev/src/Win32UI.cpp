@@ -132,20 +132,24 @@ void Win32UI::ChangeView(View nextView) {
 void Win32UI::LeaveCombat() {
 	KillTimer(window_, 1);
 	enemyTurnPending_ = false;
+	ResetCombatSelection();
 	player_.ClearStatuses();
 	if (activeEnemy_ != nullptr) activeEnemy_->ClearStatuses();
 	activeEnemy_ = nullptr;
-	combatItemSelection_ = false;
-	combatSkillSelection_ = false;
-	combatAttackSelection_ = false;
-	combatTargetConfirmed_ = false;
 	combatTransition_ = false;
-	selectedCombatSkillName_.clear();
 	combatDefeatRecovery_ = false;
 	combat_.ClearEvents();
 	if (selectedRoom_ >= 0 && selectedRoom_ < static_cast<int>(mapManager_.GetRooms().size())) {
 		mapManager_.GetRooms()[selectedRoom_].ClearEnemies();
 	}
+}
+
+void Win32UI::ResetCombatSelection() {
+	combatAttackSelection_ = false;
+	combatSkillSelection_ = false;
+	combatItemSelection_ = false;
+	combatTargetConfirmed_ = false;
+	selectedCombatSkillName_.clear();
 }
 
 void Win32UI::ShowDefeatRecovery() {
@@ -180,7 +184,7 @@ std::wstring Win32UI::FormatDisplayText(const std::string& text) const {
 }
 
 Win32UI::Win32UI()
-	: window_(nullptr), nameWindow_(nullptr), nameEdit_(nullptr), controls_{}, roomButtons_{}, inspectButtons_{}, font_(nullptr), headingFont_(nullptr),
+	: window_(nullptr), nameWindow_(nullptr), nameEdit_(nullptr), controls_{}, roomButtons_{}, inspectButtons_{}, font_(nullptr), headingFont_(nullptr), statusFont_(nullptr),
 	  view_(View::Floor), selectedRoom_(0), player_("Adelaide", 20, 10),
 	  mapManager_(), combat_(), progression_(), activeEnemy_(nullptr) {
 	InitializePlayer();
@@ -190,6 +194,7 @@ Win32UI::Win32UI()
 Win32UI::~Win32UI() {
 	if (font_ != nullptr) DeleteObject(font_);
 	if (headingFont_ != nullptr) DeleteObject(headingFont_);
+	if (statusFont_ != nullptr) DeleteObject(statusFont_);
 }
 
 bool Win32UI::ConsoleModeRequested() {
@@ -262,6 +267,9 @@ void Win32UI::CreateControls() {
 	headingFont_ = CreateFontW(26, 0, 0, 0, FW_SEMIBOLD, FALSE, FALSE, FALSE,
 							   DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
 														   CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, L"IM FELL English");
+	statusFont_ = CreateFontW(17, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+		DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY,
+		DEFAULT_PITCH | FF_DONTCARE, L"Segoe UI Emoji");
 
 	auto createButton = [&](int index, int id, const wchar_t* text) {
 		const DWORD style = WS_CHILD | WS_TABSTOP | BS_PUSHBUTTON | BS_OWNERDRAW;
@@ -421,6 +429,7 @@ void Win32UI::RefreshControls() {
 			SetWindowTextW(controls_[31], L"END BATTLE (FULL HP)");
 			ShowWindow(controls_[24], SW_SHOW);
 			ShowWindow(controls_[31], SW_SHOW);
+		} else if (combatTransition_ || !combat_.IsPlayerTurn()) {
 		} else if (combatItemSelection_) {
 			combatItemNames_.clear();
 			for (const auto& item : player_.GetInventory().GetItems()) {
@@ -448,15 +457,6 @@ void Win32UI::RefreshControls() {
 			}
 			SetWindowTextW(controls_[21], L"CANCEL");
 			ShowWindow(controls_[21], SW_SHOW);
-		} else if (combatTransition_ || !combat_.IsPlayerTurn()) {
-			ShowWindow(controls_[24], SW_SHOW);
-			ShowWindow(controls_[31], SW_SHOW);
-			ShowWindow(controls_[26], SW_SHOW);
-			ShowWindow(controls_[27], SW_SHOW);
-			EnableWindow(controls_[24], FALSE);
-			EnableWindow(controls_[31], FALSE);
-			EnableWindow(controls_[26], FALSE);
-			EnableWindow(controls_[27], FALSE);
 		} else {
 			targetEnemies_.clear();
 			if (selectedRoom_ >= 0 && selectedRoom_ < static_cast<int>(mapManager_.GetRooms().size())) {
@@ -468,8 +468,7 @@ void Win32UI::RefreshControls() {
 				for (std::size_t index = 0; index < targetEnemies_.size(); ++index) {
 					const bool selected = combatTargetConfirmed_ && targetEnemies_[index] == activeEnemy_;
 					const Enemy* enemy = targetEnemies_[index];
-					const std::wstring label = (selected ? L"SELECTED: " : L"TARGET: ") + FormatDisplayText(enemy->getName()) +
-						L"\nLV " + std::to_wstring(enemy->getLevel()) + L"  HP " + std::to_wstring(enemy->getHP()) + L"/" + std::to_wstring(enemy->getMaxHP());
+					const std::wstring label = (selected ? L"SELECTED: " : L"TARGET: ") + FormatDisplayText(enemy->getName());
 					SetWindowTextW(controls_[8 + index], label.c_str());
 					ShowWindow(controls_[8 + index], SW_SHOW);
 				}
@@ -741,6 +740,14 @@ std::string Win32UI::CompactConsumableSummary(const Item& item) const {
 void Win32UI::HandleCommand(int controlId) {
 	if (handlingCommand_) return;
 	handlingCommand_ = true;
+	const bool combatActionControl = controlId == ButtonAttack || controlId == ButtonItem ||
+		controlId == ButtonShimmer || controlId == ButtonFlee ||
+		(controlId >= InventoryButtonBase && controlId < InventoryButtonBase + 12) ||
+		(controlId >= SkillButtonBase && controlId < SkillButtonBase + 15);
+	if (view_ == View::Combat && combatActionControl && !combat_.IsPlayerTurn()) {
+		handlingCommand_ = false;
+		return;
+	}
 	if (controlId >= SortModeBase && controlId < FilterModeBase) {
 		if (controlId == SortModeBase + 0) inventorySort_ = InventorySort::AlphabeticalAscending;
 		else if (controlId == SortModeBase + 1) inventorySort_ = InventorySort::AlphabeticalDescending;
@@ -837,9 +844,9 @@ void Win32UI::HandleCommand(int controlId) {
 			selectedCombatSkillName_ = equippedSkillNames_[index];
 			combatSkillSelection_ = false;
 			auto selectedSkill = ShimmerSkill::Create(selectedCombatSkillName_);
-			if (selectedSkill != nullptr && selectedSkill->getTargetType() == ShimmerSkill::TargetType::Self) {
-				statusMessage_ = selectedCombatSkillName_ + " selected. Self-targeted skill ready.";
-							combat_.RecordInfo(player_.getName() + " selected " + selectedCombatSkillName_ + " targeting self.");
+			if (selectedSkill != nullptr && selectedSkill->getTargetType() != ShimmerSkill::TargetType::SingleEnemy) {
+				statusMessage_ = selectedCombatSkillName_ + " selected. It resolves immediately.";
+				combat_.RecordInfo(player_.getName() + " selected " + selectedCombatSkillName_ + ".");
 				PerformCombatAction(CombatAction::Shimmer);
 			} else {
 				combatTargetConfirmed_ = false;
@@ -950,6 +957,7 @@ void Win32UI::HandleCommand(int controlId) {
 			if (activeEnemy_ != nullptr && activeEnemy_->isAlive()) combat_.ResumeAfterRespawn(player_, *activeEnemy_);
 			else ShowDefeatRecovery();
 		} else if (player_.isAlive() && combat_.IsPlayerTurn()) {
+			ResetCombatSelection();
 			combatAttackSelection_ = true;
 			combatTargetConfirmed_ = false;
 			statusMessage_ = "Choose an enemy or cancel.";
@@ -961,9 +969,13 @@ void Win32UI::HandleCommand(int controlId) {
 			view_ = View::Floor;
 			viewHistory_.clear();
 			statusMessage_ = "Battle ended. You returned to the main floor with full HP.";
-		} else if (player_.isAlive()) ShowCombatItems();
+		} else if (player_.isAlive() && combat_.IsPlayerTurn()) {
+			ResetCombatSelection();
+			ShowCombatItems();
+		}
 	} else if (controlId == ButtonShimmer) {
 		if (player_.isAlive() && activeEnemy_ != nullptr && combat_.IsPlayerTurn()) {
+			ResetCombatSelection();
 			equippedSkillNames_ = progression_.GetEquippedShimmerSkills();
 			if (equippedSkillNames_.empty()) statusMessage_ = "No Shimmer skills are equipped.";
 			else combatSkillSelection_ = true;
@@ -1246,7 +1258,6 @@ void Win32UI::PerformCombatAction(CombatAction action) {
 		AddLog("Wait for your turn.");
 		return;
 	}
-	combat_.RecordInfo(player_.getName() + " is taking an action.");
 	if (action == CombatAction::Flee) {
 		if (!player_.isAlive()) return;
 		AddLog(player_.getName() + " withdrew from combat.");
@@ -1327,6 +1338,7 @@ void Win32UI::PerformCombatAction(CombatAction action) {
 	}
 	if (!combat_.IsPlayerTurn() && activeEnemy_->isAlive() && player_.isAlive()) ScheduleEnemyTurn();
 	SyncCombatEvents();
+	ResetCombatSelection();
 	statusMessage_.clear();
 	if (!player_.isAlive()) ShowDefeatRecovery();
 }
@@ -1463,6 +1475,7 @@ LRESULT Win32UI::HandleMessage(UINT message, WPARAM wParam, LPARAM lParam) {
 			if (view_ == View::Combat && activeEnemy_ != nullptr && activeEnemy_->isAlive() && player_.isAlive()) {
 				combat_.enemyTurn(player_, *activeEnemy_);
 				SyncCombatEvents();
+				RefreshControls();
 				UpdateWindow(window_);
 				if (!combat_.IsPlayerTurn() && activeEnemy_->isAlive() && player_.isAlive()) ScheduleEnemyTurn();
 				if (!player_.isAlive()) ShowDefeatRecovery();
@@ -1722,14 +1735,15 @@ void Win32UI::Paint(HDC deviceContext) {
 			DrawHealthBar(deviceContext, cardX, contentY + 28, 170, 12, target->getHP(), target->getMaxHP(), Danger);
 			DrawTextLine(deviceContext, cardX, contentY + 46, L"HP " + std::to_wstring(target->getHP()) + L" / " + std::to_wstring(target->getMaxHP()), Text, 14);
 			DrawTextLine(deviceContext, cardX, contentY + 66, L"LV " + std::to_wstring(target->getLevel()), Text, 15);
-			int enemyStatusY = contentY + 88;
+			std::wstring statusText;
 			for (const auto& status : target->GetStatuses()) {
-			const bool beneficial = status.type == StatusType::Barrier || status.type == StatusType::DamageReduction;
-			const bool healing = status.type == StatusType::HealOverTime;
-			DrawTextLine(deviceContext, cardX, enemyStatusY, StatusName(status.type) + L" (" + std::to_wstring(status.turns) + L")",
-				healing ? RGB(90, 210, 110) : beneficial ? RGB(90, 160, 245) : Danger, 15);
-			enemyStatusY += 24;
+				statusText += CombatStatusSymbol(status.type);
+				statusText += std::to_wstring(status.turns) + L"  ";
 			}
+			if (!statusText.empty()) {
+				DrawTextLine(deviceContext, cardX, contentY + 88, statusText, Text, 17, false, 170);
+			}
+			int enemyStatusY = contentY + 110;
 			if (target->getTier() == EnemyTier::Elite || target->getTier() == EnemyTier::Boss) {
 				for (std::size_t skillIndex = 0; skillIndex < target->GetSkills().size(); ++skillIndex) {
 					const int cooldown = target->GetSkillCooldown(skillIndex);
@@ -1829,7 +1843,12 @@ void Win32UI::DrawHealthBar(HDC deviceContext, int x, int y, int width, int heig
 
 int Win32UI::DrawTextLine(HDC deviceContext, int x, int y, const std::wstring& text,
 						  COLORREF color, int size, bool bold, int maxWidth) const {
-	HFONT selected = bold && size >= 24 ? headingFont_ : font_;
+	const bool emojiText = text.find(L"🔥") != std::wstring::npos || text.find(L"🩸") != std::wstring::npos ||
+		text.find(L"☠") != std::wstring::npos || text.find(L"⚡") != std::wstring::npos ||
+		text.find(L"🐌") != std::wstring::npos || text.find(L"☣") != std::wstring::npos ||
+		text.find(L"🛡") != std::wstring::npos || text.find(L"🔰") != std::wstring::npos ||
+		text.find(L"💚") != std::wstring::npos;
+	HFONT selected = emojiText ? statusFont_ : bold && size >= 24 ? headingFont_ : font_;
 	HGDIOBJ oldFont = SelectObject(deviceContext, selected);
 	SetTextColor(deviceContext, color);
 	SetBkMode(deviceContext, TRANSPARENT);
@@ -1877,4 +1896,19 @@ std::wstring Win32UI::StatusName(StatusType type) const {
 	case StatusType::Barrier: return L"Barrier";
 	}
 	return L"Unknown";
+}
+
+std::wstring Win32UI::CombatStatusSymbol(StatusType type) const {
+	switch (type) {
+	case StatusType::Burn: return L"🔥";
+	case StatusType::Bleed: return L"🩸";
+	case StatusType::Poison: return L"☠️";
+	case StatusType::Stun: return L"⚡";
+	case StatusType::Slow: return L"🐌";
+	case StatusType::VerdigrisMark: return L"☣️";
+	case StatusType::Barrier: return L"🛡️";
+	case StatusType::DamageReduction: return L"🔰";
+	case StatusType::HealOverTime: return L"💚";
+	}
+	return L"•";
 }

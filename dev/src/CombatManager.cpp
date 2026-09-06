@@ -59,7 +59,7 @@ int InterrogationChance(const Enemy& enemy, int playerLevel) {
 
 void AccumulateGaugesUntilReady(int& playerGauge, int& enemyGauge,
                                 int playerSpeed, int enemySpeed) {
-    while (playerGauge < 1000 && enemyGauge < 1000) {
+    for (int step = 0; step < 10000 && playerGauge < 1000 && enemyGauge < 1000; ++step) {
         playerGauge += (std::max)(1, playerSpeed);
         enemyGauge += (std::max)(1, enemySpeed);
     }
@@ -68,6 +68,8 @@ void AccumulateGaugesUntilReady(int& playerGauge, int& enemyGauge,
 
 void CombatManager::StartPlayerTurn(Player& player) {
     if (!player.isAlive()) return;
+    for (auto& cooldown : shimmerCooldowns_) if (cooldown.second > 0) --cooldown.second;
+    if (defaultSkill_ != nullptr) defaultSkill_->TickCooldown();
     AddEvent(CombatEvent::Kind::Turn, player.getName() + "'s turn.");
     const int healthBefore = player.getHP();
     player.ProcessStatuses();
@@ -149,7 +151,7 @@ void CombatManager::ContinueEncounter(Enemy& enemy) {
 
 bool CombatManager::resolve(CombatAction action, Player& player, Enemy& enemy,
                             ShimmerSkill* skill, ProgressionManager* progression) {
-    BeginEncounter(enemy);
+    if (activeEnemy_ == nullptr) BeginEncounter(enemy);
     blocked_ = false;
     if (turnNumber_ == 0 && playerGauge_ == 0 && enemyGauge_ == 0) {
         AccumulateGaugesUntilReady(playerGauge_, enemyGauge_, player.getSpeed(), enemy.getSpeed());
@@ -194,6 +196,9 @@ bool CombatManager::resolve(CombatAction action, Player& player, Enemy& enemy,
         }
         playerGauge_ -= 1000;
         playerTurn_ = false;
+        AccumulateGaugesUntilReady(playerGauge_, enemyGauge_, player.getSpeed(), enemy.getSpeed());
+        playerTurn_ = playerGauge_ >= 1000;
+        if (playerTurn_) StartPlayerTurn(player);
         return true;
     }
     case CombatAction::Shimmer:
@@ -235,6 +240,9 @@ bool CombatManager::resolve(CombatAction action, Player& player, Enemy& enemy,
         }
         playerGauge_ -= 1000;
         playerTurn_ = false;
+        AccumulateGaugesUntilReady(playerGauge_, enemyGauge_, player.getSpeed(), enemy.getSpeed());
+        playerTurn_ = playerGauge_ >= 1000;
+        if (playerTurn_) StartPlayerTurn(player);
         return true;
     }
     case CombatAction::Item: {
@@ -274,7 +282,7 @@ bool CombatManager::UseConsumable(const std::string& itemName, Player& player, E
     playerTurn_ = false;
     AccumulateGaugesUntilReady(playerGauge_, enemyGauge_, player.getSpeed(), enemy.getSpeed());
     playerTurn_ = playerGauge_ >= 1000;
-    if (playerTurn_) AddEvent(CombatEvent::Kind::Turn, player.getName() + "'s turn.");
+        if (playerTurn_) StartPlayerTurn(player);
     return true;
 }
 
@@ -337,7 +345,6 @@ void CombatManager::enemyTurn(Player& player, Enemy& enemy) {
         }
         if (!enemy.isAlive()) AddEvent(CombatEvent::Kind::Death, enemy.getName() + " has been defeated.");
         enemy.StartSkillCooldown(index);
-        for (auto& cooldown : shimmerCooldowns_) if (cooldown.second > 0) --cooldown.second;
         enemyGauge_ -= 1000;
         playerTurn_ = false;
         AccumulateGaugesUntilReady(playerGauge_, enemyGauge_, player.getSpeed(), enemy.getSpeed());
@@ -352,6 +359,7 @@ void CombatManager::enemyTurn(Player& player, Enemy& enemy) {
         playerTurn_ = false;
         AccumulateGaugesUntilReady(playerGauge_, enemyGauge_, player.getSpeed(), enemy.getSpeed());
         playerTurn_ = playerGauge_ >= 1000;
+        if (playerTurn_) StartPlayerTurn(player);
         return;
     }
     const int attackDamage = enemy.getAtk();
@@ -362,8 +370,6 @@ void CombatManager::enemyTurn(Player& player, Enemy& enemy) {
     AddEvent(CombatEvent::Kind::Damage, enemy.getName() + " deals " + std::to_string(finalDamage) + " damage to " + player.getName() + ".", finalDamage);
     if (!player.isAlive()) AddEvent(CombatEvent::Kind::Death, player.getName() + " has fallen.");
     std::cout << enemy.getName() << " attacks for " << damage << " damage.\n";
-    if (defaultSkill_ != nullptr) defaultSkill_->TickCooldown();
-    for (auto& cooldown : shimmerCooldowns_) if (cooldown.second > 0) --cooldown.second;
     enemyGauge_ -= 1000;
     playerTurn_ = false;
     AccumulateGaugesUntilReady(playerGauge_, enemyGauge_, player.getSpeed(), enemy.getSpeed());

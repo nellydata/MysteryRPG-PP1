@@ -36,7 +36,7 @@ bool ViolatesTheme(const Item& item) {
 
 Player::Player(const std::string& name, int maxHp, int maxSp)
     : name_(name), hp_(maxHp), maxHp_(maxHp), sp_(maxSp), maxSp_(maxSp),
-      baseStats_{maxHp, 10, 10, 20, 0, 0, 5, 150},
+      baseStats_{maxHp, 10, CombatMath::Balance::BasePlayerSpeed, 20, 0, 0, 5, 150},
       totalStats_(baseStats_), equipped_{nullptr, nullptr, nullptr, nullptr, nullptr} {}
 
 Player::~Player() = default;
@@ -265,16 +265,23 @@ bool Player::HasStatus(StatusType type) const {
 }
 
 void Player::ApplyStatus(const StatusEffect& status) {
-    if (status.type != StatusType::HealOverTime && HasStatus(status.type)) return;
+    if (GetStatusStackPolicy(status.type) != StackPolicy::IndependentStacks) {
+        for (auto& existing : statuses_) {
+            if (existing.type == status.type) {
+                existing = status;
+                return;
+            }
+        }
+    }
     statuses_.push_back(status);
 }
 
 void Player::ProcessStatuses() {
     bool barrierExpired = false;
     for (auto& status : statuses_) {
-        if (status.type == StatusType::Bleed) takeDamage(AbsorbDamage(CombatMath::Mitigate(status.sourceAttack * 30 * (100 + status.dotPotency) / 10000, status.sourceDefense)));
-        else if (status.type == StatusType::Burn) takeDamage(AbsorbDamage(CombatMath::Mitigate(status.sourceAttack * 60 * (100 + status.dotPotency) / 10000, status.sourceDefense)));
-        else if (status.type == StatusType::Poison) takeDamage(AbsorbDamage(CombatMath::Mitigate(maxHp_ * (100 + status.dotPotency) / 20 / 100, status.sourceDefense)));
+        if (status.type == StatusType::Bleed) takeDamage(AbsorbDamage(status.sourceAttack * 30 * (100 + status.dotPotency) / 10000));
+        else if (status.type == StatusType::Burn) takeDamage(AbsorbDamage(status.sourceAttack * 60 * (100 + status.dotPotency) / 10000));
+        else if (status.type == StatusType::Poison) takeDamage(AbsorbDamage(maxHp_ * 5 * (100 + status.dotPotency) / 10000));
         else if (status.type == StatusType::HealOverTime) heal(status.potency * (100 + totalStats_.healingPotency) / 100);
         --status.turns;
         if (status.type == StatusType::Barrier && status.turns <= 0) barrierExpired = true;

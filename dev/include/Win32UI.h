@@ -70,6 +70,7 @@ private:
 	void SearchRoom();
 	void PerformCombatAction(CombatAction action);
 	void ShowCombatItems();
+	void ResetCombatSelection();
 	std::string CompactConsumableSummary(const Item& item) const;
 	void AddLog(const std::string& message);
 	void SyncCombatEvents();
@@ -88,7 +89,7 @@ private:
 	std::wstring FormatDisplayText(const std::string& text) const;
 	std::string ToNarrow(const std::wstring& text) const;
 	std::wstring StatusName(StatusType type) const;
-	std::wstring CombatStatusSymbol(const std::string& message) const;
+	std::wstring CombatStatusSymbol(StatusType type) const;
 
 	HWND window_;
 	HWND nameWindow_;
@@ -98,6 +99,7 @@ private:
 	HWND inspectButtons_[5];
 	HFONT font_;
 	HFONT headingFont_;
+	HFONT statusFont_;
 	View view_;
 	std::vector<View> viewHistory_;
 	int selectedRoom_;

@@ -1,6 +1,7 @@
 #include "ContentCatalog.h"
 #include <algorithm>
 #include <random>
+#include "CombatMath.h"
 
 namespace {
 void SetSlotRules(ItemDefinition& item, EquipSlot slot, const std::string& mainStat) {
@@ -80,24 +81,12 @@ int MainStatValue(Rarity rarity, int value) {
 	return 100;
 }
 
-int SubstatValue(Rarity rarity) {
-	static std::mt19937 generator(0x53544154u);
-	std::uniform_int_distribution<int> roll;
-	switch (rarity) {
-	case Rarity::Rare: roll = std::uniform_int_distribution<int>(5, 7); break;
-	case Rarity::Epic: roll = std::uniform_int_distribution<int>(7, 10); break;
-	case Rarity::Legendary: roll = std::uniform_int_distribution<int>(10, 12); break;
-	case Rarity::Artifact: roll = std::uniform_int_distribution<int>(12, 15); break;
-	default: return 0;
-	}
-	return roll(generator);
-}
-
 int SubstatCount(Rarity rarity) {
 	switch (rarity) {
+	case Rarity::Uncommon: return 1;
 	case Rarity::Rare: return 1;
-	case Rarity::Epic: return 2;
-	case Rarity::Legendary: return 3;
+	case Rarity::Epic: return 3;
+	case Rarity::Legendary: return 4;
 	case Rarity::Artifact: return 4;
 	default: return 0;
 	}
@@ -110,7 +99,7 @@ void AddSubstat(ItemDefinition& item, ItemStat stat, int value) {
 int SpeedMainStatValue(Rarity rarity, int value) {
 	(void)value;
 	switch (rarity) {
-	case Rarity::Common: return 20;
+	case Rarity::Common: return 5;
 	case Rarity::Uncommon: return 40;
 	case Rarity::Rare: return 60;
 	case Rarity::Epic: return 80;
@@ -153,7 +142,8 @@ void AddEquippables(std::vector<ItemDefinition>& result, EquipSlot slot, const c
 		const int substatCount = SubstatCount(rarity);
 		for (int roll = 0; roll < substatCount && !item.allowedSubstats.empty(); ++roll) {
 			const ItemStat stat = item.allowedSubstats[static_cast<std::size_t>((i + roll * 3) % item.allowedSubstats.size())];
-			AddSubstat(item, stat, SubstatValue(rarity));
+			AddSubstat(item, stat, CombatMath::SubstatRoll(stat, rarity,
+				static_cast<unsigned>(i * 17 + roll * 31 + static_cast<int>(rarity) * 13)));
 		}
 		if (rarity == Rarity::Artifact) {
 			if (slot == EquipSlot::Head) { item.passive = "Critical hits reveal enemies and restore 8% HP"; item.stats.critRate += 8; item.stats.critDamage += 20; }
@@ -274,7 +264,11 @@ std::vector<ItemDefinition> BuildEquippableCatalog() {
 			else item.stats.atk = artifactMain;
 		}
 		for (int roll = 0; roll < SubstatCount(Rarity::Artifact); ++roll) {
-			if (!item.allowedSubstats.empty()) AddSubstat(item, item.allowedSubstats[static_cast<std::size_t>(roll % item.allowedSubstats.size())], SubstatValue(Rarity::Artifact));
+			if (!item.allowedSubstats.empty()) {
+				const ItemStat stat = item.allowedSubstats[static_cast<std::size_t>(roll % item.allowedSubstats.size())];
+				AddSubstat(item, stat, CombatMath::SubstatRoll(stat, Rarity::Artifact,
+					static_cast<unsigned>(roll * 31 + static_cast<int>(item.slot) * 17)));
+			}
 		}
 		if (item.name.find("verdigris") != std::string::npos) item.setName = "Verdigris Matron";
 		else if (item.name.find("choir") != std::string::npos) item.setName = "Shimmer Reliquary";

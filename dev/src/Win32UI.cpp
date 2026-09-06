@@ -15,13 +15,13 @@
 namespace {
 constexpr COLORREF Background = RGB(24, 24, 24);
 constexpr COLORREF Panel = RGB(35, 35, 35);
-constexpr COLORREF PanelEdge = RGB(155, 155, 155);
+constexpr COLORREF PanelEdge = RGB(108, 111, 105);
 constexpr COLORREF Text = RGB(235, 235, 235);
 constexpr COLORREF Muted = RGB(175, 175, 175);
-constexpr COLORREF Brass = RGB(220, 220, 220);
-constexpr COLORREF Verdigris = RGB(190, 190, 190);
-constexpr COLORREF Shimmer = RGB(245, 245, 245);
-constexpr COLORREF Danger = RGB(235, 75, 95);
+constexpr COLORREF Brass = RGB(190, 157, 92);
+constexpr COLORREF Verdigris = RGB(105, 157, 145);
+constexpr COLORREF Shimmer = RGB(190, 222, 220);
+constexpr COLORREF Danger = RGB(190, 76, 82);
 
 unsigned RoomSeed(const std::string& roomName) {
 	unsigned seed = 2166136261u;
@@ -180,7 +180,7 @@ std::wstring Win32UI::FormatDisplayText(const std::string& text) const {
 }
 
 Win32UI::Win32UI()
-	: window_(nullptr), nameWindow_(nullptr), nameEdit_(nullptr), controls_{}, font_(nullptr), headingFont_(nullptr),
+	: window_(nullptr), nameWindow_(nullptr), nameEdit_(nullptr), controls_{}, roomButtons_{}, inspectButtons_{}, font_(nullptr), headingFont_(nullptr),
 	  view_(View::Floor), selectedRoom_(0), player_("Adelaide", 20, 10),
 	  mapManager_(), combat_(), progression_(), activeEnemy_(nullptr) {
 	InitializePlayer();
@@ -265,14 +265,16 @@ void Win32UI::CreateControls() {
 
 	auto createButton = [&](int index, int id, const wchar_t* text) {
 		const DWORD style = WS_CHILD | WS_TABSTOP | BS_PUSHBUTTON | BS_OWNERDRAW;
-		controls_[index] = CreateWindowW(L"BUTTON", text, style,
+		HWND button = CreateWindowW(L"BUTTON", text, style,
 										 0, 0, 0, 0, window_, reinterpret_cast<HMENU>(id),
 										 GetModuleHandleW(nullptr), nullptr);
-		SendMessageW(controls_[index], WM_SETFONT, reinterpret_cast<WPARAM>(font_), TRUE);
+		if (index >= 0) controls_[index] = button;
+		SendMessageW(button, WM_SETFONT, reinterpret_cast<WPARAM>(font_), TRUE);
+		return button;
 	};
 
-	for (int i = 0; i < 4; ++i) createButton(i, RoomButtonBase + i, L"Room");
-	for (int i = 0; i < 4; ++i) createButton(4 + i, InspectButtonBase + i, L"Inspect");
+	for (int i = 0; i < 5; ++i) roomButtons_[i] = createButton(-1, RoomButtonBase + i, L"Room");
+	for (int i = 0; i < 5; ++i) inspectButtons_[i] = createButton(-1, InspectButtonBase + i, L"Inspect");
 	for (int i = 0; i < 12; ++i) createButton(8 + i, InventoryButtonBase + i, L"Item");
 	for (int i = 0; i < 15; ++i) createButton(36 + i, SkillButtonBase + i, L"Skill");
 	controls_[25] = CreateWindowW(L"EDIT", L"", WS_CHILD | WS_BORDER | ES_AUTOHSCROLL,
@@ -297,9 +299,11 @@ void Win32UI::CreateControls() {
 }
 
 void Win32UI::RefreshControls() {
-	if (controls_[0] == nullptr || refreshingControls_) return;
+	if (controls_[20] == nullptr || refreshingControls_) return;
 	refreshingControls_ = true;
 	for (HWND control : controls_) if (control != nullptr) ShowWindow(control, SW_HIDE);
+	for (HWND control : roomButtons_) if (control != nullptr) ShowWindow(control, SW_HIDE);
+	for (HWND control : inspectButtons_) if (control != nullptr) ShowWindow(control, SW_HIDE);
 	EnableWindow(controls_[24], TRUE);
 	EnableWindow(controls_[31], TRUE);
 	EnableWindow(controls_[26], TRUE);
@@ -311,11 +315,11 @@ void Win32UI::RefreshControls() {
 	if (view_ == View::Map) {
 		const auto& rooms = mapManager_.GetRooms();
 		visibleRoomIndices_.clear();
-		for (std::size_t i = 0; i < rooms.size() && visibleRoomIndices_.size() < 4; ++i) {
+		for (std::size_t i = 0; i < rooms.size() && visibleRoomIndices_.size() < 5; ++i) {
 			if (!rooms[i].IsUnlocked()) continue;
 			visibleRoomIndices_.push_back(static_cast<int>(i));
-			SetWindowTextW(controls_[visibleRoomIndices_.size() - 1], ToWide(rooms[i].getName()).c_str());
-			ShowWindow(controls_[visibleRoomIndices_.size() - 1], SW_SHOW);
+			SetWindowTextW(roomButtons_[visibleRoomIndices_.size() - 1], ToWide(rooms[i].getName()).c_str());
+			ShowWindow(roomButtons_[visibleRoomIndices_.size() - 1], SW_SHOW);
 		}
 		ShowWindow(controls_[22], SW_SHOW);
 		ShowWindow(controls_[29], SW_SHOW);
@@ -334,9 +338,9 @@ void Win32UI::RefreshControls() {
 			ShowWindow(controls_[21], SW_HIDE);
 		} else {
 			const auto& interactables = mapManager_.GetRooms()[selectedRoom_].GetVisibleInteractables();
-			for (std::size_t i = 0; i < interactables.size() && i < 4; ++i) {
-				SetWindowTextW(controls_[4 + i], ToWide(interactables[i]).c_str());
-				ShowWindow(controls_[4 + i], SW_SHOW);
+			for (std::size_t i = 0; i < interactables.size() && i < 5; ++i) {
+				SetWindowTextW(inspectButtons_[i], ToWide(interactables[i]).c_str());
+				ShowWindow(inspectButtons_[i], SW_SHOW);
 			}
 			ShowWindow(controls_[20], SW_SHOW);
 			ShowWindow(controls_[21], SW_SHOW);
@@ -355,10 +359,8 @@ void Win32UI::RefreshControls() {
 				const std::string searchable = Lowercase(item->getName() + " " + item->getDescription() + " " + item->getTheme() + " " + item->getPassive());
 				if (searchable.find(query) == std::string::npos) continue;
 			}
-			for (int quantity = 0; quantity < player_.GetInventory().GetQuantity(item->getName()); ++quantity) {
-				inventoryEntryItems_.push_back(const_cast<Item*>(item));
-				inventoryEntryDescriptions_.push_back(item->getDescription());
-			}
+			inventoryEntryItems_.push_back(const_cast<Item*>(item));
+			inventoryEntryDescriptions_.push_back(item->getDescription());
 		}
 		if (inventoryFilter_ < 0 || inventoryFilter_ == static_cast<int>(ItemCategory::Clue)) {
 			for (const auto& clue : player_.GetInventory().GetClues()) {
@@ -374,7 +376,9 @@ void Win32UI::RefreshControls() {
 			const int entry = firstEntry + button;
 			if (entry < static_cast<int>(inventoryEntryItems_.size())) {
 				const Item* item = inventoryEntryItems_[entry];
-				const std::string label = item == nullptr ? "Clue" : item->getName();
+				const std::string label = item == nullptr ? "Clue" : item->getName() +
+					(player_.GetInventory().GetQuantity(item->getName()) > 1
+						? " x" + std::to_string(player_.GetInventory().GetQuantity(item->getName())) : "");
 				SetWindowTextW(controls_[8 + button], FormatDisplayText(label).c_str());
 				ShowWindow(controls_[8 + button], SW_SHOW);
 			}
@@ -579,14 +583,14 @@ void Win32UI::LayoutControls(int width, int height) {
 		return;
 	}
 
-	for (int i = 0; i < 4; ++i) {
-		MoveWindow(controls_[i], center + (i % 2) * 225, actionY + (i / 2) * 50,
+	for (int i = 0; i < 5; ++i) {
+		MoveWindow(roomButtons_[i], center + (i % 2) * 225, actionY + (i / 2) * 50,
 				   buttonWidth, buttonHeight, TRUE);
 	}
-	for (int i = 0; i < 4; ++i) {
+	for (int i = 0; i < 5; ++i) {
 		const int column = i % 2;
 		const int row = i / 2;
-		MoveWindow(controls_[4 + i], center + column * (inventoryWidth * 2 + inventoryGap * 2),
+		MoveWindow(inspectButtons_[i], center + column * (inventoryWidth * 2 + inventoryGap * 2),
 				   actionY + row * 54, inventoryWidth * 2 + inventoryGap, buttonHeight, TRUE);
 	}
 	for (int i = 0; i < 12; ++i) {
@@ -776,10 +780,10 @@ void Win32UI::HandleCommand(int controlId) {
 		inventoryFilter_ = controlId == FilterModeBase ? -1 : controlId - FilterModeBase - 1;
 		selectedInventoryIndex_ = -1;
 		inventoryPage_ = 0;
-	} else if (controlId >= RoomButtonBase && controlId < RoomButtonBase + 4) {
+	} else if (controlId >= RoomButtonBase && controlId < RoomButtonBase + 5) {
 		const int buttonIndex = controlId - RoomButtonBase;
 		if (buttonIndex < static_cast<int>(visibleRoomIndices_.size())) EnterRoom(visibleRoomIndices_[buttonIndex]);
-	} else if (controlId >= InspectButtonBase && controlId < InspectButtonBase + 4) {
+	} else if (controlId >= InspectButtonBase && controlId < InspectButtonBase + 5) {
 		if (view_ == View::Room && selectedRoom_ >= 0 &&
 			selectedRoom_ < static_cast<int>(mapManager_.GetRooms().size())) {
 			const auto& interactables = mapManager_.GetRooms()[selectedRoom_].GetVisibleInteractables();
@@ -1488,10 +1492,15 @@ LRESULT Win32UI::HandleMessage(UINT message, WPARAM wParam, LPARAM lParam) {
 		const auto* draw = reinterpret_cast<const DRAWITEMSTRUCT*>(lParam);
 		if (draw != nullptr && draw->CtlType == ODT_BUTTON) {
 			const bool inventoryButton = draw->CtlID >= InventoryButtonBase && draw->CtlID < InventoryButtonBase + 12;
-			HBRUSH brush = CreateSolidBrush(((draw->itemState & ODS_SELECTED) != 0) ? RGB(45, 45, 45) : Background);
+			const bool inventorySelected = inventoryButton &&
+				inventoryPage_ * 12 + draw->CtlID - InventoryButtonBase == selectedInventoryIndex_;
+			HBRUSH brush = CreateSolidBrush((draw->itemState & ODS_SELECTED) != 0 || inventorySelected ? RGB(52, 61, 62) : Background);
 			FillRect(draw->hDC, &draw->rcItem, brush);
 			DeleteObject(brush);
-			FrameRect(draw->hDC, &draw->rcItem, reinterpret_cast<HBRUSH>(GetStockObject(WHITE_BRUSH)));
+			const COLORREF borderColor = inventorySelected ? Shimmer : PanelEdge;
+			HBRUSH border = CreateSolidBrush(borderColor);
+			FrameRect(draw->hDC, &draw->rcItem, border);
+			DeleteObject(border);
 			wchar_t label[128]{};
 			GetWindowTextW(draw->hwndItem, label, 128);
 			SetBkMode(draw->hDC, TRANSPARENT);
@@ -1540,7 +1549,7 @@ void Win32UI::Paint(HDC deviceContext) {
 	if (progression_.GetLevel() == 100) DrawRainbowText(deviceContext, 42, 110, ToWide(player_.getName()), 19, true);
 	else DrawTextLine(deviceContext, 42, 110, ToWide(player_.getName()), Text, 19, true);
 	DrawTextLine(deviceContext, 250, 110, L"LEVEL " + std::to_wstring(progression_.GetLevel()), Text, 19, true);
-	DrawTextLine(deviceContext, 42, 150, L"HP", Muted); DrawTextLine(deviceContext, 150, 150, std::to_wstring(player_.getHP()) + L" / " + std::to_wstring(player_.getMaxHP()), Text);
+	DrawTextLine(deviceContext, 42, 150, L"HP", Muted); DrawHealthBar(deviceContext, 80, 154, 145, 12, player_.getHP(), player_.getMaxHP(), Verdigris); DrawTextLine(deviceContext, 235, 150, std::to_wstring(player_.getHP()) + L" / " + std::to_wstring(player_.getMaxHP()), Text, 15);
 	DrawTextLine(deviceContext, 42, 182, L"XP", Muted); DrawTextLine(deviceContext, 150, 182,
 		std::to_wstring(progression_.GetXP()) + L" / " + std::to_wstring(progression_.GetXPToNextLevel()), Text);
 	DrawTextLine(deviceContext, 42, 214, L"DEF   " + std::to_wstring(player_.getDefense()) + L"     SPD   " + std::to_wstring(player_.getSpeed()), Text);
@@ -1612,8 +1621,10 @@ void Win32UI::Paint(HDC deviceContext) {
 				if (!selected->getDescription().empty()) {
 					detailY += DrawTextLine(deviceContext, detailX, detailY, FormatDisplayText(selected->getDescription()), Text, 18, false, detailWidth) + 8;
 				}
-				const std::string mainValue = selected->getMainStatPercent() > 0 ? "+" + std::to_string(selected->getMainStatPercent()) + "%" : "+" + std::to_string(selected->getMainStatValue());
-				detailY += DrawTextLine(deviceContext, detailX, detailY, L"Main stat: " + FormatDisplayText(selected->getMainStat()) + L" " + ToWide(mainValue), Shimmer, 17, false, detailWidth) + 6;
+				if (selected->getCategory() == ItemCategory::Equippable) {
+					const std::string mainValue = selected->getMainStatPercent() > 0 ? "+" + std::to_string(selected->getMainStatPercent()) + "%" : "+" + std::to_string(selected->getMainStatValue());
+					detailY += DrawTextLine(deviceContext, detailX, detailY, L"Main stat: " + FormatDisplayText(selected->getMainStat()) + L" " + ToWide(mainValue), Shimmer, 17, false, detailWidth) + 6;
+				}
 				for (const auto& substat : selected->getSubstats()) {
 					const char* label = "Stat";
 					switch (substat.first) {
@@ -1708,9 +1719,10 @@ void Win32UI::Paint(HDC deviceContext) {
 		for (Enemy* target : targetEnemies_) {
 			if (target == nullptr || !target->isAlive()) continue;
 			DrawTextLine(deviceContext, cardX, contentY, ToWide(target->getName()), EnemyTierColor(target->getTier()), 18, true, 170);
-			DrawTextLine(deviceContext, cardX, contentY + 26, L"HP " + std::to_wstring(target->getHP()) + L" / " + std::to_wstring(target->getMaxHP()), Text, 15);
-			DrawTextLine(deviceContext, cardX, contentY + 48, L"LV " + std::to_wstring(target->getLevel()), Text, 15);
-			int enemyStatusY = contentY + 70;
+			DrawHealthBar(deviceContext, cardX, contentY + 28, 170, 12, target->getHP(), target->getMaxHP(), Danger);
+			DrawTextLine(deviceContext, cardX, contentY + 46, L"HP " + std::to_wstring(target->getHP()) + L" / " + std::to_wstring(target->getMaxHP()), Text, 14);
+			DrawTextLine(deviceContext, cardX, contentY + 66, L"LV " + std::to_wstring(target->getLevel()), Text, 15);
+			int enemyStatusY = contentY + 88;
 			for (const auto& status : target->GetStatuses()) {
 			const bool beneficial = status.type == StatusType::Barrier || status.type == StatusType::DamageReduction;
 			const bool healing = status.type == StatusType::HealOverTime;
@@ -1775,14 +1787,11 @@ void Win32UI::DrawRainbowText(HDC deviceContext, int x, int y, const std::wstrin
 	for (std::size_t index = 0; index < text.size(); ++index) {
 		const std::wstring character(1, text[index]);
 		DrawTextLine(deviceContext, offset, y, character, colors[index % 6], size, bold);
-		HFONT measureFont = CreateFontW(size, 0, 0, 0, bold ? FW_BOLD : FW_NORMAL, FALSE, FALSE, FALSE,
-			DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY,
-			DEFAULT_PITCH | FF_DONTCARE, L"IM FELL English");
+		HFONT measureFont = bold && size >= 24 ? headingFont_ : font_;
 		HFONT oldFont = static_cast<HFONT>(SelectObject(deviceContext, measureFont));
 		SIZE characterSize{};
 		GetTextExtentPoint32W(deviceContext, character.c_str(), 1, &characterSize);
 		SelectObject(deviceContext, oldFont);
-		DeleteObject(measureFont);
 		offset += characterSize.cx;
 	}
 }
@@ -1801,11 +1810,26 @@ void Win32UI::DrawPanel(HDC deviceContext, RECT bounds, const std::wstring& titl
 	DrawTextLine(deviceContext, bounds.left + 18, bounds.top + 14, title, Brass, 17, true);
 }
 
+void Win32UI::DrawHealthBar(HDC deviceContext, int x, int y, int width, int height,
+	int current, int maximum, COLORREF fillColor) const {
+	if (maximum <= 0) return;
+	RECT bounds{x, y, x + width, y + height};
+	HBRUSH background = CreateSolidBrush(RGB(55, 55, 55));
+	FillRect(deviceContext, &bounds, background);
+	DeleteObject(background);
+	const int filledWidth = (std::max)(0, (std::min)(width, width * current / maximum));
+	if (filledWidth > 0) {
+		RECT filled{x, y, x + filledWidth, y + height};
+		HBRUSH fill = CreateSolidBrush(fillColor);
+		FillRect(deviceContext, &filled, fill);
+		DeleteObject(fill);
+	}
+	FrameRect(deviceContext, &bounds, reinterpret_cast<HBRUSH>(GetStockObject(DKGRAY_BRUSH)));
+}
+
 int Win32UI::DrawTextLine(HDC deviceContext, int x, int y, const std::wstring& text,
 						  COLORREF color, int size, bool bold, int maxWidth) const {
-	HFONT selected = CreateFontW(size, 0, 0, 0, bold ? FW_SEMIBOLD : FW_NORMAL, FALSE, FALSE, FALSE,
-								 DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
-								  CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, L"IM FELL English");
+	HFONT selected = bold && size >= 24 ? headingFont_ : font_;
 	HGDIOBJ oldFont = SelectObject(deviceContext, selected);
 	SetTextColor(deviceContext, color);
 	SetBkMode(deviceContext, TRANSPARENT);
@@ -1819,7 +1843,6 @@ int Win32UI::DrawTextLine(HDC deviceContext, int x, int y, const std::wstring& t
 	DrawTextW(deviceContext, text.c_str(), static_cast<int>(text.size()), &drawBounds,
 			  DT_NOPREFIX | DT_WORDBREAK);
 	SelectObject(deviceContext, oldFont);
-	DeleteObject(selected);
 	return height > 0 ? height : size + 4;
 }
 

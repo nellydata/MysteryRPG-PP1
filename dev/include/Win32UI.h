@@ -79,6 +79,7 @@ private:
 
 	void Paint(HDC deviceContext);
 	void DrawPanel(HDC deviceContext, RECT bounds, const std::wstring& title);
+	void DrawHealthBar(HDC deviceContext, int x, int y, int width, int height, int current, int maximum, COLORREF fillColor) const;
 	int DrawTextLine(HDC deviceContext, int x, int y, const std::wstring& text,
 					 COLORREF color, int size = 18, bool bold = false, int maxWidth = 0) const;
 	void DrawRainbowText(HDC deviceContext, int x, int y, const std::wstring& text,
@@ -93,6 +94,8 @@ private:
 	HWND nameWindow_;
 	HWND nameEdit_;
 	HWND controls_[64];
+	HWND roomButtons_[5];
+	HWND inspectButtons_[5];
 	HFONT font_;
 	HFONT headingFont_;
 	View view_;

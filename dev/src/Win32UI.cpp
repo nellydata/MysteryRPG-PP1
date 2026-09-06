@@ -315,6 +315,9 @@ void Win32UI::RefreshControls() {
 	} else if (view_ == View::Room && selectedRoom_ >= 0) {
 		if (selectedRoom_ >= static_cast<int>(mapManager_.GetRooms().size())) {
 			view_ = View::Floor;
+		} else if (combatTransition_ || !combat_.IsPlayerTurn()) {
+			SetWindowTextW(controls_[21], L"...");
+			ShowWindow(controls_[21], SW_SHOW);
 		} else {
 			const auto& interactables = mapManager_.GetRooms()[selectedRoom_].GetVisibleInteractables();
 			for (std::size_t i = 0; i < interactables.size() && i < 4; ++i) {
@@ -394,6 +397,7 @@ void Win32UI::RefreshControls() {
 		SetWindowTextW(controls_[33], L"Equip / Unequip");
 		SetWindowTextW(controls_[30], L"Sort / filter");
 	} else if (view_ == View::Combat) {
+			if (!combatDefeatRecovery_ && !combatTransition_ && !combat_.IsPlayerTurn() && activeEnemy_ != nullptr && activeEnemy_->isAlive() && player_.isAlive()) ScheduleEnemyTurn();
 		if (combatDefeatRecovery_) {
 			SetWindowTextW(controls_[24], L"RESPAWN (10% HP)");
 			SetWindowTextW(controls_[31], L"END BATTLE (FULL HP)");
@@ -426,6 +430,9 @@ void Win32UI::RefreshControls() {
 			}
 			SetWindowTextW(controls_[21], L"CANCEL");
 			ShowWindow(controls_[21], SW_SHOW);
+		} else if (combatTransition_ || !combat_.IsPlayerTurn()) {
+			SetWindowTextW(controls_[21], L"...");
+			ShowWindow(controls_[21], SW_SHOW);
 		} else {
 			targetEnemies_.clear();
 			if (selectedRoom_ >= 0 && selectedRoom_ < static_cast<int>(mapManager_.GetRooms().size())) {
@@ -433,7 +440,7 @@ void Win32UI::RefreshControls() {
 					if (enemy != nullptr && enemy->isAlive() && targetEnemies_.size() < 3) targetEnemies_.push_back(enemy.get());
 				}
 			}
-			if (targetEnemies_.size() > 1 || combatAttackSelection_ || !selectedCombatSkillName_.empty()) {
+			if (combatAttackSelection_ || !selectedCombatSkillName_.empty()) {
 				for (std::size_t index = 0; index < targetEnemies_.size(); ++index) {
 					const bool selected = combatTargetConfirmed_ && targetEnemies_[index] == activeEnemy_;
 					SetWindowTextW(controls_[8 + index], ((selected ? L"SELECTED: " : L"TARGET: ") + FormatDisplayText(targetEnemies_[index]->getName())).c_str());
@@ -805,7 +812,14 @@ void Win32UI::HandleCommand(int controlId) {
 				PerformCombatAction(CombatAction::Shimmer);
 			} else {
 				combatTargetConfirmed_ = false;
-				statusMessage_ = selectedCombatSkillName_ + " selected. Choose an enemy or cancel.";
+				const int cooldown = combat_.GetSkillCooldown(selectedCombatSkillName_);
+				if (cooldown > 0) {
+					statusMessage_ = selectedCombatSkillName_ + " is on cooldown for " + std::to_string(cooldown) + " more turn(s).";
+					combat_.RecordInfo(selectedCombatSkillName_ + " is on cooldown for " + std::to_string(cooldown) + " more turn(s). Choose another skill or cancel.");
+				} else {
+					statusMessage_ = selectedCombatSkillName_ + " selected. Choose an enemy or cancel.";
+					combat_.RecordInfo(selectedCombatSkillName_ + " selected. Choose an enemy or cancel.");
+				}
 			}
 		}
 	} else if (controlId == ButtonInventoryPrevious) {
@@ -1061,7 +1075,7 @@ void Win32UI::SearchRoom() {
 				if (elite->getTier() == EnemyTier::Elite) {
 					area.addEnemy(std::move(elite));
 					activeEnemy_ = area.getFirstAliveEnemy();
-					combat_.BeginEncounter(*activeEnemy_);
+					combat_.ContinueEncounter(*activeEnemy_);
 					combat_.PrepareTurn(player_, *activeEnemy_);
 					view_ = View::Combat;
 			if (!player_.isAlive()) ShowDefeatRecovery();
@@ -1266,8 +1280,15 @@ void Win32UI::PerformCombatAction(CombatAction action) {
 			combatTargetConfirmed_ = false;
 			combatAttackSelection_ = false;
 			selectedCombatSkillName_.clear();
-			combat_.RecordInfo("Another enemy remains. Select a living enemy for the next action.");
+					combat_.BeginEncounter(*activeEnemy_);
 			combat_.PrepareTurn(player_, *activeEnemy_);
+					combat_.RecordInfo("Another enemy remains. Select a living enemy for the next action.");
+					if (!combat_.IsPlayerTurn()) ScheduleEnemyTurn();
+		}
+		SyncCombatEvents();
+		if (!refreshPosted_) {
+			refreshPosted_ = true;
+			PostMessageW(window_, RefreshControlsMessage, 0, 0);
 		}
 		return;
 	}
@@ -1408,6 +1429,10 @@ LRESULT Win32UI::HandleMessage(UINT message, WPARAM wParam, LPARAM lParam) {
 				SyncCombatEvents();
 				if (!combat_.IsPlayerTurn() && activeEnemy_->isAlive() && player_.isAlive()) ScheduleEnemyTurn();
 				if (!player_.isAlive()) ShowDefeatRecovery();
+				if (!refreshPosted_) {
+					refreshPosted_ = true;
+					PostMessageW(window_, RefreshControlsMessage, 0, 0);
+				}
 				Invalidate();
 			}
 		}

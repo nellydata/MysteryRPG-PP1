@@ -33,6 +33,7 @@ public:
     ~CombatManager();
 
     void BeginEncounter(Enemy& enemy);
+    void ContinueEncounter(Enemy& enemy);
     void PrepareTurn(Player& player, Enemy& enemy);
     void ResumeAfterRespawn(Player& player, Enemy& enemy);
     bool resolve(CombatAction action, Player& player, Enemy& enemy,
@@ -45,6 +46,7 @@ public:
     bool HasUsedConsumableThisTurn() const;
     const std::vector<CombatEvent>& GetEvents() const;
     void RecordInfo(const std::string& message);
+    int GetSkillCooldown(const std::string& skillName) const;
     void ClearEvents();
 
 private:

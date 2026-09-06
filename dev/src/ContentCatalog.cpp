@@ -28,6 +28,7 @@ void SetSlotRules(ItemDefinition& item, EquipSlot slot, const std::string& mainS
 		break;
 	default: break;
 	}
+			if (!item.setName.empty()) item.theme = item.setName + ": " + item.theme;
 }
 
 int PercentMainStatValue(Rarity rarity) {
@@ -279,6 +280,7 @@ std::vector<ItemDefinition> BuildEquippableCatalog() {
 		else if (item.name.find("choir") != std::string::npos) item.setName = "Shimmer Reliquary";
 		else if (item.name.find("first_light") != std::string::npos) item.setName = "Oracle Automaton";
 		item.passive = item.uniqueEffect;
+		item.theme = item.setName + ": " + item.theme;
 		if (item.setName == "Verdigris Matron") item.setPassive = "Five-piece: recover 25% max HP each turn, recover 50% of damage taken, convert excess recovery into barrier, and gain 100% healing potency.";
 		else if (item.setName == "Shimmer Reliquary") item.setPassive = "Five-piece: the first Shimmer skill each turn costs no cooldown and barriers absorb 50% more damage.";
 		else if (item.setName == "Oracle Automaton") item.setPassive = "Five-piece: gain 30% accuracy, 75% critical damage, and a chance to repeat offensive actions.";

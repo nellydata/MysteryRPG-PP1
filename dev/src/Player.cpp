@@ -217,7 +217,8 @@ std::vector<std::string> Player::GetActiveSets() const {
         for (const Item* equipped : equipped_) {
             if (equipped != nullptr && equipped->getSetName() == item->getSetName()) ++pieces;
         }
-        if (pieces == 5) activeSets.push_back(item->getSetName());
+        const bool hasCompleteSet = pieces == 5;
+        if (hasCompleteSet) activeSets.push_back(item->getSetName());
     }
     return activeSets;
 }

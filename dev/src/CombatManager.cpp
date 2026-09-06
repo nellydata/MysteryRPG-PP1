@@ -79,6 +79,10 @@ const ShimmerSkill* CombatManager::GetDefaultSkill() const { return defaultSkill
 const std::vector<CombatManager::CombatEvent>& CombatManager::GetEvents() const { return events_; }
 void CombatManager::ClearEvents() { events_.clear(); }
 void CombatManager::RecordInfo(const std::string& message) { AddEvent(CombatEvent::Kind::Info, message); }
+int CombatManager::GetSkillCooldown(const std::string& skillName) const {
+    const auto found = shimmerCooldowns_.find(skillName);
+    return found == shimmerCooldowns_.end() ? 0 : found->second;
+}
 void CombatManager::AddEvent(CombatEvent::Kind kind, const std::string& message, int value) {
     events_.push_back({kind, message, value});
     if (events_.size() > 40) events_.erase(events_.begin());
@@ -86,11 +90,13 @@ void CombatManager::AddEvent(CombatEvent::Kind kind, const std::string& message,
 
 void CombatManager::PrepareTurn(Player& player, Enemy& enemy) {
     if (!enemy.isAlive()) return;
-    if (turnNumber_ == 0 && playerGauge_ == 0 && enemyGauge_ == 0) {
+    if (playerGauge_ == 0 && enemyGauge_ == 0 && !playerTurn_) {
         AccumulateGaugesUntilReady(playerGauge_, enemyGauge_, player.getSpeed(), enemy.getSpeed());
         playerTurn_ = playerGauge_ >= 1000;
+        if (playerTurn_) AddEvent(CombatEvent::Kind::Turn, player.getName() + "'s turn.");
     }
     while (!playerTurn_ && player.isAlive() && enemy.isAlive() && enemyGauge_ >= 1000) enemyTurn(player, enemy);
+    if (playerTurn_ && player.isAlive()) AddEvent(CombatEvent::Kind::Info, "Waiting for " + player.getName() + " to choose an action.");
 }
 
 void CombatManager::ResumeAfterRespawn(Player& player, Enemy& enemy) {
@@ -118,6 +124,15 @@ void CombatManager::BeginEncounter(Enemy& enemy) {
     AddEvent(CombatEvent::Kind::Info, "Combat begins against " + enemy.getName() + ".");
 }
 
+void CombatManager::ContinueEncounter(Enemy& enemy) {
+    activeEnemy_ = &enemy;
+    playerGauge_ = 0;
+    enemyGauge_ = 0;
+    playerTurn_ = false;
+    consumableUsedThisTurn_ = false;
+    AddEvent(CombatEvent::Kind::Info, enemy.getName() + " enters the battle.");
+}
+
 bool CombatManager::resolve(CombatAction action, Player& player, Enemy& enemy,
                             ShimmerSkill* skill, ProgressionManager* progression) {
     BeginEncounter(enemy);
@@ -142,7 +157,6 @@ bool CombatManager::resolve(CombatAction action, Player& player, Enemy& enemy,
     if (!player.isAlive() || !enemy.isAlive()) return false;
     if (!playerTurn_) return false;
     ++turnNumber_;
-    AddEvent(CombatEvent::Kind::Turn, player.getName() + "'s turn.");
 
     switch (action) {
     case CombatAction::Attack: {
@@ -185,7 +199,7 @@ bool CombatManager::resolve(CombatAction action, Player& player, Enemy& enemy,
         const std::string effect = skill->getEffect();
         const int remainingCooldown = shimmerCooldowns_[skill->getName()];
         if (remainingCooldown > 0) {
-            AddEvent(CombatEvent::Kind::Info, skill->getName() + " is recharging for " + std::to_string(remainingCooldown) + " more turns.");
+            AddEvent(CombatEvent::Kind::Info, skill->getName() + " is recharging for " + std::to_string(remainingCooldown) + (remainingCooldown == 1 ? " turn." : " turns."));
             return false;
         }
         const int enemyHealthBefore = enemy.getHP();
@@ -311,6 +325,7 @@ void CombatManager::enemyTurn(Player& player, Enemy& enemy) {
         playerTurn_ = false;
         AccumulateGaugesUntilReady(playerGauge_, enemyGauge_, player.getSpeed(), enemy.getSpeed());
         playerTurn_ = playerGauge_ >= 1000;
+        if (playerTurn_) AddEvent(CombatEvent::Kind::Turn, player.getName() + "'s turn.");
         return;
     }
 
@@ -336,6 +351,7 @@ void CombatManager::enemyTurn(Player& player, Enemy& enemy) {
     playerTurn_ = false;
     AccumulateGaugesUntilReady(playerGauge_, enemyGauge_, player.getSpeed(), enemy.getSpeed());
     playerTurn_ = playerGauge_ >= 1000;
+    if (playerTurn_) AddEvent(CombatEvent::Kind::Turn, player.getName() + "'s turn.");
 }
 
 bool CombatManager::IsPlayerTurn() const { return playerTurn_; }

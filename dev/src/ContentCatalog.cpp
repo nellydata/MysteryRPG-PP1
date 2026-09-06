@@ -1,4 +1,6 @@
 #include "ContentCatalog.h"
+#include <algorithm>
+#include <random>
 
 namespace {
 void SetSlotRules(ItemDefinition& item, EquipSlot slot, const std::string& mainStat) {
@@ -6,53 +8,115 @@ void SetSlotRules(ItemDefinition& item, EquipSlot slot, const std::string& mainS
 	switch (slot) {
 	case EquipSlot::Head:
 		item.theme = "insight, clarity, protection, perception";
-		item.allowedSubstats = {ItemStat::CritRate, ItemStat::CritDamage, ItemStat::Resistance, ItemStat::Accuracy, ItemStat::SPD};
-		item.forbiddenStats = {ItemStat::ATK, ItemStat::DotPotency, ItemStat::Evasion};
+		item.allowedSubstats = {ItemStat::CritRate, ItemStat::CritDamage, ItemStat::ATK, ItemStat::DEF, ItemStat::HP};
 		break;
 	case EquipSlot::Torso:
 		item.theme = "protection, stability, purity, endurance";
-		item.allowedSubstats = {ItemStat::Resistance, ItemStat::BarrierPotency, ItemStat::HealingPotency, ItemStat::DebuffDurationReduction, ItemStat::SPD};
-		item.forbiddenStats = {ItemStat::ATK, ItemStat::CritRate, ItemStat::CritDamage, ItemStat::Accuracy, ItemStat::DotPotency, ItemStat::Evasion};
+		item.allowedSubstats = {ItemStat::HP, ItemStat::DEF, ItemStat::Resistance, ItemStat::ATK};
 		break;
 	case EquipSlot::Hand:
 		item.theme = "offense, aggression, precision, execution";
-		item.allowedSubstats = {ItemStat::CritRate, ItemStat::CritDamage, ItemStat::Accuracy, ItemStat::DotPotency, ItemStat::Lifesteal, ItemStat::SPD};
-		item.forbiddenStats = {ItemStat::DEF, ItemStat::HP, ItemStat::Resistance, ItemStat::BarrierPotency, ItemStat::HealingPotency, ItemStat::Evasion};
+		item.allowedSubstats = {ItemStat::ATK, ItemStat::CritRate, ItemStat::CritDamage, ItemStat::Accuracy};
 		break;
 	case EquipSlot::Boots:
 		item.theme = "movement, agility, positioning";
 		item.allowedSubstats = {ItemStat::Evasion, ItemStat::Accuracy, ItemStat::ATK, ItemStat::DEF, ItemStat::SPD};
-		item.forbiddenStats = {ItemStat::CritRate, ItemStat::CritDamage, ItemStat::DotPotency, ItemStat::HealingPotency, ItemStat::BarrierPotency, ItemStat::Resistance, ItemStat::HP};
 		break;
 	case EquipSlot::Accessory:
 		item.theme = "spiritual power, amplification, utility";
-		item.allowedSubstats = {ItemStat::CritRate, ItemStat::CritDamage, ItemStat::Accuracy, ItemStat::Resistance, ItemStat::HealingPotency, ItemStat::BarrierPotency, ItemStat::DotPotency, ItemStat::SPD};
-		item.forbiddenStats = {ItemStat::Evasion};
+		item.allowedSubstats = {ItemStat::ATK, ItemStat::DEF, ItemStat::HP, ItemStat::Resistance, ItemStat::DotPotency, ItemStat::HealingPotency, ItemStat::BarrierPotency};
 		break;
 	default: break;
 	}
 }
 
+int PercentMainStatValue(Rarity rarity) {
+	switch (rarity) {
+	case Rarity::Common: return 5;
+	case Rarity::Uncommon: return 10;
+	case Rarity::Rare: return 15;
+	case Rarity::Epic: return 20;
+	case Rarity::Legendary: return 25;
+	case Rarity::Artifact: return 30;
+	}
+	return 5;
+}
+
+int MainHPValue(Rarity rarity) {
+	switch (rarity) {
+	case Rarity::Common: return 1000;
+	case Rarity::Uncommon: return 1500;
+	case Rarity::Rare: return 2000;
+	case Rarity::Epic: return 3000;
+	case Rarity::Legendary: return 4000;
+	case Rarity::Artifact: return 5000;
+	}
+	return 1000;
+}
+
+int MainDEFValue(Rarity rarity) {
+	switch (rarity) {
+	case Rarity::Common: return 75;
+	case Rarity::Uncommon: return 100;
+	case Rarity::Rare: return 150;
+	case Rarity::Epic: return 200;
+	case Rarity::Legendary: return 250;
+	case Rarity::Artifact: return 300;
+	}
+	return 75;
+}
+
 int MainStatValue(Rarity rarity, int value) {
-	const int multiplier = rarity == Rarity::Artifact ? 3 : rarity == Rarity::Legendary ? 2 : 1;
-	return value * multiplier;
+	(void)value;
+	switch (rarity) {
+	case Rarity::Common: return 100;
+	case Rarity::Uncommon: return 150;
+	case Rarity::Rare: return 200;
+	case Rarity::Epic: return 300;
+	case Rarity::Legendary: return 400;
+	case Rarity::Artifact: return 500;
+	}
+	return 100;
 }
 
 int SubstatValue(Rarity rarity) {
+	static std::mt19937 generator(0x53544154u);
+	std::uniform_int_distribution<int> roll;
 	switch (rarity) {
-	case Rarity::Common: return 2;
-	case Rarity::Uncommon: return 4;
-	case Rarity::Rare: return 8;
-	case Rarity::Epic: return 12;
-	case Rarity::Legendary: return 18;
-	case Rarity::Artifact: return 23;
+	case Rarity::Rare: roll = std::uniform_int_distribution<int>(5, 7); break;
+	case Rarity::Epic: roll = std::uniform_int_distribution<int>(7, 10); break;
+	case Rarity::Legendary: roll = std::uniform_int_distribution<int>(10, 12); break;
+	case Rarity::Artifact: roll = std::uniform_int_distribution<int>(12, 15); break;
+	default: return 0;
 	}
-	return 0;
+	return roll(generator);
+}
+
+int SubstatCount(Rarity rarity) {
+	switch (rarity) {
+	case Rarity::Rare: return 1;
+	case Rarity::Epic: return 2;
+	case Rarity::Legendary: return 3;
+	case Rarity::Artifact: return 4;
+	default: return 0;
+	}
+}
+
+void AddSubstat(ItemDefinition& item, ItemStat stat, int value) {
+	item.substats.emplace_back(stat, value);
 }
 
 int SpeedMainStatValue(Rarity rarity, int value) {
-	const int rarityMultiplier = static_cast<int>(rarity) + 1;
-	return value * rarityMultiplier * 2;
+	(void)value;
+	switch (rarity) {
+	case Rarity::Common: return 20;
+	case Rarity::Uncommon: return 40;
+	case Rarity::Rare: return 60;
+	case Rarity::Epic: return 80;
+	case Rarity::Legendary: return 100;
+	case Rarity::Artifact: return 120;
+	}
+	return 20;
 }
 
 void AddEquippables(std::vector<ItemDefinition>& result, EquipSlot slot, const char* const* names,
@@ -73,28 +137,22 @@ void AddEquippables(std::vector<ItemDefinition>& result, EquipSlot slot, const c
 		item.rarity = rarity;
 		item.slot = slot;
 		item.mainStat = resolvedMainStat;
-		const int percentageValue = MainStatValue(rarity, value);
-		item.mainStatPercent = percentageValue;
-		const int substat = SubstatValue(rarity);
-		if (slot == EquipSlot::Head) {
-			if (resolvedMainStat == "acc") item.stats.critRate = rarity >= Rarity::Rare ? substat : 0;
-			else item.stats.res = substat;
-		} else if (slot == EquipSlot::Torso) {
-			if (name.find("automaton") != std::string::npos) item.stats.barrierPotency = substat;
-			else if (name.find("choir") != std::string::npos) item.stats.healingPotency = substat;
-			else item.stats.res = substat;
-		} else if (slot == EquipSlot::Hand) {
-			if (name.find("choir") != std::string::npos || name.find("verdigris") != std::string::npos) item.stats.dotPotency = substat;
-			else if (name.find("automaton") != std::string::npos) item.stats.critRate = substat;
-			else item.stats.acc = substat;
-		} else if (slot == EquipSlot::Boots) {
-			if (name.find("sandals") != std::string::npos || name.find("shoes") != std::string::npos) item.stats.evasion = substat;
-			else item.stats.acc = substat;
-		} else if (slot == EquipSlot::Accessory) {
-			if (resolvedMainStat == "atk") item.stats.acc = substat;
-			else if (resolvedMainStat == "def") item.stats.res = substat;
-			else if (name.find("choir") != std::string::npos || name.find("rosary") != std::string::npos) item.stats.healingPotency = substat;
-			else item.stats.barrierPotency = substat;
+		SetSlotRules(item, slot, resolvedMainStat);
+		const int mainStatValue = slot == EquipSlot::Boots ? SpeedMainStatValue(rarity, value)
+			: resolvedMainStat == "hp" ? MainHPValue(rarity)
+			: resolvedMainStat == "def" ? MainDEFValue(rarity)
+			: MainStatValue(rarity, value);
+		if (slot == EquipSlot::Boots) {
+			item.mainStatValue = mainStatValue;
+			item.stats.spd = mainStatValue;
+		}
+		else if (resolvedMainStat == "acc" || resolvedMainStat == "res") item.mainStatPercent = PercentMainStatValue(rarity);
+		else if (resolvedMainStat == "hp") item.mainStatPercent = static_cast<int>(rarity) * 5 + 5;
+		else item.mainStatValue = mainStatValue;
+		const int substatCount = SubstatCount(rarity);
+		for (int roll = 0; roll < substatCount && !item.allowedSubstats.empty(); ++roll) {
+			const ItemStat stat = item.allowedSubstats[static_cast<std::size_t>((i + roll * 3) % item.allowedSubstats.size())];
+			AddSubstat(item, stat, SubstatValue(rarity));
 		}
 		if (rarity == Rarity::Artifact) {
 			if (slot == EquipSlot::Head) { item.passive = "Critical hits reveal enemies and restore 8% HP"; item.stats.critRate += 8; item.stats.critDamage += 20; }
@@ -109,7 +167,6 @@ void AddEquippables(std::vector<ItemDefinition>& result, EquipSlot slot, const c
 			else if (slot == EquipSlot::Boots) { item.passive = "Accuracy +18%"; item.stats.acc += 18; }
 			else if (slot == EquipSlot::Accessory) { item.passive = "Accuracy +18%"; item.stats.acc += 18; }
 		}
-		SetSlotRules(item, slot, resolvedMainStat);
 		result.push_back(item);
 	}
 }
@@ -161,7 +218,7 @@ std::vector<ItemDefinition> BuildEquippableCatalog() {
 	const char* accessoryUncommon[] = {"blessed_rosary", "reinforced_iron_ring", "polished_automaton_charm", "choir_ember_pendant"};
 	const char* accessoryRare[] = {"ceremonial_rosary_of_grace", "ironbound_ring", "automaton_combat_charm", "choir_flame_pendant"};
 	const char* accessoryEpic[] = {"rosary_of_benediction", "ironheart_ring", "automaton_strike_charm", "choir_inferno_pendant"};
-	const char* accessoryLegendary[] = {"choir_verdigris_rosary", "shimmer_ascendant_ring", "automaton_command_charm"};
+	const char* accessoryLegendary[] = {"radiant_oath_reliquary", "broken_choir_reliquary", "lumen_forged_reliquary"};
 	AddEquippables(result, EquipSlot::Accessory, accessoryCommon, 5, Rarity::Common, "hp", 5);
 	AddEquippables(result, EquipSlot::Accessory, accessoryUncommon, 4, Rarity::Uncommon, "hp", 10);
 	AddEquippables(result, EquipSlot::Accessory, accessoryRare, 4, Rarity::Rare, "hp", 15);
@@ -169,9 +226,16 @@ std::vector<ItemDefinition> BuildEquippableCatalog() {
 	AddEquippables(result, EquipSlot::Accessory, accessoryLegendary, 3, Rarity::Legendary, "hp", 25);
 	for (auto& item : result) {
 		if (item.rarity == Rarity::Legendary) {
-			if (item.name.find("choir") != std::string::npos) { item.setName = "Choir of Verdigris"; item.setPassive = "Barrier at battle start; DOT damage taken -20%"; }
-			else if (item.name.find("shimmer") != std::string::npos) { item.setName = "Shimmer Ascendant"; item.setPassive = "ATK +15%; Accuracy +15%; first attack guaranteed critical"; }
-			else if (item.name.find("automaton") != std::string::npos || item.name.find("clockwork") != std::string::npos) { item.setName = "Automaton Overlord"; item.setPassive = "Accuracy +20%; Crit damage +20%; chance for an extra turn"; }
+			if (item.name.find("broken_choir") != std::string::npos) {
+				item.setName = "Choir of Verdigris";
+				item.setPassive = "Five-piece: gain a barrier at battle start and increase healing received by 25%.";
+			} else if (item.name.find("lumen_forged") != std::string::npos) {
+				item.setName = "Shimmer Ascendant";
+				item.setPassive = "Five-piece: Shimmer skills deal 25% more damage and restore 5% max HP.";
+			} else if (item.name.find("radiant_oath") != std::string::npos) {
+				item.setName = "Automaton Overlord";
+				item.setPassive = "Five-piece: accuracy is perfected, critical damage rises by 50%, and every third action grants a bonus turn.";
+			}
 		}
 	}
 	result.push_back({"verdigris_halo_of_saint_adelaide", "Artifact headgear.", ItemCategory::Equippable, Rarity::Artifact, EquipSlot::Head, {12}, {}, "shimmer_cooldown_reduced_by_1"});
@@ -186,22 +250,38 @@ std::vector<ItemDefinition> BuildEquippableCatalog() {
 	result.push_back({"verdigris_saint_relic", "Artifact hand gear.", ItemCategory::Equippable, Rarity::Artifact, EquipSlot::Hand, {0, 0, 0, 12}, {}, "attacks_apply_verdigris_mark_dealing_bonus_damage_over_time"});
 	result.push_back({"choirs_eternal_tome", "Artifact hand gear.", ItemCategory::Equippable, Rarity::Artifact, EquipSlot::Hand, {0, 0, 0, 12}, {}, "first_attack_each_battle_is_guaranteed_crit"});
 	result.push_back({"first_light_crucible", "Artifact hand gear.", ItemCategory::Equippable, Rarity::Artifact, EquipSlot::Hand, {0, 0, 0, 12}, {}, "gain_5_percent_atk_every_time_you_use_a_shimmer_skill"});
+	result.push_back({"verdigris_saint_reliquary", "Artifact accessory.", ItemCategory::Equippable, Rarity::Artifact, EquipSlot::Accessory, {12}, {}, "verdigris_set_lifesteal"});
+	result.push_back({"choirs_eternal_reliquary", "Artifact accessory.", ItemCategory::Equippable, Rarity::Artifact, EquipSlot::Accessory, {12}, {}, "choir_set_barrier"});
+	result.push_back({"first_light_reliquary", "Artifact accessory.", ItemCategory::Equippable, Rarity::Artifact, EquipSlot::Accessory, {12}, {}, "first_light_set_shimmer"});
 	for (auto& item : result) {
 		if (item.rarity != Rarity::Artifact) continue;
+		const std::string artifactMainStat = item.slot == EquipSlot::Boots ? "spd" : item.slot == EquipSlot::Torso ? "def" : item.slot == EquipSlot::Head ? "hp" : item.slot == EquipSlot::Accessory ? "hp" : "atk";
+		SetSlotRules(item, item.slot, artifactMainStat);
 		item.stats = {};
-		const int artifactMain = item.slot == EquipSlot::Boots ? SpeedMainStatValue(Rarity::Artifact, 12) : MainStatValue(Rarity::Artifact, 30);
-		if (item.slot == EquipSlot::Head) item.stats.hp = artifactMain;
-		else if (item.slot == EquipSlot::Torso) item.stats.def = artifactMain;
-		else if (item.slot == EquipSlot::Boots) item.stats.spd = artifactMain;
-		else item.stats.atk = artifactMain;
-		item.stats.spd += SubstatValue(Rarity::Artifact);
-		SetSlotRules(item, item.slot, item.slot == EquipSlot::Head ? "hp" :
-			item.slot == EquipSlot::Torso ? "def" :
-			item.slot == EquipSlot::Boots ? "spd" : "atk");
+		item.mainStatValue = 0;
+		item.mainStatPercent = 0;
+		item.substats.clear();
+		item.mainStat = artifactMainStat;
+		const int artifactMain = artifactMainStat == "spd" ? SpeedMainStatValue(Rarity::Artifact, 0)
+			: artifactMainStat == "def" ? MainDEFValue(Rarity::Artifact)
+			: artifactMainStat == "hp" ? PercentMainStatValue(Rarity::Artifact) : MainStatValue(Rarity::Artifact, 0);
+		if (artifactMainStat == "hp") item.mainStatPercent = artifactMain;
+		else {
+			item.mainStatValue = artifactMain;
+			if (artifactMainStat == "def") item.stats.def = artifactMain;
+			else if (artifactMainStat == "spd") item.stats.spd = artifactMain;
+			else item.stats.atk = artifactMain;
+		}
+		for (int roll = 0; roll < SubstatCount(Rarity::Artifact); ++roll) {
+			if (!item.allowedSubstats.empty()) AddSubstat(item, item.allowedSubstats[static_cast<std::size_t>(roll % item.allowedSubstats.size())], SubstatValue(Rarity::Artifact));
+		}
 		if (item.name.find("verdigris") != std::string::npos) item.setName = "Verdigris Matron";
 		else if (item.name.find("choir") != std::string::npos) item.setName = "Shimmer Reliquary";
 		else if (item.name.find("first_light") != std::string::npos) item.setName = "Oracle Automaton";
 		item.passive = item.uniqueEffect;
+		if (item.setName == "Verdigris Matron") item.setPassive = "Five-piece: recover 25% max HP each turn, recover 50% of damage taken, convert excess recovery into barrier, and gain 100% healing potency.";
+		else if (item.setName == "Shimmer Reliquary") item.setPassive = "Five-piece: the first Shimmer skill each turn costs no cooldown and barriers absorb 50% more damage.";
+		else if (item.setName == "Oracle Automaton") item.setPassive = "Five-piece: gain 30% accuracy, 75% critical damage, and a chance to repeat offensive actions.";
 	}
 	return result;
 }

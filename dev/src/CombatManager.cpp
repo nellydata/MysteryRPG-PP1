@@ -78,6 +78,7 @@ const ShimmerSkill* CombatManager::GetDefaultSkill() const { return defaultSkill
 
 const std::vector<CombatManager::CombatEvent>& CombatManager::GetEvents() const { return events_; }
 void CombatManager::ClearEvents() { events_.clear(); }
+void CombatManager::RecordInfo(const std::string& message) { AddEvent(CombatEvent::Kind::Info, message); }
 void CombatManager::AddEvent(CombatEvent::Kind kind, const std::string& message, int value) {
     events_.push_back({kind, message, value});
     if (events_.size() > 40) events_.erase(events_.begin());
@@ -112,6 +113,7 @@ void CombatManager::BeginEncounter(Enemy& enemy) {
     weaknessExposed_ = false;
     interrogationAttempts_ = 0;
     consumableUsedThisTurn_ = false;
+    shimmerCooldowns_.clear();
     events_.clear();
     AddEvent(CombatEvent::Kind::Info, "Combat begins against " + enemy.getName() + ".");
 }
@@ -144,6 +146,7 @@ bool CombatManager::resolve(CombatAction action, Player& player, Enemy& enemy,
 
     switch (action) {
     case CombatAction::Attack: {
+        AddEvent(CombatEvent::Kind::Attack, player.getName() + " attacks " + enemy.getName() + ".");
         const unsigned roll = static_cast<unsigned>(turnNumber_ * 37 + player.getAttack() * 11 + enemy.getHP()) % 100;
         if (roll < static_cast<unsigned>(enemy.getEvasion())) {
             std::cout << player.getName() << " attacks " << enemy.getName() << ", but the strike is evaded.\n";
@@ -187,7 +190,7 @@ bool CombatManager::resolve(CombatAction action, Player& player, Enemy& enemy,
         }
         const int enemyHealthBefore = enemy.getHP();
         const int playerHealthBefore = player.getHP();
-        AddEvent(CombatEvent::Kind::Shimmer, player.getName() + " uses Shimmer skill " + skill->getName() + ". Effect: " + effect + ".");
+        AddEvent(CombatEvent::Kind::Shimmer, player.getName() + " uses Shimmer skill " + skill->getName() + " on " + enemy.getName() + ". Effect: " + effect + ".");
         skill->apply(player, enemy);
 
         const int dealt = enemyHealthBefore - enemy.getHP();
@@ -274,14 +277,14 @@ void CombatManager::enemyTurn(Player& player, Enemy& enemy) {
             const int finalDamage = player.AbsorbDamage((std::max)(1, static_cast<int>(std::lround(
                 static_cast<double>(damage) * 70.0 / (100.0 + player.getDefense())))));
             player.takeDamage(finalDamage);
-            AddEvent(CombatEvent::Kind::Skill, enemy.getName() + " uses " + skill.name + ". " + enemy.getName() + " dealt " + std::to_string(damage) +
-                " damage to " + player.getName() + " with " + skill.name + ".", damage);
+            AddEvent(CombatEvent::Kind::Skill, enemy.getName() + " uses " + skill.name + ". " + enemy.getName() + " dealt " + std::to_string(finalDamage) +
+                " damage to " + player.getName() + " with " + skill.name + ".", finalDamage);
         }
         if (skill.effect == "bleed" || skill.effect == "burn" || skill.effect == "poison") {
             StatusType type = skill.effect == "bleed" ? StatusType::Bleed : skill.effect == "burn" ? StatusType::Burn : StatusType::Poison;
             const bool hadStatus = player.HasStatus(type);
             player.ApplyStatus({type, skill.duration > 0 ? skill.duration : 2, 0, enemy.getAtk()});
-            if (!hadStatus && player.HasStatus(type)) AddEvent(CombatEvent::Kind::Debuff, player.getName() + " suffers " + std::string(StatusDisplayName(type)) + " for " +
+            if (!hadStatus && player.HasStatus(type)) AddEvent(CombatEvent::Kind::Debuff, enemy.getName() + " inflicts " + std::string(StatusDisplayName(type)) + " on " + player.getName() + " for " +
                 std::to_string(skill.duration > 0 ? skill.duration : 2) + " turns!");
         } else if (skill.effect == "tri_dot" || skill.effect == "burn_bleed") {
             const int duration = skill.duration > 0 ? skill.duration : 2;
@@ -289,7 +292,7 @@ void CombatManager::enemyTurn(Player& player, Enemy& enemy) {
                 if (skill.effect == "burn_bleed" && type == StatusType::Poison) continue;
                 const bool hadStatus = player.HasStatus(type);
                 player.ApplyStatus({type, duration, 0, enemy.getAtk()});
-                if (!hadStatus && player.HasStatus(type)) AddEvent(CombatEvent::Kind::Debuff, player.getName() + " suffers " + std::string(StatusDisplayName(type)) + " for " + std::to_string(duration) + " turns!");
+                if (!hadStatus && player.HasStatus(type)) AddEvent(CombatEvent::Kind::Debuff, enemy.getName() + " inflicts " + std::string(StatusDisplayName(type)) + " on " + player.getName() + " for " + std::to_string(duration) + " turns!");
             }
         } else if (skill.effect == "def_down" || skill.effect == "accuracy_down") {
             const bool hadStatus = enemy.HasStatus(StatusType::VerdigrisMark);

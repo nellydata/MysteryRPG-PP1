@@ -45,6 +45,7 @@ private:
 	static constexpr int SkillFilterBase = 750;
 	static constexpr int SortModeBase = 600;
 	static constexpr int FilterModeBase = 620;
+	static constexpr int EquipFilterBase = 680;
 	static constexpr UINT RefreshControlsMessage = WM_APP + 1;
 
 	static LRESULT CALLBACK WindowProcedure(HWND window, UINT message,
@@ -108,6 +109,7 @@ private:
 	InventorySort inventorySort_ = InventorySort::RecentlyObtained;
 	ItemStat inventoryFocusStat_ = ItemStat::ATK;
 	int inventoryFilter_ = -1;
+	int equipFilter_ = -1;
 	std::vector<int> visibleRoomIndices_;
 	int selectedInventoryIndex_ = -1;
 	int selectedSkillIndex_ = -1;
@@ -128,6 +130,9 @@ private:
 	std::vector<Enemy*> targetEnemies_;
 	std::string selectedCombatSkillName_;
 	bool combatSkillSelection_ = false;
+	bool combatAttackSelection_ = false;
+	bool combatTargetConfirmed_ = false;
+	bool combatTransition_ = false;
 	std::size_t loggedCombatEvents_ = 0;
 	bool enemyTurnPending_ = false;
 	void ScheduleEnemyTurn();

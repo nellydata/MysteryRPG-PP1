@@ -108,9 +108,9 @@ std::vector<std::string> ProgressionManager::GetEquippedShimmerSkills() const {
     return std::vector<std::string>(equippedShimmerSkills_.begin(), equippedShimmerSkills_.end());
 }
 
-int ProgressionManager::GetShimmerPoints() const { return 10 - shimmerPointsUsed_; }
+int ProgressionManager::GetShimmerPoints() const { return 12 - shimmerPointsUsed_; }
 bool ProgressionManager::EquipShimmerSkill(const std::string& skillName, int cost) {
-    if (!HasShimmerSkill(skillName) || cost <= 0 || equippedShimmerSkills_.count(skillName) != 0 || shimmerPointsUsed_ + cost > 10) return false;
+    if (!HasShimmerSkill(skillName) || cost <= 0 || equippedShimmerSkills_.count(skillName) != 0 || shimmerPointsUsed_ + cost > 12) return false;
     equippedShimmerSkills_.insert(skillName);
     shimmerPointsUsed_ += cost;
     return true;

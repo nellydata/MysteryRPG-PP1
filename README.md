@@ -1,5 +1,11 @@
 # Micare - Cathedral of Lies
 
+## Version 0.4.0
+
+This version records the finalized rarity-driven itemization system. Boots always roll flat SPD as their main stat: Common +20, Uncommon +40, Rare +60, Epic +80, Legendary +100, and Artifact +120. Non-boot main stats use fixed rarity values: ATK 100/150/200/300/400/500, HP 1000/1500/2000/3000/4000/5000, and DEF 75/100/150/200/250/300 from Common through Artifact.
+
+Equippable substats are percentage-based and use slot-specific pools. Head items use Crit Rate, Crit Damage, ATK, DEF, and HP; torso items use HP, DEF, Resistance, and ATK; hand items use ATK, Crit Rate, Crit Damage, and Accuracy; boots use SPD, Evasion, Accuracy, ATK, and DEF; accessories use ATK, DEF, HP, Resistance, DOT Potency, Healing Potency, and Barrier Potency. Common and Uncommon items have no substats, Rare has one, Epic has two, Legendary has three, and Artifact has four. Substat rolls are Rare 5–7%, Epic 7–10%, Legendary 10–12%, and Artifact 12–15%. Upgrade-roll persistence is not yet part of the current item model.
+
 Micare is a C++17 noir roguelike RPG with both a native Win32 desktop UI and a console mode. The player chooses an investigator name, explores a cathedral overtaken by the Shimmer, discovers clues and items, encounters NPCs, and fights enemies while progressing through Floor 1.
 
 ## Project Structure
@@ -23,6 +29,7 @@ Micare is a C++17 noir roguelike RPG with both a native Win32 desktop UI and a c
 - Bleed, burn, poison, stun, healing-over-time, barrier, and mark status processing
 - Percentage-based defense reduction, deterministic critical hits, and turn cooldowns
 - Fifteen concrete shimmer skills with Latin display names and specification cooldowns
+- Rarity-driven itemization with flat boot SPD mains, fixed non-boot mains, slot-specific percentage substats, and rarity-scaled substat counts/ranges
 - Metadata-driven Shimmer Skills menu with descriptions, effects, equip/unequip loadouts, and combat selection
 - Structured console UI with a persistent player panel, exploration/combat views, inventory overlay, map, and shimmer bar
 - ASCII-safe rendering for Windows consoles, with optional ANSI color styling
@@ -67,6 +74,38 @@ The main challenges were keeping the project structure consistent with Visual St
 
 I built a deterministic Floor 1 map, added four interactable rooms, created basic enemy types, implemented combat actions, added XP and level progression, created readable item and clue inventory output, and added a clickable desktop UI. The project builds successfully with the Visual Studio project configuration.
 
+### Progress Update - 9/5
+
+#### Itemization and Item Information
+
+- Added explicit item metadata for flat main-stat values and percentage main-stat values.
+- Added explicit rolled substat metadata so generated item stats can be applied and displayed consistently.
+- Normalized rarity-based item generation and substat scaling.
+- Kept boot SPD as a flat main stat while preserving the intended flat DEF and ATK main-stat rules.
+- Corrected HP main-stat handling so Linen Veil provides percentage maximum HP instead of an excessive flat HP bonus.
+- Updated the item information panel to display only the item name, description, main stat, all substats, and available effects or passive information.
+- Added inventory filtering by equippable type: Head, Torso, Boots, Hands, and Accessory.
+
+#### Combat and Target Selection
+
+- Reset Shimmer skill cooldowns when a new encounter begins so cooldowns do not carry over from a previous battle.
+- Added explicit target confirmation for attacks and single-target Shimmer skills.
+- Added target cancellation before an action is committed.
+- Added selected-target labels in combat so the player can see which enemy is currently selected.
+- Cleared pending target selection when combat ends.
+
+#### Health and Defeat Recovery
+
+- Ensured new games initialize the player at full HP.
+- Prevented non-combat environmental damage from leaving the player stranded at 0 HP without a recovery path.
+- Preserved fountain recovery behavior: the player can respawn into the same battle at 10% HP or leave the battle and return to the main floor at full HP.
+- Cleared combat selection state when leaving combat to prevent dead or stale battle UI states.
+
+#### Validation
+
+- The updated workspace build completed successfully.
+- Targeted modified files reported no compilation errors.
+
 ### Next Steps
 
 The core catalog and gameplay systems are now data-driven through `ContentCatalog`, while the room loop remains deterministic and console-friendly. Further work can expand NPC dialogue, procedural room generation, save/load support, and narrative branches without changing the core stat or item APIs.
@@ -95,3 +134,5 @@ The normal build launches **Micare - Cathedral of Lies** with a name prompt befo
 - Combat buttons perform Attack, Item, Shimmer, and Flee actions while refreshing enemy/player state.
 
 For debugging or environments where a window is not available, set `MICARE_CONSOLE_MODE=1` before launching. The repository currently contains no local image asset files, so the desktop UI uses native drawing and the supplied visual references for its dark, brass, verdigris, and shimmer composition.
+
+0.5.0

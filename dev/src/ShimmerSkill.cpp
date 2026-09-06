@@ -51,7 +51,11 @@ public:
 ShimmerSkill::ShimmerSkill(const std::string& name, int equipCost, int cooldown, const std::string& description,
 	const std::string& effect, int powerPercent, int duration)
 	: name_(name), description_(description), effect_(effect), equipCost_(equipCost), cooldown_(cooldown),
-	powerPercent_(powerPercent), duration_(duration), remainingCooldown_(0) {}
+	  powerPercent_(powerPercent), duration_(duration), remainingCooldown_(0) {
+	if (effect_ == "barrier" || effect_ == "heal_hot" || effect_ == "cleanse_resist" || effect_ == "defensive_buff" || effect_ == "stat_boost" || effect_ == "revive")
+		targetType_ = TargetType::Self;
+	else if (effect_ == "all_damage" || effect_ == "all_burn") targetType_ = TargetType::AllEnemies;
+	}
 
 ShimmerSkill::ShimmerSkill(const std::string& name, int cooldown, const std::string& description, const std::string& effect)
 	: ShimmerSkill(name, cooldown, cooldown, description, effect, 100, 0) {}
@@ -66,6 +70,7 @@ int ShimmerSkill::getEquipCost() const { return equipCost_; }
 int ShimmerSkill::getCooldown() const { return cooldown_; }
 int ShimmerSkill::getPowerPercent() const { return powerPercent_; }
 int ShimmerSkill::getDuration() const { return duration_; }
+ShimmerSkill::TargetType ShimmerSkill::getTargetType() const { return targetType_; }
 int ShimmerSkill::getRemainingCooldown() const { return remainingCooldown_; }
 bool ShimmerSkill::IsReady() const { return remainingCooldown_ == 0; }
 void ShimmerSkill::TickCooldown() { if (remainingCooldown_ > 0) --remainingCooldown_; }

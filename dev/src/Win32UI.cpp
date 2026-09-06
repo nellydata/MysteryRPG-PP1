@@ -135,6 +135,9 @@ void Win32UI::LeaveCombat() {
 	activeEnemy_ = nullptr;
 	combatItemSelection_ = false;
 	combatSkillSelection_ = false;
+	combatAttackSelection_ = false;
+	combatTargetConfirmed_ = false;
+	combatTransition_ = false;
 	selectedCombatSkillName_.clear();
 	combatDefeatRecovery_ = false;
 	combat_.ClearEvents();
@@ -303,6 +306,7 @@ void Win32UI::RefreshControls() {
 		ShowWindow(controls_[29], SW_SHOW);
 		ShowWindow(controls_[23], SW_SHOW);
 		ShowWindow(controls_[28], SW_SHOW);
+		ShowWindow(controls_[21], SW_SHOW);
 	} else if (view_ == View::Floor) {
 		ShowWindow(controls_[22], SW_SHOW);
 		ShowWindow(controls_[29], SW_SHOW);
@@ -328,6 +332,7 @@ void Win32UI::RefreshControls() {
 		const auto items = player_.GetInventory().GetSortedItems(inventorySort_, inventoryFocusStat_);
 		for (const auto* item : items) {
 			if (inventoryFilter_ >= 0 && static_cast<int>(item->getCategory()) != inventoryFilter_) continue;
+			if (equipFilter_ >= 0 && (item->getCategory() != ItemCategory::Equippable || static_cast<int>(item->getSlot()) != equipFilter_)) continue;
 			const std::string query = Lowercase(inventorySearchQuery_);
 			if (!query.empty()) {
 				const std::string searchable = Lowercase(item->getName() + " " + item->getDescription() + " " + item->getTheme() + " " + item->getPassive());
@@ -428,11 +433,17 @@ void Win32UI::RefreshControls() {
 					if (enemy != nullptr && enemy->isAlive() && targetEnemies_.size() < 3) targetEnemies_.push_back(enemy.get());
 				}
 			}
-			if (targetEnemies_.size() > 1) {
+			if (targetEnemies_.size() > 1 || combatAttackSelection_ || !selectedCombatSkillName_.empty()) {
 				for (std::size_t index = 0; index < targetEnemies_.size(); ++index) {
-					SetWindowTextW(controls_[8 + index], (L"TARGET: " + FormatDisplayText(targetEnemies_[index]->getName())).c_str());
+					const bool selected = combatTargetConfirmed_ && targetEnemies_[index] == activeEnemy_;
+					SetWindowTextW(controls_[8 + index], ((selected ? L"SELECTED: " : L"TARGET: ") + FormatDisplayText(targetEnemies_[index]->getName())).c_str());
 					ShowWindow(controls_[8 + index], SW_SHOW);
 				}
+			}
+			if (!selectedCombatSkillName_.empty() || combatAttackSelection_) SetWindowTextW(controls_[21], L"CANCEL");
+			if (targetEnemies_.size() == 1 && (combatAttackSelection_ || !selectedCombatSkillName_.empty())) {
+				SetWindowTextW(controls_[8], (L"TARGET: " + FormatDisplayText(targetEnemies_[0]->getName())).c_str());
+				ShowWindow(controls_[8], SW_SHOW);
 			}
 			SetWindowTextW(controls_[24], L"ATTACK");
 			SetWindowTextW(controls_[31], L"ITEM");
@@ -585,6 +596,14 @@ void Win32UI::ShowInventoryMenu() {
 	AppendMenuW(filterMenu, MF_STRING, FilterModeBase + 2, L"Consumables");
 	AppendMenuW(filterMenu, MF_STRING, FilterModeBase + 3, L"Clues");
 	AppendMenuW(filterMenu, MF_STRING, FilterModeBase + 4, L"Crux items");
+	HMENU equipMenu = CreatePopupMenu();
+	AppendMenuW(equipMenu, MF_STRING, EquipFilterBase, L"All equipment");
+	AppendMenuW(equipMenu, MF_STRING, EquipFilterBase + 1, L"Head");
+	AppendMenuW(equipMenu, MF_STRING, EquipFilterBase + 2, L"Torso");
+	AppendMenuW(equipMenu, MF_STRING, EquipFilterBase + 3, L"Boots");
+	AppendMenuW(equipMenu, MF_STRING, EquipFilterBase + 4, L"Hands");
+	AppendMenuW(equipMenu, MF_STRING, EquipFilterBase + 5, L"Accessory");
+	AppendMenuW(filterMenu, MF_POPUP, reinterpret_cast<UINT_PTR>(equipMenu), L"Equipment slot");
 	AppendMenuW(menu, MF_POPUP, reinterpret_cast<UINT_PTR>(sortMenu), L"Sort by");
 	AppendMenuW(menu, MF_POPUP, reinterpret_cast<UINT_PTR>(filterMenu), L"Filter by type");
 	POINT cursor{};
@@ -700,6 +719,9 @@ void Win32UI::HandleCommand(int controlId) {
 		}
 		selectedInventoryIndex_ = -1;
 		inventoryPage_ = 0;
+	} else if (controlId >= EquipFilterBase && controlId < EquipFilterBase + 6) {
+		equipFilter_ = controlId == EquipFilterBase ? -1 : controlId - EquipFilterBase - 1;
+		inventoryPage_ = 0;
 	} else if (controlId >= SkillSortBase && controlId < SkillSortBase + 4) {
 		if (view_ == View::Skills) {
 			skillSortMode_ = controlId - SkillSortBase;
@@ -739,8 +761,25 @@ void Win32UI::HandleCommand(int controlId) {
 			} else {
 				const int targetIndex = controlId - InventoryButtonBase;
 				if (targetIndex < static_cast<int>(targetEnemies_.size())) {
-					activeEnemy_ = targetEnemies_[targetIndex];
-					statusMessage_ = activeEnemy_->getName() + " targeted.";
+					Enemy* target = targetEnemies_[targetIndex];
+					if (combatAttackSelection_ || !selectedCombatSkillName_.empty()) {
+						if (combatTargetConfirmed_ && activeEnemy_ == target) {
+							combatAttackSelection_ = false;
+							PerformCombatAction(selectedCombatSkillName_.empty() ? CombatAction::Attack : CombatAction::Shimmer);
+						} else {
+							activeEnemy_ = target;
+							combatTargetConfirmed_ = true;
+							combat_.RecordInfo(selectedCombatSkillName_.empty()
+								? player_.getName() + " selected " + activeEnemy_->getName() + "."
+								: selectedCombatSkillName_ + " selected; target is " + activeEnemy_->getName() + ".");
+							statusMessage_ = selectedCombatSkillName_.empty()
+								? player_.getName() + " selected " + activeEnemy_->getName() + ". Select it again to confirm the attack."
+								: selectedCombatSkillName_ + " selected; targeting " + activeEnemy_->getName() + ". Select it again to confirm.";
+						}
+					} else {
+						activeEnemy_ = target;
+						statusMessage_ = activeEnemy_->getName() + " selected.";
+					}
 				}
 			}
 		} else {
@@ -759,7 +798,15 @@ void Win32UI::HandleCommand(int controlId) {
 		} else if (view_ == View::Combat && combatSkillSelection_ && index < static_cast<int>(equippedSkillNames_.size())) {
 			selectedCombatSkillName_ = equippedSkillNames_[index];
 			combatSkillSelection_ = false;
-			PerformCombatAction(CombatAction::Shimmer);
+			auto selectedSkill = ShimmerSkill::Create(selectedCombatSkillName_);
+			if (selectedSkill != nullptr && selectedSkill->getTargetType() == ShimmerSkill::TargetType::Self) {
+				statusMessage_ = selectedCombatSkillName_ + " selected. Self-targeted skill ready.";
+							combat_.RecordInfo(player_.getName() + " selected " + selectedCombatSkillName_ + " targeting self.");
+				PerformCombatAction(CombatAction::Shimmer);
+			} else {
+				combatTargetConfirmed_ = false;
+				statusMessage_ = selectedCombatSkillName_ + " selected. Choose an enemy or cancel.";
+			}
 		}
 	} else if (controlId == ButtonInventoryPrevious) {
 		if (inventoryPage_ > 0) --inventoryPage_;
@@ -780,6 +827,13 @@ void Win32UI::HandleCommand(int controlId) {
 		else if (view_ == View::Combat && combatSkillSelection_) {
 			combatSkillSelection_ = false;
 			selectedCombatSkillName_.clear();
+			combatTargetConfirmed_ = false;
+		}
+		else if (view_ == View::Combat && (combatAttackSelection_ || !selectedCombatSkillName_.empty())) {
+			combatAttackSelection_ = false;
+			selectedCombatSkillName_.clear();
+			combatTargetConfirmed_ = false;
+			statusMessage_ = "Target selection canceled.";
 		}
 		else if (!viewHistory_.empty()) {
 			view_ = viewHistory_.back();
@@ -850,7 +904,11 @@ void Win32UI::HandleCommand(int controlId) {
 			statusMessage_ = "Respawned at the fountain with 10% HP. Continue the battle.";
 			if (activeEnemy_ != nullptr && activeEnemy_->isAlive()) combat_.ResumeAfterRespawn(player_, *activeEnemy_);
 			else ShowDefeatRecovery();
-		} else if (player_.isAlive()) PerformCombatAction(CombatAction::Attack);
+		} else if (player_.isAlive() && combat_.IsPlayerTurn()) {
+			combatAttackSelection_ = true;
+			combatTargetConfirmed_ = false;
+			statusMessage_ = "Choose an enemy or cancel.";
+		}
 	} else if (controlId == ButtonItem) {
 		if (combatDefeatRecovery_) {
 			player_.heal(player_.getMaxHP());
@@ -928,6 +986,8 @@ void Win32UI::SyncCombatEvents() {
 void Win32UI::ScheduleEnemyTurn() {
 	if (enemyTurnPending_ || activeEnemy_ == nullptr || !activeEnemy_->isAlive() || !player_.isAlive()) return;
 	enemyTurnPending_ = true;
+	combatTransition_ = true;
+	AddLog("...");
 	SetTimer(window_, 1, 1000, nullptr);
 }
 
@@ -985,7 +1045,10 @@ void Win32UI::SearchRoom() {
 		const int damage = (std::max)(1, player_.getMaxHP() * 5 / 100);
 		player_.takeDamage(damage);
 		AddLog("Investigation: environmental hazard caused " + std::to_string(damage) + " damage.");
-		if (!player_.isAlive()) ShowDefeatRecovery();
+		if (!player_.isAlive()) {
+			if (activeEnemy_ != nullptr && activeEnemy_->isAlive()) ShowDefeatRecovery();
+			else player_.RestoreHealth((std::max)(1, player_.getMaxHP() * 10 / 100));
+		}
 		return;
 	}
 	if (activeEnemy_ == nullptr && roll >= 84) {
@@ -1136,6 +1199,7 @@ void Win32UI::PerformCombatAction(CombatAction action) {
 		AddLog("Wait for your turn.");
 		return;
 	}
+	combat_.RecordInfo(player_.getName() + " is taking an action.");
 	if (action == CombatAction::Flee) {
 		if (!player_.isAlive()) return;
 		AddLog(player_.getName() + " withdrew from combat.");
@@ -1160,13 +1224,13 @@ void Win32UI::PerformCombatAction(CombatAction action) {
 		const int xpReward = activeEnemy_->getXPReward();
 		const EnemyTier defeatedTier = activeEnemy_->getTier();
 		const bool wasBoss = defeatedTier == EnemyTier::Boss;
-		area.removeDeadEnemies();
-		if (area.getName() == "Fountain" && !area.IsHealingUnlocked() && !area.hasEnemies()) {
+		const bool allEnemiesDefeated = !area.hasEnemies();
+		if (area.getName() == "Fountain" && !area.IsHealingUnlocked() && allEnemiesDefeated) {
 			area.SetHealingUnlocked(true);
 			AddLog("The Fountain is purified. Full healing is now available.");
 		}
-		statusMessage_ = "Battle ended: " + defeatedName + " defeated. XP gained: " + std::to_string(xpReward) + ".";
-		AddLog("Battle ended: " + defeatedName + " defeated. XP gained: " + std::to_string(xpReward) + ".");
+		statusMessage_ = defeatedName + " defeated. XP gained: " + std::to_string(xpReward) + ".";
+		AddLog(defeatedName + " defeated. XP gained: " + std::to_string(xpReward) + ".");
 		if (wasBoss) {
 			if (progression_.UnlockShimmerFromTrigger(defeatedName)) AddLog("Shimmer skill unlocked from the boss: " + defeatedName + ".");
 			area.SetBossDefeated(true);
@@ -1194,8 +1258,17 @@ void Win32UI::PerformCombatAction(CombatAction action) {
 			}
 		}
 		}
-		LeaveCombat();
-		view_ = View::Room;
+		if (allEnemiesDefeated) {
+			LeaveCombat();
+			view_ = View::Room;
+		} else {
+			activeEnemy_ = area.getFirstAliveEnemy();
+			combatTargetConfirmed_ = false;
+			combatAttackSelection_ = false;
+			selectedCombatSkillName_.clear();
+			combat_.RecordInfo("Another enemy remains. Select a living enemy for the next action.");
+			combat_.PrepareTurn(player_, *activeEnemy_);
+		}
 		return;
 	}
 	if (!combat_.IsPlayerTurn() && activeEnemy_->isAlive() && player_.isAlive()) ScheduleEnemyTurn();
@@ -1210,6 +1283,7 @@ void Win32UI::AddLog(const std::string& message) {
 }
 
 void Win32UI::InitializePlayer() {
+	player_.RestoreHealth(player_.getMaxHP());
 	progression_.UnlockShimmerSkill("Pulsus Luminis");
 	const auto equipment = BuildEquippableCatalog();
 	AddNamedItem(player_, equipment, "plain_rosary");
@@ -1328,6 +1402,7 @@ LRESULT Win32UI::HandleMessage(UINT message, WPARAM wParam, LPARAM lParam) {
 		if (wParam == 1 && enemyTurnPending_) {
 			KillTimer(window_, 1);
 			enemyTurnPending_ = false;
+			combatTransition_ = false;
 			if (view_ == View::Combat && activeEnemy_ != nullptr && activeEnemy_->isAlive() && player_.isAlive()) {
 				combat_.enemyTurn(player_, *activeEnemy_);
 				SyncCombatEvents();
@@ -1476,45 +1551,22 @@ void Win32UI::Paint(HDC deviceContext) {
 			if (selected == nullptr) {
 				DrawTextLine(deviceContext, detailX, detailY, FormatDisplayText(description), Text, 18, false, detailWidth);
 			} else {
-				std::wstring type = L"Type: ";
-				switch (selected->getCategory()) {
-				case ItemCategory::Equippable:
-					switch (selected->getSlot()) {
-					case EquipSlot::Head: type += L"Head"; break;
-					case EquipSlot::Torso: type += L"Torso"; break;
-					case EquipSlot::Boots: type += L"Boots"; break;
-					case EquipSlot::Hand: type += L"Hands"; break;
-					case EquipSlot::Accessory: type += L"Accessory"; break;
-					default: type += L"Equipment"; break;
-					}
-					break;
-				case ItemCategory::Consumable: type += L"Consumable"; break;
-				case ItemCategory::Clue: type += L"Clue"; break;
-				case ItemCategory::Crux: type += L"Crux"; break;
-				default: type += L"Item"; break;
-				}
-				detailY += DrawTextLine(deviceContext, detailX, detailY, type, Muted, 18, false, detailWidth) + 8;
 				if (!selected->getDescription().empty()) {
 					detailY += DrawTextLine(deviceContext, detailX, detailY, FormatDisplayText(selected->getDescription()), Text, 18, false, detailWidth) + 8;
 				}
-				const Stats& stats = selected->getStats();
-				auto drawStat = [&](const wchar_t* label, int value) {
-					if (value == 0) return;
-					detailY += DrawTextLine(deviceContext, detailX, detailY, std::wstring(label) + L"  " + std::to_wstring(value), Text, 18, false, detailWidth) + 6;
-				};
-				if (selected->getMainStatPercent() > 0) {
-					detailY += DrawTextLine(deviceContext, detailX, detailY,
-						L"Main stat: " + FormatDisplayText(selected->getMainStat()) + L" +" + std::to_wstring(selected->getMainStatPercent()) + L"%",
-						Shimmer, 17, false, detailWidth) + 6;
-				}
-				drawStat(L"HP", stats.hp); drawStat(L"DEF", stats.def); drawStat(L"SPD", stats.spd); drawStat(L"ATK", stats.atk);
-				drawStat(L"Accuracy", stats.acc); drawStat(L"Resistance", stats.res); drawStat(L"Crit rate", stats.critRate);
-				drawStat(L"Crit damage", stats.critDamage); drawStat(L"Evasion", stats.evasion);
-				drawStat(L"Healing potency", stats.healingPotency); drawStat(L"Healing received", stats.healingReceived);
-				drawStat(L"Barrier potency", stats.barrierPotency); drawStat(L"DOT potency", stats.dotPotency);
-				drawStat(L"Lifesteal", stats.lifesteal); drawStat(L"Debuff reduction", stats.debuffDurationReduction);
-				if (selected->getCategory() == ItemCategory::Consumable && !selected->getEffect().empty()) {
-					detailY += DrawTextLine(deviceContext, detailX, detailY, L"Use: " + FormatDisplayText(selected->getEffect()), Shimmer, 17, false, detailWidth) + 6;
+				const std::string mainValue = selected->getMainStatPercent() > 0 ? "+" + std::to_string(selected->getMainStatPercent()) + "%" : "+" + std::to_string(selected->getMainStatValue());
+				detailY += DrawTextLine(deviceContext, detailX, detailY, L"Main stat: " + FormatDisplayText(selected->getMainStat()) + L" " + ToWide(mainValue), Shimmer, 17, false, detailWidth) + 6;
+				for (const auto& substat : selected->getSubstats()) {
+					const char* label = "Stat";
+					switch (substat.first) {
+					case ItemStat::HP: label = "HP"; break; case ItemStat::DEF: label = "DEF"; break; case ItemStat::SPD: label = "SPD"; break;
+					case ItemStat::ATK: label = "ATK"; break; case ItemStat::Accuracy: label = "Accuracy"; break; case ItemStat::Resistance: label = "Resistance"; break;
+					case ItemStat::CritRate: label = "Crit rate"; break; case ItemStat::CritDamage: label = "Crit damage"; break; case ItemStat::Evasion: label = "Evasion"; break;
+					case ItemStat::HealingPotency: label = "Healing potency"; break; case ItemStat::BarrierPotency: label = "Barrier potency"; break;
+					case ItemStat::DotPotency: label = "DOT potency"; break; case ItemStat::Lifesteal: label = "Lifesteal"; break;
+					case ItemStat::DebuffDurationReduction: label = "Debuff reduction"; break;
+					}
+					detailY += DrawTextLine(deviceContext, detailX, detailY, L"Substat: " + ToWide(label) + L" +" + std::to_wstring(substat.second) + L"%", Text, 17, false, detailWidth) + 6;
 				}
 				std::string effect = selected->getEffect();
 				if (!selected->getPassive().empty()) effect += (effect.empty() ? "" : " ") + selected->getPassive();
@@ -1524,7 +1576,7 @@ void Win32UI::Paint(HDC deviceContext) {
 				}
 				if (!selected->getSetName().empty()) {
 					detailY += DrawTextLine(deviceContext, detailX, detailY, L"Set: " + FormatDisplayText(selected->getSetName()), Brass, 17, false, detailWidth) + 6;
-					DrawTextLine(deviceContext, detailX, detailY, L"Set bonus: " + FormatDisplayText(selected->getSetPassive()), Brass, 17, false, detailWidth);
+					if (!selected->getSetPassive().empty()) detailY += DrawTextLine(deviceContext, detailX, detailY, L"Set bonus: " + FormatDisplayText(selected->getSetPassive()), Brass, 17, false, detailWidth) + 6;
 				}
 			}
 		}
@@ -1628,6 +1680,7 @@ void Win32UI::Paint(HDC deviceContext) {
 		}
 	} else if (view_ == View::Map) {
 		DrawTextLine(deviceContext, 425, contentY, L"FLOOR I // MAP", Shimmer, 25, true);
+		DrawTextLine(deviceContext, 425, contentY + 35, L"Select Back to return.", Muted, 16);
 		int mapY = contentY + 55;
 		for (const auto& room : mapManager_.GetRooms()) {
 			if (room.IsUnlocked()) {

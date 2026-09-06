@@ -2,6 +2,7 @@
 
 #include <string>
 #include <vector>
+#include <utility>
 
 struct Stats {
 	int hp = 0;
@@ -106,4 +107,6 @@ struct ItemDefinition {
 	std::string setName;
 	std::string passive;
 	std::string setPassive;
+	int mainStatValue = 0;
+	std::vector<std::pair<ItemStat, int>> substats;
 };

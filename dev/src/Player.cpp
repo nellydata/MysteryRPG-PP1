@@ -42,8 +42,16 @@ Player::~Player() = default;
 
 void Player::takeDamage(int amount) {
     if (amount <= 0) return;
+    const auto activeSets = GetActiveSets();
+    const bool verdigrisSet = std::find(activeSets.begin(), activeSets.end(), "Verdigris Matron") != activeSets.end();
+    const int healthBefore = hp_;
     hp_ -= amount;
     if (hp_ < 0) hp_ = 0;
+    if (verdigrisSet && healthBefore > hp_) {
+        const int recovery = healthBefore - hp_;
+        heal(recovery / 2);
+        AddBarrier(recovery / 4);
+    }
 }
 
 bool Player::ToggleEquip(Item& item) {
@@ -96,9 +104,9 @@ int Player::getAttack() const { return totalStats_.atk; }
 int Player::getDefense() const { return totalStats_.def; }
 int Player::getSP() const { return sp_; }
 int Player::getSpeed() const { return totalStats_.spd; }
-int Player::getAccuracy() const { return totalStats_.acc; }
-int Player::getResistance() const { return totalStats_.res; }
-int Player::getCritRate() const { return totalStats_.critRate; }
+int Player::getAccuracy() const { return (std::min)(100, totalStats_.acc); }
+int Player::getResistance() const { return (std::min)(100, totalStats_.res); }
+int Player::getCritRate() const { return (std::min)(100, totalStats_.critRate); }
 int Player::getCritDamage() const { return totalStats_.critDamage; }
 int Player::getEvasion() const { return totalStats_.evasion; }
 int Player::getHealingPotency() const { return totalStats_.healingPotency; }
@@ -313,6 +321,34 @@ void Player::RecalculateStats() {
         totalStats_.dotPotency += stats.dotPotency;
         totalStats_.lifesteal += stats.lifesteal;
         totalStats_.debuffDurationReduction += stats.debuffDurationReduction;
+        const int flatMainValue = item->getMainStatValue();
+        if (flatMainValue > 0) {
+            if (item->getMainStat() == "hp") totalStats_.hp += flatMainValue;
+            else if (item->getMainStat() == "def") totalStats_.def += flatMainValue;
+            else if (item->getMainStat() == "spd") totalStats_.spd += flatMainValue;
+            else if (item->getMainStat() == "atk") totalStats_.atk += flatMainValue;
+        }
+        for (const auto& substat : item->getSubstats()) {
+            int baseValue = 0;
+            int* totalValue = nullptr;
+            switch (substat.first) {
+            case ItemStat::HP: baseValue = baseStats_.hp; totalValue = &totalStats_.hp; break;
+            case ItemStat::DEF: baseValue = baseStats_.def; totalValue = &totalStats_.def; break;
+            case ItemStat::SPD: baseValue = baseStats_.spd; totalValue = &totalStats_.spd; break;
+            case ItemStat::ATK: baseValue = baseStats_.atk; totalValue = &totalStats_.atk; break;
+            case ItemStat::Accuracy: baseValue = 100; totalValue = &totalStats_.acc; break;
+            case ItemStat::Resistance: baseValue = 100; totalValue = &totalStats_.res; break;
+            case ItemStat::CritRate: baseValue = 100; totalValue = &totalStats_.critRate; break;
+            case ItemStat::CritDamage: baseValue = 100; totalValue = &totalStats_.critDamage; break;
+            case ItemStat::Evasion: baseValue = 100; totalValue = &totalStats_.evasion; break;
+            case ItemStat::HealingPotency: totalValue = &totalStats_.healingPotency; break;
+            case ItemStat::BarrierPotency: totalValue = &totalStats_.barrierPotency; break;
+            case ItemStat::DotPotency: totalValue = &totalStats_.dotPotency; break;
+            case ItemStat::Lifesteal: totalValue = &totalStats_.lifesteal; break;
+            case ItemStat::DebuffDurationReduction: totalValue = &totalStats_.debuffDurationReduction; break;
+            }
+            if (totalValue != nullptr) *totalValue += baseValue > 0 ? baseValue * substat.second / 100 : substat.second;
+        }
         const int percent = item->getMainStatPercent();
         if (percent > 0) {
             int baseValue = 0;
@@ -327,7 +363,19 @@ void Player::RecalculateStats() {
     }
 
     for (const std::string& setName : GetActiveSets()) {
-        if (setName == "Shimmer Ascendant") {
+        if (setName == "Verdigris Matron") {
+            totalStats_.healingPotency += 100;
+            totalStats_.lifesteal += 50;
+            totalStats_.barrierPotency += 25;
+        } else if (setName == "Shimmer Reliquary") {
+            totalStats_.barrierPotency += 75;
+            totalStats_.healingReceived += 50;
+            totalStats_.critRate += 25;
+        } else if (setName == "Oracle Automaton") {
+            totalStats_.atk += 50;
+            totalStats_.acc += 30;
+            totalStats_.critDamage += 75;
+        } else if (setName == "Shimmer Ascendant") {
             totalStats_.atk += 15;
             totalStats_.acc += 15;
         } else if (setName == "Automaton Overlord") {

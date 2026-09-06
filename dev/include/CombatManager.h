@@ -44,6 +44,7 @@ public:
     bool IsPlayerTurn() const;
     bool HasUsedConsumableThisTurn() const;
     const std::vector<CombatEvent>& GetEvents() const;
+    void RecordInfo(const std::string& message);
     void ClearEvents();
 
 private:

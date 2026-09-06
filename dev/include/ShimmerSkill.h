@@ -8,6 +8,7 @@ class Enemy;
 
 class ShimmerSkill {
 public:
+	enum class TargetType { Self, SingleEnemy, AllEnemies };
 	ShimmerSkill(const std::string& name, int equipCost, int cooldown,
 		const std::string& description = "", const std::string& effect = "");
 	ShimmerSkill(const std::string& name, int equipCost, int cooldown,
@@ -26,6 +27,7 @@ public:
 	int getCooldown() const;
 	int getPowerPercent() const;
 	int getDuration() const;
+	TargetType getTargetType() const;
 	int getRemainingCooldown() const;
 	bool IsReady() const;
 	void TickCooldown();
@@ -40,5 +42,6 @@ protected:
 	int cooldown_;
 	int powerPercent_;
 	int duration_;
+	TargetType targetType_ = TargetType::SingleEnemy;
 	int remainingCooldown_;
 };

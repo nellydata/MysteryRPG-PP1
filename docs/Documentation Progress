@@ -176,4 +176,15 @@ Cleanup pass
 • Validated the cleanup with a successful Debug x64 build, `MICARE_VALIDATE=1`, and `git diff --check`.
 
 
+9/7
 
+•	Deleted unused Automata, Boss, and Nun source/header files.
+•	Removed stale includes and verified project metadata no longer references them.
+•	Removed the legacy name-based Enemy constructor and speed sniffing.
+•	Added Area::ResourcePool for clue/item state and introduced SetHealingRoom(bool).
+•	Updated MapManager to explicitly mark the Fountain as the healing room.
+•	Replaced Inventory’s parallel vectors with std::vector<ItemEntry>.
+•	Merged Enemy::ProcessStatuses overloads and added SumStatusBonus.
+•	Added CombatManager::AdvanceTurn for repeated gauge transitions.
+•	Replaced direct CombatManager.cpp std::cout calls with CombatEvent logging.
+•	Preserved the requested exclusions.

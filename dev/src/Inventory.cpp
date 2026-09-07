@@ -8,22 +8,16 @@ void Inventory::AddClue(const Clue& clue) {
 
 void Inventory::AddItem(std::unique_ptr<Item> item) {
 	if (!item) return;
-	items_.push_back(std::move(item));
-	quantities_.push_back(1);
-	locked_.push_back(false);
-	acquisitionOrder_.push_back(++nextAcquisitionOrder_);
+	items_.push_back({ std::move(item), 1, false, ++nextAcquisitionOrder_ });
 }
 
 bool Inventory::RemoveItem(const std::string& name) {
 	for (std::size_t index = 0; index < items_.size(); ++index) {
-		if (items_[index] && items_[index]->getName() == name) {
-			if (quantities_[index] > 1) {
-				--quantities_[index];
-			} else if (!locked_[index]) {
+		if (items_[index].item && items_[index]->getName() == name) {
+			if (items_[index].quantity > 1) {
+				--items_[index].quantity;
+			} else if (!items_[index].locked) {
 				items_.erase(items_.begin() + static_cast<std::ptrdiff_t>(index));
-				quantities_.erase(quantities_.begin() + static_cast<std::ptrdiff_t>(index));
-				locked_.erase(locked_.begin() + static_cast<std::ptrdiff_t>(index));
-				acquisitionOrder_.erase(acquisitionOrder_.begin() + static_cast<std::ptrdiff_t>(index));
 			} else return false;
 			return true;
 		}
@@ -34,20 +28,20 @@ bool Inventory::RemoveItem(const std::string& name) {
 int Inventory::GetQuantity(const std::string& name) const {
 	int quantity = 0;
 	for (std::size_t index = 0; index < items_.size(); ++index)
-		if (items_[index] && items_[index]->getName() == name) quantity += quantities_[index];
+		if (items_[index].item && items_[index]->getName() == name) quantity += items_[index].quantity;
 	return quantity;
 }
 
 bool Inventory::IsLocked(const std::string& name) const {
 	for (std::size_t index = 0; index < items_.size(); ++index)
-		if (items_[index] && items_[index]->getName() == name) return locked_[index];
+		if (items_[index].item && items_[index]->getName() == name) return items_[index].locked;
 	return false;
 }
 
 void Inventory::SetLocked(const std::string& name, bool locked) {
 	for (std::size_t index = 0; index < items_.size(); ++index) {
-		if (items_[index] && items_[index]->getName() == name) {
-			locked_[index] = locked;
+		if (items_[index].item && items_[index]->getName() == name) {
+			items_[index].locked = locked;
 			return;
 		}
 	}
@@ -56,13 +50,10 @@ void Inventory::SetLocked(const std::string& name, bool locked) {
 bool Inventory::DiscardItem(const std::string& name, int amount) {
 	if (amount <= 0 || IsLocked(name)) return false;
 	for (std::size_t index = 0; index < items_.size(); ++index) {
-		if (items_[index] && items_[index]->getName() == name) {
-			if (amount >= quantities_[index]) {
+		if (items_[index].item && items_[index]->getName() == name) {
+			if (amount >= items_[index].quantity) {
 				items_.erase(items_.begin() + static_cast<std::ptrdiff_t>(index));
-				quantities_.erase(quantities_.begin() + static_cast<std::ptrdiff_t>(index));
-				locked_.erase(locked_.begin() + static_cast<std::ptrdiff_t>(index));
-				acquisitionOrder_.erase(acquisitionOrder_.begin() + static_cast<std::ptrdiff_t>(index));
-			} else quantities_[index] -= amount;
+			} else items_[index].quantity -= amount;
 			return true;
 		}
 	}
@@ -93,17 +84,17 @@ int FocusValue(const Stats& stats, ItemStat stat) {
 
 std::vector<Item*> Inventory::GetSortedItems(InventorySort sort, ItemStat focusStat) const {
 	std::vector<Item*> result;
-	for (const auto& item : items_) if (item) result.push_back(item.get());
+	for (const auto& entry : items_) if (entry.item) result.push_back(entry.item.get());
 	std::sort(result.begin(), result.end(), [&](const Item* left, const Item* right) {
 		const auto findIndex = [&](const Item* item) {
 			for (std::size_t index = 0; index < items_.size(); ++index)
-				if (items_[index].get() == item) return index;
+				if (items_[index].item.get() == item) return index;
 			return items_.size();
 		};
 		const std::size_t leftIndex = findIndex(left);
 		const std::size_t rightIndex = findIndex(right);
-		if (sort == InventorySort::RecentlyObtained) return acquisitionOrder_[leftIndex] > acquisitionOrder_[rightIndex];
-		if (sort == InventorySort::LeastRecentlyObtained) return acquisitionOrder_[leftIndex] < acquisitionOrder_[rightIndex];
+		if (sort == InventorySort::RecentlyObtained) return items_[leftIndex].acquisitionOrder > items_[rightIndex].acquisitionOrder;
+		if (sort == InventorySort::LeastRecentlyObtained) return items_[leftIndex].acquisitionOrder < items_[rightIndex].acquisitionOrder;
 		if (sort == InventorySort::RarityAscending) return static_cast<int>(left->getRarity()) < static_cast<int>(right->getRarity());
 		if (sort == InventorySort::RarityDescending) return static_cast<int>(left->getRarity()) > static_cast<int>(right->getRarity());
 		if (sort == InventorySort::HighestStat) return FocusValue(left->getStats(), focusStat) > FocusValue(right->getStats(), focusStat);
@@ -115,18 +106,18 @@ std::vector<Item*> Inventory::GetSortedItems(InventorySort sort, ItemStat focusS
 
 std::size_t Inventory::GetItemCount() const {
 	std::size_t count = 0;
-	for (int quantity : quantities_) count += static_cast<std::size_t>(quantity);
+	for (const auto& entry : items_) count += static_cast<std::size_t>(entry.quantity);
 	return count;
 }
 
 Item* Inventory::FindItem(const std::string& name) {
-	for (auto& item : items_) {
-		if (item && item->getName() == name) return item.get();
+	for (auto& entry : items_) {
+		if (entry.item && entry->getName() == name) return entry.item.get();
 	}
 	return nullptr;
 }
 
-const std::vector<std::unique_ptr<Item>>& Inventory::GetItems() const { return items_; }
+const std::vector<ItemEntry>& Inventory::GetItems() const { return items_; }
 const std::vector<Clue>& Inventory::GetClues() const { return clues; }
 
 bool Inventory::HasClue(const std::string& description) const {

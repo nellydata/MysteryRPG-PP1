@@ -3,9 +3,9 @@
 #include <algorithm>
 
 Area::Area(const std::string& name)
-    : name_(name), hasNPC_(false), hasClues_(false), hasItems_(false), cluesRemaining_(0), itemsRemaining_(0),
+    : name_(name), hasNPC_(false),
       spawnCondition_(EnemySpawnCondition::None), unlocked_(false), searchCount_(0),
-      discoveredNPC_(false), bossDefeated_(false), bossEncountered_(false), healingUnlocked_(false) {}
+      discoveredNPC_(false), bossDefeated_(false), bossEncountered_(false), healingUnlocked_(false), healingRoom_(false) {}
 
 Area::~Area() = default;
 
@@ -45,6 +45,7 @@ bool Area::HasBossBeenDefeated() const { return bossDefeated_; }
 void Area::SetBossDefeated(bool defeated) { bossDefeated_ = defeated; }
 bool Area::IsHealingUnlocked() const { return healingUnlocked_; }
 void Area::SetHealingUnlocked(bool unlocked) { healingUnlocked_ = unlocked; }
+void Area::SetHealingRoom(bool healingRoom) { healingRoom_ = healingRoom; }
 bool Area::HasBossBeenEncountered() const { return bossEncountered_; }
 void Area::MarkBossEncountered() { bossEncountered_ = true; }
 void Area::SetCleared(bool cleared) {
@@ -54,7 +55,7 @@ void Area::SetCleared(bool cleared) {
     discoveredNPC_ = hasNPC_;
     bossDefeated_ = true;
     bossEncountered_ = false;
-    if (name_ == "Fountain") healingUnlocked_ = true;
+    if (healingRoom_) healingUnlocked_ = true;
 }
 
 bool Area::hasEnemies() const {
@@ -89,28 +90,26 @@ void Area::AddInteractable(const std::string& interactable) {
 }
 
 void Area::SetNPC(bool hasNPC) { hasNPC_ = hasNPC; }
-void Area::SetClues(bool hasClues) { hasClues_ = hasClues; cluesRemaining_ = hasClues ? static_cast<int>(interactables_.size()) : 0; }
-void Area::SetItems(bool hasItems) { hasItems_ = hasItems; itemsRemaining_ = hasItems ? static_cast<int>(interactables_.size()) : 0; }
+void Area::SetClues(bool hasClues) {
+    cluePool_.Set(hasClues, static_cast<int>(interactables_.size()));
+}
+void Area::SetItems(bool hasItems) {
+    itemPool_.Set(hasItems, static_cast<int>(interactables_.size()));
+}
 void Area::SetSpawnCondition(EnemySpawnCondition condition) { spawnCondition_ = condition; }
 
 const std::vector<std::string>& Area::GetInteractables() const { return interactables_; }
 bool Area::HasNPC() const { return hasNPC_; }
-bool Area::HasClues() const { return hasClues_; }
-bool Area::HasItems() const { return hasItems_; }
-bool Area::HasAllClues() const { return cluesRemaining_ == 0; }
-bool Area::HasAllItems() const { return itemsRemaining_ == 0; }
+bool Area::HasClues() const { return cluePool_.Has(); }
+bool Area::HasItems() const { return itemPool_.Has(); }
+bool Area::HasAllClues() const { return cluePool_.HasAll(); }
+bool Area::HasAllItems() const { return itemPool_.HasAll(); }
 EnemySpawnCondition Area::GetSpawnCondition() const { return spawnCondition_; }
 
 bool Area::ConsumeClue() {
-    if (!hasClues_ || cluesRemaining_ <= 0) return false;
-    --cluesRemaining_;
-    hasClues_ = cluesRemaining_ > 0;
-    return true;
+    return cluePool_.Consume();
 }
 
 bool Area::ConsumeItem() {
-    if (!hasItems_ || itemsRemaining_ <= 0) return false;
-    --itemsRemaining_;
-    hasItems_ = itemsRemaining_ > 0;
-    return true;
+    return itemPool_.Consume();
 }

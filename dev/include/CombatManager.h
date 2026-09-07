@@ -72,4 +72,5 @@ private:
 
     void AddEvent(CombatEvent::Kind kind, const std::string& message, int value = 0);
     void StartPlayerTurn(Player& player);
+    void AdvanceTurn(Player& player, Enemy& enemy);
 };

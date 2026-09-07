@@ -17,6 +17,7 @@
   <ItemGroup>
     <None Include=".gitignore" />
     <None Include="README.md" />
+    <None Include="docs\Micare-System-Design.md" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="dev\include\ContentCatalog.h">
@@ -35,12 +36,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="dev\include\Area.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="dev\include\Automata.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="dev\include\Boss.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="dev\include\Clue.h">
@@ -73,9 +68,6 @@
     <ClInclude Include="dev\include\MapManager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="dev\include\Nun.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="dev\include\Player.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -97,12 +89,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="dev\src\Area.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="dev\src\Automata.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="dev\src\Boss.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="dev\src\Clue.cpp">
@@ -138,9 +124,6 @@
     <ClCompile Include="dev\src\MapManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="dev\src\Nun.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="dev\src\Player.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -152,8 +135,3 @@
     </ClCompile>
   </ItemGroup>
 </Project>
-
-
-
-
-

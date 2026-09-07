@@ -1,8 +1,6 @@
 #include "Win32UI.h"
-#include "Automata.h"
 #include "ContentCatalog.h"
 #include "EnemyCatalog.h"
-#include "Nun.h"
 #include "ShimmerSkill.h"
 #include "MapManager.h"
 #include <algorithm>

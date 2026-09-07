@@ -8,6 +8,16 @@
 
 class Item;
 
+struct ItemEntry {
+	std::unique_ptr<Item> item;
+	int quantity = 1;
+	bool locked = false;
+	unsigned long long acquisitionOrder = 0;
+
+	Item* operator->() { return item.get(); }
+	const Item* operator->() const { return item.get(); }
+};
+
 enum class InventorySort {
 	AlphabeticalAscending,
 	AlphabeticalDescending,
@@ -26,7 +36,7 @@ public:
 	void AddItem(std::unique_ptr<Item> item);
 	bool RemoveItem(const std::string& name);
 	Item* FindItem(const std::string& name);
-	const std::vector<std::unique_ptr<Item>>& GetItems() const;
+	const std::vector<ItemEntry>& GetItems() const;
 	const std::vector<Clue>& GetClues() const;
 	bool HasClue(const std::string& description) const;
 	int GetQuantity(const std::string& name) const;
@@ -37,9 +47,6 @@ public:
 	std::size_t GetItemCount() const;
 
 private:
-	std::vector<std::unique_ptr<Item>> items_;
-	std::vector<int> quantities_;
-	std::vector<bool> locked_;
-	std::vector<unsigned long long> acquisitionOrder_;
+	std::vector<ItemEntry> items_;
 	unsigned long long nextAcquisitionOrder_ = 0;
 };

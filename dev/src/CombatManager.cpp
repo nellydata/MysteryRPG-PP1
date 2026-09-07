@@ -6,7 +6,6 @@
 #include "ShimmerSkill.h"
 #include "CombatMath.h"
 #include <algorithm>
-#include <iostream>
 #include <string>
 #include <memory>
 
@@ -72,6 +71,12 @@ void AccumulateGaugesUntilReady(int& playerGauge, int& enemyGauge,
         enemyGauge += (std::max)(1, enemySpeed);
     }
 }
+}
+
+void CombatManager::AdvanceTurn(Player& player, Enemy& enemy) {
+    AccumulateGaugesUntilReady(playerGauge_, enemyGauge_, player.getSpeed(), enemy.getSpeed());
+    playerTurn_ = playerGauge_ >= 1000;
+    if (playerTurn_ && !groupEnemyTurn_) StartPlayerTurn(player);
 }
 
 void CombatManager::StartPlayerTurn(Player& player) {
@@ -176,13 +181,11 @@ bool CombatManager::resolve(CombatAction action, Player& player, Enemy& enemy,
         const unsigned hitRoll = static_cast<unsigned>(turnNumber_ * 37 + player.getAttack() * 11 + enemy.getHP()) % 100;
         const int hitChance = CombatMath::AccuracyChance(100, player.getAccuracy(), enemy.getEvasion());
         if (hitRoll >= static_cast<unsigned>(hitChance)) {
-            std::cout << player.getName() << " attacks " << enemy.getName() << ", but the strike is evaded.\n";
+            AddEvent(CombatEvent::Kind::Info, player.getName() + " attacks " + enemy.getName() + ", but the strike is evaded.");
             playerGauge_ -= 1000;
             playerTurn_ = false;
             AddEvent(CombatEvent::Kind::Info, player.getName() + "'s attack was evaded.");
-            AccumulateGaugesUntilReady(playerGauge_, enemyGauge_, player.getSpeed(), enemy.getSpeed());
-            playerTurn_ = playerGauge_ >= 1000;
-            if (playerTurn_) StartPlayerTurn(player);
+            AdvanceTurn(player, enemy);
             return true;
         }
         const unsigned critRoll = static_cast<unsigned>(turnNumber_ * 53 + player.getAttack() * 7 + enemy.getHP() * 3) % 100;
@@ -203,17 +206,15 @@ bool CombatManager::resolve(CombatAction action, Player& player, Enemy& enemy,
         if (enemy.UpdatePhase()) {
             AddEvent(CombatEvent::Kind::Info, "Boss enters Phase " + std::to_string(enemy.GetPhase()) + ".");
         }
-        std::cout << "Adelaide attacks " << enemy.getName()
-                  << " for " << damage << (critical ? " critical" : "") << " damage.\n";
+        AddEvent(CombatEvent::Kind::Info, player.getName() + " attacks " + enemy.getName()
+                  + " for " + std::to_string(damage) + (critical ? " critical" : "") + " damage.");
         if (!enemy.isAlive() && progression != nullptr) {
             progression->GrantXP(enemy.getXPReward());
             progression->CheckLevelUp(player);
         }
         playerGauge_ -= 1000;
         playerTurn_ = false;
-        AccumulateGaugesUntilReady(playerGauge_, enemyGauge_, player.getSpeed(), enemy.getSpeed());
-        playerTurn_ = playerGauge_ >= 1000;
-        if (playerTurn_) StartPlayerTurn(player);
+        AdvanceTurn(player, enemy);
         return true;
     }
     case CombatAction::Shimmer:
@@ -255,9 +256,7 @@ bool CombatManager::resolve(CombatAction action, Player& player, Enemy& enemy,
         }
         playerGauge_ -= 1000;
         playerTurn_ = false;
-        AccumulateGaugesUntilReady(playerGauge_, enemyGauge_, player.getSpeed(), enemy.getSpeed());
-        playerTurn_ = playerGauge_ >= 1000;
-        if (playerTurn_) StartPlayerTurn(player);
+        AdvanceTurn(player, enemy);
         return true;
     }
     case CombatAction::Item: {
@@ -269,7 +268,7 @@ bool CombatManager::resolve(CombatAction action, Player& player, Enemy& enemy,
         return false;
     }
     case CombatAction::Flee:
-        std::cout << "Adelaide retreats from the encounter.\n";
+        AddEvent(CombatEvent::Kind::Info, player.getName() + " retreats from the encounter.");
         return true;
     }
 
@@ -295,9 +294,7 @@ bool CombatManager::UseConsumable(const std::string& itemName, Player& player, E
     if (damage > 0) AddEvent(CombatEvent::Kind::Damage, player.getName() + " deals " + std::to_string(damage) + " damage to " + enemy.getName() + ".", damage);
     playerGauge_ -= 1000;
     playerTurn_ = false;
-    AccumulateGaugesUntilReady(playerGauge_, enemyGauge_, player.getSpeed(), enemy.getSpeed());
-    playerTurn_ = playerGauge_ >= 1000;
-        if (playerTurn_) StartPlayerTurn(player);
+    AdvanceTurn(player, enemy);
     return true;
 }
 
@@ -401,9 +398,7 @@ void CombatManager::enemyTurn(Player& player, Enemy& enemy) {
         enemy.StartSkillCooldown(index);
         enemyGauge_ -= 1000;
         playerTurn_ = false;
-        AccumulateGaugesUntilReady(playerGauge_, enemyGauge_, player.getSpeed(), enemy.getSpeed());
-        playerTurn_ = playerGauge_ >= 1000;
-        if (playerTurn_ && !groupEnemyTurn_) StartPlayerTurn(player);
+        AdvanceTurn(player, enemy);
         return;
     }
 
@@ -424,12 +419,10 @@ void CombatManager::enemyTurn(Player& player, Enemy& enemy) {
     AddEvent(CombatEvent::Kind::Attack, enemy.getName() + " attacks " + player.getName() + ".", finalDamage);
     AddEvent(CombatEvent::Kind::Damage, enemy.getName() + " deals " + std::to_string(finalDamage) + " damage to " + player.getName() + ".", finalDamage);
     if (!player.isAlive()) AddEvent(CombatEvent::Kind::Death, player.getName() + " has fallen.");
-    std::cout << enemy.getName() << " attacks for " << damage << " damage.\n";
+    AddEvent(CombatEvent::Kind::Info, enemy.getName() + " attacks for " + std::to_string(damage) + " damage.");
     enemyGauge_ -= 1000;
     playerTurn_ = false;
-    AccumulateGaugesUntilReady(playerGauge_, enemyGauge_, player.getSpeed(), enemy.getSpeed());
-    playerTurn_ = playerGauge_ >= 1000;
-    if (playerTurn_ && !groupEnemyTurn_) StartPlayerTurn(player);
+    AdvanceTurn(player, enemy);
 }
 
 void CombatManager::enemyTurn(Player& player, Enemy& enemy, const std::vector<Enemy*>& enemies) {
@@ -466,13 +459,13 @@ bool CombatManager::interrogate(Player& player, Enemy& enemy,
     const int chance = InterrogationChance(enemy, playerLevel);
     const unsigned roll = InterrogationRoll(enemy, playerLevel, interrogationAttempts_);
 
-    std::cout << "Interrogation success chance: " << chance << "%.\n";
+    AddEvent(CombatEvent::Kind::Info, "Interrogation success chance: " + std::to_string(chance) + "%.");
     if (roll >= static_cast<unsigned>(chance)) {
-        std::cout << enemy.getName() << " refuses to reveal anything.\n";
+        AddEvent(CombatEvent::Kind::Info, enemy.getName() + " refuses to reveal anything.");
         return true;
     }
 
-    std::cout << enemy.getName() << " reveals a fragment of cathedral lore.\n";
+    AddEvent(CombatEvent::Kind::Info, enemy.getName() + " reveals a fragment of cathedral lore.");
     if (progression != nullptr) {
         progression->GrantXP(10);
         progression->CheckLevelUp(player);

@@ -59,19 +59,36 @@ public:
     void SetBossDefeated(bool defeated);
     bool IsHealingUnlocked() const;
     void SetHealingUnlocked(bool unlocked);
+    void SetHealingRoom(bool healingRoom);
     bool HasBossBeenEncountered() const;
     void MarkBossEncountered();
     void SetCleared(bool cleared);
 
 private:
+    struct ResourcePool {
+        bool available = false;
+        int remaining = 0;
+
+        void Set(bool hasResource, int count) {
+            available = hasResource;
+            remaining = hasResource ? count : 0;
+        }
+
+        bool Has() const { return available; }
+        bool HasAll() const { return remaining == 0; }
+
+        bool Consume() {
+            if (!available || remaining <= 0) return false;
+            --remaining;
+            available = remaining > 0;
+            return true;
+        }
+    };
+
     std::string name_;
     std::vector<std::unique_ptr<Enemy>> enemies_;
     std::vector<std::string> interactables_;
     bool hasNPC_;
-    bool hasClues_;
-    bool hasItems_;
-    int cluesRemaining_;
-    int itemsRemaining_;
     EnemySpawnCondition spawnCondition_;
     bool unlocked_;
     int searchCount_;
@@ -80,4 +97,7 @@ private:
     bool bossDefeated_;
     bool bossEncountered_;
     bool healingUnlocked_;
+    bool healingRoom_;
+    ResourcePool cluePool_;
+    ResourcePool itemPool_;
 };

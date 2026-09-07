@@ -6,7 +6,6 @@
 
 class Enemy {
 public:
-    Enemy(const std::string& name, int hp, int atk, int xpReward = 15, int level = 1);
     Enemy(const EnemyDefinition& definition, int level);
     virtual ~Enemy();
 
@@ -38,8 +37,8 @@ public:
     bool HasStatus(StatusType type) const;
     const std::vector<StatusEffect>& GetStatuses() const;
     bool ApplyStatus(const StatusEffect& status, int accuracy = 100);
-    void ProcessStatuses();
-    void ProcessStatuses(std::vector<std::pair<StatusType, int>>& damageEvents, int& healing);
+    void ProcessStatuses(std::vector<std::pair<StatusType, int>>& damageEvents = EmptyDamageEvents(),
+                         int& healing = EmptyHealing());
     void ClearStatuses();
 
 protected:
@@ -62,4 +61,9 @@ protected:
     std::vector<EnemySkillDefinition> skills_;
     std::vector<int> skillCooldowns_;
     int phase_;
+
+private:
+    static std::vector<std::pair<StatusType, int>>& EmptyDamageEvents();
+    static int& EmptyHealing();
+    int SumStatusBonus(StatusType type) const;
 };

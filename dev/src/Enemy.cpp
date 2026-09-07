@@ -21,24 +21,20 @@ int NormalizeSpeed(int legacySpeed, EnemyFaction faction) {
 
 }
 
-Enemy::Enemy(const std::string& name, int hp, int atk, int xpReward, int level)
-	: name_(name), hp_(hp), maxHp_(hp), atk_(atk), xpReward_(xpReward),
-	  defense_(0), speed_(5), level_(level), resistance_(0), evasion_(0),
-	  critRate_(5), critDamage_(150), accuracy_(100),
-	  faction_(EnemyFaction::Devotee), tier_(EnemyTier::Basic), phase_(1) {
-	skillCooldowns_.assign(skills_.size(), 0);
-	int baseSpeed = 10;
-	double growth = 1.0;
-	if (name.find("Automata") != std::string::npos) baseSpeed = 8;
-	else if (name.find("Buff Nun") != std::string::npos) { baseSpeed = 14; growth = 2.0; }
-	else if (name.find("Nun") != std::string::npos) { baseSpeed = 12; growth = 1.5; }
-	speed_ = baseSpeed + static_cast<int>(growth * (std::max)(0, level_ - 1));
-}
-
 void Enemy::heal(int amount) {
 	if (amount <= 0) return;
 	for (const auto& status : statuses_) if (status.type == StatusType::HealResistance) amount = amount * (100 - status.potency) / 100;
 	hp_ = (std::min)(maxHp_, hp_ + amount);
+}
+
+std::vector<std::pair<StatusType, int>>& Enemy::EmptyDamageEvents() {
+	static std::vector<std::pair<StatusType, int>> events;
+	return events;
+}
+
+int& Enemy::EmptyHealing() {
+	static int healing = 0;
+	return healing;
 }
 
 Enemy::Enemy(const EnemyDefinition& definition, int level)
@@ -89,16 +85,16 @@ bool Enemy::isAlive() const { return hp_ > 0; }
 const std::string& Enemy::getName() const { return name_; }
 int Enemy::getHP() const { return hp_; }
 int Enemy::getMaxHP() const { return maxHp_; }
-int Enemy::getAtk() const {
+int Enemy::SumStatusBonus(StatusType type) const {
 	int bonus = 0;
-	for (const auto& status : statuses_) if (status.type == StatusType::AttackUp) bonus += status.potency;
-	return atk_ * (100 + bonus) / 100;
+	for (const auto& status : statuses_) if (status.type == type) bonus += status.potency;
+	return bonus;
 }
+int Enemy::getAtk() const { return atk_ * (100 + SumStatusBonus(StatusType::AttackUp)) / 100; }
 int Enemy::getXPReward() const { return xpReward_; }
 int Enemy::getDefense() const { return defense_; }
 int Enemy::getSpeed() const {
-	int slow = 0;
-	for (const auto& status : statuses_) if (status.type == StatusType::Slow) slow += status.potency;
+	const int slow = SumStatusBonus(StatusType::Slow);
 	return (std::max)(1, speed_ * (100 - (std::min)(75, slow)) / 100);
 }
 int Enemy::getLevel() const { return level_; }
@@ -106,8 +102,7 @@ int Enemy::getResistance() const { return resistance_; }
 int Enemy::getCritRate() const { return critRate_; }
 int Enemy::getCritDamage() const { return critDamage_; }
 int Enemy::getAccuracy() const {
-	int bonus = 0;
-	for (const auto& status : statuses_) if (status.type == StatusType::AccuracyUp) bonus += status.potency;
+	const int bonus = SumStatusBonus(StatusType::AccuracyUp);
 	return (std::min)(100, accuracy_ + bonus);
 }
 int Enemy::getEvasion() const { return evasion_; }
@@ -165,18 +160,6 @@ bool Enemy::ApplyStatus(const StatusEffect& status, int accuracy) {
 	}
 	statuses_.push_back(status);
 	return true;
-}
-
-void Enemy::ProcessStatuses() {
-	for (auto& status : statuses_) {
-		if (status.type == StatusType::Bleed) takeDamage(status.sourceAttack * 30 * (100 + status.dotPotency) / 10000);
-		else if (status.type == StatusType::Burn) takeDamage(status.sourceAttack * 60 * (100 + status.dotPotency) / 10000);
-		else if (status.type == StatusType::Poison) takeDamage(maxHp_ * 5 * (100 + status.dotPotency) / 10000);
-		--status.turns;
-	}
-	statuses_.erase(std::remove_if(statuses_.begin(), statuses_.end(), [](const StatusEffect& status) {
-		return status.turns <= 0;
-	}), statuses_.end());
 }
 
 void Enemy::ClearStatuses() { statuses_.clear(); }

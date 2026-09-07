@@ -39,6 +39,7 @@ void MapManager::GenerateFloor1() {
     rooms_.emplace_back("Fountain");
     Area& fountain = rooms_.back();
     fountain.SetUnlocked(true);
+    fountain.SetHealingRoom(true);
     fountain.AddInteractable("The restorative cathedral fountain");
     fountain.SetSpawnCondition(EnemySpawnCondition::Low);
 

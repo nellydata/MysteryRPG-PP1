@@ -218,7 +218,11 @@ bool CombatManager::resolve(CombatAction action, Player& player, Enemy& enemy,
     case CombatAction::Attack: {
         AddEvent(CombatEvent::Kind::Attack, player.getName() + " uses Attack on " + enemy.getName() + ".");
         const unsigned hitRoll = static_cast<unsigned>(turnNumber_ * 37 + player.getAttack() * 11 + enemy.getHP()) % 100;
-        const int hitChance = CombatMath::AccuracyChance(100, player.getAccuracy(), enemy.getEvasion());
+        int accuracyFloor = 0;
+        for (const auto& status : player.GetStatuses()) {
+            if (status.type == StatusType::AccuracyFloor) accuracyFloor += status.potency;
+        }
+        const int hitChance = (std::max)(CombatMath::AccuracyChance(100, player.getAccuracy(), enemy.getEvasion()), accuracyFloor);
         if (hitRoll >= static_cast<unsigned>(hitChance)) {
             AddEvent(CombatEvent::Kind::Info, player.getName() + " attacks " + enemy.getName() + ", but the strike is evaded.");
             playerGauge_ -= 1000;
@@ -228,15 +232,18 @@ bool CombatManager::resolve(CombatAction action, Player& player, Enemy& enemy,
             return true;
         }
         const unsigned critRoll = static_cast<unsigned>(turnNumber_ * 53 + player.getAttack() * 7 + enemy.getHP() * 3) % 100;
-        const bool critical = critRoll < static_cast<unsigned>((std::min)(100, player.getCritRate()));
+        const bool critical = player.HasStatus(StatusType::GuaranteedCrit) ||
+            critRoll < static_cast<unsigned>((std::min)(100, player.getCritRate()));
         const int rawDamage = critical
             ? player.getAttack() * player.getCritDamage() / 100
             : player.getAttack();
         const int damage = CombatMath::Mitigate(rawDamage, enemy.getDefense()) + (weaknessExposed_ ? 2 : 0);
+        const int enemyHealthBefore = enemy.getHP();
         enemy.takeDamage(damage);
-        AddEvent(CombatEvent::Kind::Damage, player.getName() + " deals " + std::to_string(damage) + " damage to " + enemy.getName() + ".", damage);
+        const int actualDamage = enemyHealthBefore - enemy.getHP();
+        AddEvent(CombatEvent::Kind::Damage, player.getName() + " deals " + std::to_string(actualDamage) + " damage to " + enemy.getName() + ".", actualDamage);
         if (player.getLifesteal() > 0) {
-            const int recovery = damage * (std::min)(CombatMath::Balance::MaximumLifesteal, player.getLifesteal()) / 100;
+            const int recovery = actualDamage * (std::min)(CombatMath::Balance::MaximumLifesteal, player.getLifesteal()) / 100;
             if (recovery > 0) {
                 player.heal(recovery);
                 AddEvent(CombatEvent::Kind::Heal, player.getName() + " recovers " + std::to_string(recovery) + " HP from lifesteal.", recovery);
@@ -246,7 +253,7 @@ bool CombatManager::resolve(CombatAction action, Player& player, Enemy& enemy,
             AddEvent(CombatEvent::Kind::Info, "Boss enters Phase " + std::to_string(enemy.GetPhase()) + ".");
         }
         AddEvent(CombatEvent::Kind::Info, player.getName() + " attacks " + enemy.getName()
-                  + " for " + std::to_string(damage) + (critical ? " [CRITICAL]" : "") + " damage.");
+                  + " for " + std::to_string(actualDamage) + (critical ? " [CRITICAL]" : "") + " damage.");
         if (!enemy.isAlive() && progression != nullptr) {
             ResolveDefeatReward(player, enemy, progression);
         }
@@ -468,8 +475,10 @@ void CombatManager::enemyTurn(Player& player, Enemy& enemy, ProgressionManager* 
         enemyGauge_ -= 1000;
         return;
     }
+    const unsigned critRoll = static_cast<unsigned>((turnNumber_ * 53 + enemy.getAtk() * 7 + player.getHP() * 3) % 100);
     const bool critical = enemy.HasStatus(StatusType::GuaranteedCrit) ||
-        ((enemy.getCritRate() + (enemy.HasStatus(StatusType::CritUp) ? 20 : 0)) > hitRoll);
+        critRoll < static_cast<unsigned>((std::min)(100,
+            enemy.getCritRate() + (enemy.HasStatus(StatusType::CritUp) ? 20 : 0)));
     const int rawDamage = critical ? attackDamage * (enemy.getCritDamage() + (enemy.HasStatus(StatusType::CritDamageUp) ? 50 : 0)) / 100 : attackDamage;
     const int damage = CombatMath::Mitigate(rawDamage, player.getDefense());
     const int healthBefore = player.getHP();
@@ -483,6 +492,25 @@ void CombatManager::enemyTurn(Player& player, Enemy& enemy, ProgressionManager* 
     enemyGauge_ -= 1000;
     playerTurn_ = false;
     AdvanceTurn(player, enemy);
+}
+
+void CombatManager::PrepareGroupTurn(Player& player, const std::vector<Enemy*>& enemies) {
+    currentEnemyParty_.clear();
+    for (Enemy* enemy : enemies) {
+        if (enemy != nullptr && enemy->isAlive()) currentEnemyParty_.push_back(enemy);
+    }
+    std::sort(currentEnemyParty_.begin(), currentEnemyParty_.end(), [](const Enemy* left, const Enemy* right) {
+        if (left->getSpeed() != right->getSpeed()) return left->getSpeed() > right->getSpeed();
+        return left->getName() < right->getName();
+    });
+    groupEnemyTurn_ = !currentEnemyParty_.empty();
+    if (groupEnemyTurn_) {
+        playerTurn_ = false;
+        enemyGauge_ = 1000;
+    } else {
+        playerTurn_ = true;
+        enemyGauge_ = 0;
+    }
 }
 
 void CombatManager::enemyTurn(Player& player, Enemy& enemy, const std::vector<Enemy*>& enemies, ProgressionManager* progression) {

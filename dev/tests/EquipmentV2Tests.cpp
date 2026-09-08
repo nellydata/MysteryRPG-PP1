@@ -36,10 +36,26 @@ int main() {
 	boots.slot = EquipSlot::Boots;
 	boots.mainStat = "spd";
 	boots.mainStatValue = 50;
-	Item bootsItem(boots);
 	Player player("Equipment test", 100, 10);
-	player.Equip(bootsItem);
+	player.AddItem(std::make_unique<Item>(boots));
+	Item* bootsItem = player.GetInventory().GetItems().back().item.get();
+	player.Equip(*bootsItem);
 	assert(player.getSpeed() == 150);
+	assert(!player.GetInventory().DiscardItem(bootsItem->getInstanceId()));
+	player.ToggleEquip(*bootsItem);
+	assert(player.GetInventory().DiscardItem(bootsItem->getInstanceId()));
+
+	ItemDefinition speedPercent;
+	speedPercent.name = "speed_percent_boots";
+	speedPercent.category = ItemCategory::Equippable;
+	speedPercent.slot = EquipSlot::Boots;
+	speedPercent.mainStat = "spd";
+	speedPercent.mainStatPercent = 25;
+	Player percentagePlayer("Percentage test", 100, 10);
+	percentagePlayer.AddItem(std::make_unique<Item>(speedPercent));
+	Item* percentageItem = percentagePlayer.GetInventory().GetItems().back().item.get();
+	percentagePlayer.Equip(*percentageItem);
+	assert(percentagePlayer.getSpeed() == 125);
 
 	LootContext context;
 	context.playerLevel = 25;

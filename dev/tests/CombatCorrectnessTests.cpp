@@ -29,6 +29,21 @@ void EquipFullSet(Player& player, const std::string& setName) {
 		}
 	}
 }
+
+void EquipSyntheticSet(Player& player, const std::string& setName) {
+	const EquipSlot slots[] = {EquipSlot::Head, EquipSlot::Torso, EquipSlot::Boots, EquipSlot::Hand, EquipSlot::Accessory};
+	for (EquipSlot slot : slots) {
+		ItemDefinition definition;
+		definition.name = setName + " test piece";
+		definition.category = ItemCategory::Equippable;
+		definition.slot = slot;
+		definition.setName = setName;
+		definition.mainStat = slot == EquipSlot::Boots ? "spd" : slot == EquipSlot::Head ? "acc" : "atk";
+		definition.mainStatValue = 0;
+		player.AddItem(std::make_unique<Item>(definition));
+		player.Equip(*player.GetInventory().GetItems().back().item);
+	}
+}
 }
 
 int main() {
@@ -196,6 +211,38 @@ int main() {
 	}
 
 	{
+		Player player("Set Test", 100, 10);
+		EquipSyntheticSet(player, "Shimmer Ascendant");
+		assert(player.HasActiveSet("Shimmer Ascendant"));
+		assert(player.getAttack() == 35);
+		assert(player.getAccuracy() == 15);
+	}
+
+	{
+		CombatManager combat;
+		Player player("Test", 100, 10);
+		Enemy first(TestEnemyDefinition(), 1);
+		Enemy second(TestEnemyDefinition(), 1);
+		combat.PrepareGroupTurn(player, {&first, &second});
+		assert(!combat.IsPlayerTurn());
+	}
+
+	{
+		CombatManager combat;
+		Player player("Test", 100, 10);
+		player.takeDamage(50);
+		Stats lifesteal;
+		lifesteal.lifesteal = 40;
+		player.ModifyStats(lifesteal);
+		Enemy enemy(TestEnemyDefinition(), 1);
+		enemy.ApplyStatus({StatusType::Barrier, 2, 1000});
+		combat.BeginEncounter(enemy);
+		combat.PrepareTurn(player, enemy);
+		assert(combat.resolve(CombatAction::Attack, player, enemy));
+		assert(player.getHP() == 50);
+	}
+
+	{
 		const auto* flagellant = FindEnemyDefinition("Devotee Flagellant");
 		assert(flagellant != nullptr);
 		assert(flagellant->skills.front().effect == "def_down");
@@ -288,6 +335,11 @@ int main() {
 		const int before = enemy.getHP();
 		high->apply(player, enemy);
 		assert(before - enemy.getHP() >= 1);
+	}
+
+	{
+		for (const auto& name : BuildLatinShimmerSkillNames())
+			assert(ShimmerSkill::Create(name) != nullptr);
 	}
 
 	{

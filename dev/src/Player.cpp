@@ -64,8 +64,14 @@ void Player::takeDamage(int amount) {
 bool Player::ToggleEquip(Item& item) {
     if (!item.isEquippable() || item.getSlot() == EquipSlot::None || ViolatesTheme(item)) return false;
     const int slot = static_cast<int>(item.getSlot());
-    if (equipped_[slot] == &item) equipped_[slot] = nullptr;
-    else equipped_[slot] = &item;
+    if (equipped_[slot] == &item) {
+        equipped_[slot] = nullptr;
+        inventory_.UnprotectItem(item.getInstanceId());
+    } else {
+        if (equipped_[slot] != nullptr) inventory_.UnprotectItem(equipped_[slot]->getInstanceId());
+        equipped_[slot] = &item;
+        inventory_.ProtectItem(item.getInstanceId());
+    }
     RecalculateStats();
     return true;
 }
@@ -239,7 +245,10 @@ void Player::PrintInventory() const {
 
 bool Player::Equip(Item& item) {
     if (!item.isEquippable() || item.getSlot() == EquipSlot::None || ViolatesTheme(item)) return false;
-    equipped_[static_cast<int>(item.getSlot())] = &item;
+    const int slot = static_cast<int>(item.getSlot());
+    if (equipped_[slot] != nullptr) inventory_.UnprotectItem(equipped_[slot]->getInstanceId());
+    equipped_[slot] = &item;
+    inventory_.ProtectItem(item.getInstanceId());
     RecalculateStats();
     return true;
 }
@@ -506,8 +515,6 @@ void Player::RecalculateStats() {
     for (const std::string& setName : GetActiveSets()) {
         if (setName == "Choir of Verdigris") {
             totalStats_.healingReceived += 25;
-        } else if (setName == "Shimmer Ascendant") {
-            totalStats_.critDamage += 0;
         } else if (setName == "Automaton Overlord") {
             totalStats_.acc = 100;
             totalStats_.critDamage += 50;
@@ -526,14 +533,11 @@ void Player::RecalculateStats() {
         } else if (setName == "Shimmer Ascendant") {
             totalStats_.atk += 15;
             totalStats_.acc += 15;
-        } else if (setName == "Automaton Overlord") {
-            totalStats_.acc += 20;
-            totalStats_.critDamage += 20;
         }
     }
     totalStats_.hp = CombatMath::ApplyPercent(totalStats_.hp, totalStats_.hpPercent);
     totalStats_.def = CombatMath::ApplyPercent(totalStats_.def, totalStats_.defPercent);
-    totalStats_.spd += totalStats_.spdPercent;
+    totalStats_.spd = CombatMath::ApplyPercent(totalStats_.spd, totalStats_.spdPercent);
     totalStats_.atk = CombatMath::ApplyPercent(totalStats_.atk, totalStats_.atkPercent);
     totalStats_.acc = CombatMath::ClampPercent(totalStats_.acc + totalStats_.accuracyPercent);
     totalStats_.res = CombatMath::ClampPercent(totalStats_.res + totalStats_.resistancePercent);

@@ -7,6 +7,7 @@ void Inventory::AddClue(const Clue& clue) {
 }
 
 bool Inventory::RemoveItem(unsigned long long instanceId) {
+	if (protectedItems_.count(instanceId) != 0) return false;
 	for (std::size_t index = 0; index < items_.size(); ++index) {
 		if (!items_[index].item || items_[index].item->getInstanceId() != instanceId) continue;
 		if (items_[index].locked) return false;
@@ -22,6 +23,7 @@ void Inventory::AddItem(std::unique_ptr<Item> item) {
 }
 
 bool Inventory::DiscardItem(unsigned long long instanceId) {
+	if (protectedItems_.count(instanceId) != 0) return false;
 	for (std::size_t index = 0; index < items_.size(); ++index) {
 		if (!items_[index].item || items_[index].item->getInstanceId() != instanceId || items_[index].locked) continue;
 		items_.erase(items_.begin() + static_cast<std::ptrdiff_t>(index));
@@ -33,6 +35,7 @@ bool Inventory::DiscardItem(unsigned long long instanceId) {
 bool Inventory::RemoveItem(const std::string& name) {
 	for (std::size_t index = 0; index < items_.size(); ++index) {
 		if (items_[index].item && items_[index].item->getName() == name) {
+			if (protectedItems_.count(items_[index].item->getInstanceId()) != 0) return false;
 			if (items_[index].quantity > 1) {
 				--items_[index].quantity;
 			} else if (!items_[index].locked) {
@@ -70,6 +73,7 @@ bool Inventory::DiscardItem(const std::string& name, int amount) {
 	if (amount <= 0 || IsLocked(name)) return false;
 	for (std::size_t index = 0; index < items_.size(); ++index) {
 		if (items_[index].item && items_[index].item->getName() == name) {
+			if (protectedItems_.count(items_[index].item->getInstanceId()) != 0) return false;
 			if (amount >= items_[index].quantity) {
 				items_.erase(items_.begin() + static_cast<std::ptrdiff_t>(index));
 			} else items_[index].quantity -= amount;
@@ -78,6 +82,9 @@ bool Inventory::DiscardItem(const std::string& name, int amount) {
 	}
 	return false;
 }
+
+void Inventory::ProtectItem(unsigned long long instanceId) { protectedItems_.insert(instanceId); }
+void Inventory::UnprotectItem(unsigned long long instanceId) { protectedItems_.erase(instanceId); }
 
 namespace {
 int FocusValue(const Stats& stats, ItemStat stat) {

@@ -511,5 +511,12 @@ std::vector<ItemDefinition> BuildCruxCatalog() {
 }
 
 std::vector<std::string> BuildLatinShimmerSkillNames() {
-	return {"Pulsus Luminis", "Velum Radiāns", "Gradus Coruscus", "Lucerna Echo", "Fulgur Aurorae", "Flos Aeruginis", "Resonantia Chori", "Requiem Mechanicum", "Scutum Coruscum", "Nota Luminosa", "Revelatio Occulta", "Catena Aeruginis", "Onus Coruscum", "Lux Sanctorum", "Mutatio Horologii"};
+	return {
+		"Pulsus Luminis", "Velum Radiāns", "Gradus Coruscus", "Lucerna Echo", "Fulgur Aurorae", "Flos Aeruginis",
+		"Resonantia Chori", "Requiem Mechanicum", "Scutum Coruscum", "Nota Luminosa", "Revelatio Occulta",
+		"Catena Aeruginis", "Onus Coruscum", "Lux Sanctorum", "Mutatio Horologii", "Phragmós Phōtós",
+		"Ray of Mercy", "Prism Step", "Gleam Needle", "Therapeía Anakláseōs", "Anástasis Phōtós",
+		"Phthorá Phōtós", "Phōteinḕ Kátharsis", "Phōteinòs Thṓrax", "Refractio Ultima", "Lumen Spiculum",
+		"Lux Vortex", "Siphon Lux", "Lux Aegis", "Refraction Cataclysm", "Lux Ascension"
+	};
 }

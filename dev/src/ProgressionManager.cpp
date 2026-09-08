@@ -110,11 +110,7 @@ std::vector<std::string> ProgressionManager::ConsumeLevelUpMessages() {
 }
 
 void ProgressionManager::QueueLevelUpChoice() {
-    static const std::vector<std::string> names = {
-        "Ray of Mercy", "Prism Step", "Gleam Needle", "Phragmós Phōtós", "Therapeía Anakláseōs", "Anástasis Phōtós", "Phthorá Phōtós",
-        "Phōteinḕ Kátharsis", "Phōteinòs Thṓrax", "Refractio Ultima", "Lumen Spiculum", "Lux Vortex", "Siphon Lux", "Lux Aegis",
-        "Refraction Cataclysm", "Lux Ascension"
-    };
+    const std::vector<std::string> names = BuildLatinShimmerSkillNames();
     std::vector<std::string> candidates;
     for (const auto& name : names) {
         if (!HasShimmerSkill(name) && ShimmerSkill::Create(name) != nullptr) candidates.push_back(name);
@@ -163,11 +159,7 @@ std::string ProgressionManager::RollShimmerSkill() {
         return 2;
     }();
     std::vector<std::string> candidates;
-    static const std::vector<std::string> names = {
-        "Ray of Mercy", "Prism Step", "Gleam Needle", "Phragmós Phōtós", "Therapeía Anakláseōs", "Anástasis Phōtós", "Phthorá Phōtós",
-        "Phōteinḕ Kátharsis", "Phōteinòs Thṓrax", "Refractio Ultima", "Lumen Spiculum",
-        "Lux Vortex", "Siphon Lux", "Lux Aegis", "Refraction Cataclysm", "Lux Ascension"
-    };
+    const std::vector<std::string> names = BuildLatinShimmerSkillNames();
     for (const auto& name : names) {
         auto skill = ShimmerSkill::Create(name);
         if (skill != nullptr && skill->getEquipCost() == targetCost && !HasShimmerSkill(name)) candidates.push_back(name);

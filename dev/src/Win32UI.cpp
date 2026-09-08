@@ -266,7 +266,7 @@ void Win32UI::CreateControls() {
 	auto createButton = [&](int index, int id, const wchar_t* text) {
 		const DWORD style = WS_CHILD | WS_TABSTOP | BS_PUSHBUTTON | BS_OWNERDRAW;
 		HWND button = CreateWindowW(L"BUTTON", text, style,
-										 0, 0, 0, 0, window_, reinterpret_cast<HMENU>(id),
+										 0, 0, 0, 0, window_, reinterpret_cast<HMENU>(static_cast<INT_PTR>(id)),
 										 GetModuleHandleW(nullptr), nullptr);
 		if (index >= 0) controls_[index] = button;
 		SendMessageW(button, WM_SETFONT, reinterpret_cast<WPARAM>(font_), TRUE);
@@ -278,7 +278,7 @@ void Win32UI::CreateControls() {
 	for (int i = 0; i < 12; ++i) createButton(8 + i, InventoryButtonBase + i, L"Item");
 	for (int i = 0; i < 15; ++i) createButton(36 + i, SkillButtonBase + i, L"Skill");
 	controls_[25] = CreateWindowW(L"EDIT", L"", WS_CHILD | WS_BORDER | ES_AUTOHSCROLL,
-		0, 0, 0, 0, window_, reinterpret_cast<HMENU>(InventorySearch), GetModuleHandleW(nullptr), nullptr);
+		0, 0, 0, 0, window_, reinterpret_cast<HMENU>(static_cast<INT_PTR>(InventorySearch)), GetModuleHandleW(nullptr), nullptr);
 	SendMessageW(controls_[25], WM_SETFONT, reinterpret_cast<WPARAM>(font_), TRUE);
 	createButton(20, ButtonSearch, L"Investigate");
 	createButton(21, ButtonBack, L"Back");
@@ -1456,6 +1456,7 @@ LRESULT Win32UI::HandleMessage(UINT message, WPARAM wParam, LPARAM lParam) {
 	default:
 		return DefWindowProcW(window_, message, wParam, lParam);
 	}
+	return DefWindowProcW(window_, message, wParam, lParam);
 }
 
 void Win32UI::Paint(HDC deviceContext) {

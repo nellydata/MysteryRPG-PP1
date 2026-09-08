@@ -3,6 +3,7 @@
 #include <vector>
 #include <memory>
 #include <string>
+#include <set>
 #include "Clue.h"
 #include "GameplayTypes.h"
 
@@ -45,10 +46,13 @@ public:
 	void SetLocked(const std::string& name, bool locked);
 	bool DiscardItem(const std::string& name, int amount = 1);
 	bool DiscardItem(unsigned long long instanceId);
+	void ProtectItem(unsigned long long instanceId);
+	void UnprotectItem(unsigned long long instanceId);
 	std::vector<Item*> GetSortedItems(InventorySort sort, ItemStat focusStat = ItemStat::ATK) const;
 	std::size_t GetItemCount() const;
 
 private:
 	std::vector<ItemEntry> items_;
+	std::set<unsigned long long> protectedItems_;
 	unsigned long long nextAcquisitionOrder_ = 0;
 };

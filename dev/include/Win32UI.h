@@ -9,6 +9,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <deque>
 
 class Win32UI {
 public:
@@ -19,7 +20,7 @@ public:
 	static bool ConsoleModeRequested();
 
 private:
-	enum class View { Floor, Room, Combat, Inventory, Map, Skills };
+	enum class View { Floor, Room, Combat, Inventory, Map, Skills, BattleLog };
 
 	static constexpr int RoomButtonBase = 100;
 	static constexpr int InspectButtonBase = 200;
@@ -41,6 +42,8 @@ private:
 	static constexpr int ButtonInventoryPrevious = 510;
 	static constexpr int ButtonInventoryNext = 511;
 	static constexpr int InventorySearch = 512;
+	static constexpr int ButtonBattleLog = 513;
+	static constexpr int ButtonCombatSpeed = 514;
 	static constexpr int SkillButtonBase = 800;
 	static constexpr int SkillSortBase = 740;
 	static constexpr int SkillFilterBase = 750;
@@ -66,6 +69,10 @@ private:
 	void ChangeView(View nextView);
 	void LeaveCombat();
 	void ShowDefeatRecovery();
+	void AcknowledgeDefeat();
+	void ResolveCombatAfterAction();
+	void FinishCombatPresentation();
+	void ShowFullBattleLog();
 	void EnterRoom(int roomIndex);
 	void Inspect(int interactableIndex);
 	void SearchRoom();
@@ -143,7 +150,17 @@ private:
 	bool combatAttackSelection_ = false;
 	bool combatTargetConfirmed_ = false;
 	bool combatTransition_ = false;
-	std::size_t loggedCombatEvents_ = 0;
+	std::uint64_t loggedCombatSequence_ = 0;
+	std::deque<CombatManager::CombatEvent> pendingCombatEvents_;
+	std::vector<CombatManager::CombatEvent> presentedCombatEvents_;
+	std::vector<CombatManager::CombatEvent> savedCombatHistory_;
+	std::vector<CombatManager::CombatEvent> defeatSnapshot_;
+	std::string defeatCause_;
+	bool defeatPresentationPending_ = false;
+	bool victoryPresentationPending_ = false;
+	View battleLogReturnView_ = View::Room;
+	UINT combatPresentationDelayMs_ = 350;
+	int presentedPlayerHP_ = 0;
 	bool enemyTurnPending_ = false;
 	void ScheduleEnemyTurn();
 };

@@ -1,6 +1,7 @@
 #include "ContentCatalog.h"
 #include <algorithm>
 #include <random>
+#include <stdexcept>
 #include "CombatMath.h"
 #include "EnemyCatalog.h"
 #include "MapManager.h"
@@ -200,29 +201,32 @@ void AddEquippables(std::vector<ItemDefinition>& result, EquipSlot slot, const c
 }
 }
 
-std::vector<ItemDefinition> GenerateInvestigationLoot(ConsumableProfile profile, int playerLevel, const std::string& roomId, unsigned seed) {
-	std::vector<ItemDefinition> result;
-	const int level = (std::max)(1, playerLevel);
-	const int roll = static_cast<int>(seed % 100);
-	if (roll < 70) {
-		const ItemDefinition consumable = BuildInvestigationConsumable(profile, level);
-		if (!consumable.name.empty()) result.push_back(consumable);
-		return result;
-	}
-	if (roll >= 70) {
-		const int rarityRoll = static_cast<int>((seed / 7) % 100);
-		Rarity rarity = level >= 5 ? Rarity::Uncommon : Rarity::Common;
-		if (level >= 20 && rarityRoll < 20) rarity = Rarity::Epic;
-		else if (level >= 10 && rarityRoll < 55) rarity = Rarity::Rare;
-		else if (level >= 5 && rarityRoll < 80) rarity = Rarity::Uncommon;
-		std::vector<ItemDefinition> candidates;
-		for (const auto& item : BuildEquippableCatalog()) {
-			if (item.rarity == rarity && (roomId.empty() || item.name.find(roomId.substr(0, 4)) != std::string::npos)) candidates.push_back(item);
-		}
-		if (candidates.empty()) for (const auto& item : BuildEquippableCatalog()) if (item.rarity == rarity) candidates.push_back(item);
-		if (!candidates.empty()) result.push_back(RollLootInstance(candidates[(seed / 13) % candidates.size()], seed + 97));
-	}
-	return result;
+std::vector<ItemDefinition> GenerateInvestigationLoot(ConsumableProfile profile, int playerLevel,
+                                                       const std::string& roomId, unsigned seed, bool repeat) {
+    std::mt19937 rng(seed);
+    const int level = (std::max)(1, playerLevel);
+    const bool consumable = std::uniform_int_distribution<int>(0, 99)(rng) < (repeat ? 80 : 70);
+    if (consumable) {
+        // Room source profiles explicitly select their appropriate restorative/resource reward.
+        const auto item = BuildInvestigationConsumable(profile, level);
+        if (item.name.empty()) throw std::logic_error("Missing investigation consumable profile");
+        return {RollLootInstance(item, rng())};
+    }
+    static const auto catalogue = BuildEquippableCatalog();
+    std::vector<const ItemDefinition*> pools[4];
+    for (const auto& item : catalogue) {
+        const int rarity = static_cast<int>(item.rarity);
+        if (rarity >= 0 && rarity < 4) pools[rarity].push_back(&item);
+    }
+    double weights[] = {level < 5 ? 100.0 : 20.0, level >= 5 ? 60.0 : 0.0,
+        level >= 10 ? 35.0 : 0.0, level >= 20 ? 20.0 : 0.0};
+    for (int rarity = 0; rarity < 4; ++rarity) if (pools[rarity].empty()) weights[rarity] = 0;
+    if (weights[0] + weights[1] + weights[2] + weights[3] <= 0)
+        throw std::logic_error("No eligible investigation equipment");
+    const int rarity = std::discrete_distribution<int>(std::begin(weights), std::end(weights))(rng);
+    const auto& pool = pools[rarity];
+    const auto* item = pool[std::uniform_int_distribution<std::size_t>(0, pool.size() - 1)(rng)];
+    return {RollLootInstance(*item, rng())};
 }
 
 bool ValidateMicareContent(std::string* error) {
@@ -235,6 +239,12 @@ bool ValidateMicareContent(std::string* error) {
 		}
 		if (!room.bossId.empty() && FindEnemyDefinition(room.bossId) == nullptr) {
 			if (error) *error = "Room boss is missing from enemy catalogue: " + room.bossId;
+			return false;
+		}
+		if (!room.bossId.empty() && (room.firstClearBossLevel < 1 || room.firstClearBossLevel > 100 ||
+			room.intendedProgressionLevel < 1 || room.intendedProgressionLevel > 100 || room.firstClearBossXP <= 0 ||
+			room.farmBossStartingChance < 0 || room.farmBossStartingChance > 100)) {
+			if (error) *error = "Invalid fixed boss profile: " + room.id;
 			return false;
 		}
 		for (const auto& entry : room.enemiesBeforeClear) if (FindEnemyDefinition(entry.enemyId) == nullptr) {
@@ -279,6 +289,9 @@ ItemDefinition BuildInvestigationConsumable(ConsumableProfile profile, int playe
 
 std::vector<ItemDefinition> GenerateLoot(const LootContext& context, unsigned seed) {
 	std::vector<ItemDefinition> result;
+	std::mt19937 rng(seed);
+	std::uniform_int_distribution<int> percent(0, 99);
+	static const auto equipment = BuildEquippableCatalog();
 	const bool boss = context.enemyTier == EnemyTier::Boss;
 	const bool elite = context.enemyTier == EnemyTier::Elite;
 	const bool rareEnemy = context.enemyTier == EnemyTier::Rare || context.enemyTier == EnemyTier::Epic;
@@ -286,9 +299,9 @@ std::vector<ItemDefinition> GenerateLoot(const LootContext& context, unsigned se
 	const int count = boss ? (context.bossFirstClear ? 4 : 3) : elite ? 2 : rareEnemy ? 1 : 1;
 	const int equipmentChance = boss || elite || rareEnemy ? 100 : (std::min)(100, 85 + level / 10);
 	for (int drop = 0; drop < count; ++drop) {
-		const unsigned roll = seed + static_cast<unsigned>(drop * 41);
-		if (static_cast<int>(roll % 100) >= equipmentChance) continue;
-		const int rarityRoll = static_cast<int>((roll / 7) % 100);
+		const unsigned instanceSeed = rng();
+		if (percent(rng) >= equipmentChance) continue;
+		const int rarityRoll = percent(rng);
 		Rarity rarity = Rarity::Common;
 		const bool rareUnlocked = level >= 10;
 		const bool epicUnlocked = level >= 20;
@@ -300,17 +313,13 @@ std::vector<ItemDefinition> GenerateLoot(const LootContext& context, unsigned se
 		else if (rareUnlocked && rarityRoll < (boss ? 100 : elite ? 95 : 80)) rarity = Rarity::Rare;
 		else rarity = level >= 5 ? Rarity::Uncommon : Rarity::Common;
 		std::vector<ItemDefinition> candidates;
-		for (const auto& item : BuildEquippableCatalog()) {
-			if (item.rarity != rarity) continue;
-			if (!context.roomId.empty() && item.name.find(context.roomId.substr(0, 4)) != std::string::npos) candidates.push_back(item);
-		}
-		if (candidates.empty()) for (const auto& item : BuildEquippableCatalog()) if (item.rarity == rarity) candidates.push_back(item);
-		if (!candidates.empty()) result.push_back(RollLootInstance(candidates[(roll / 13) % candidates.size()], roll + 97));
+		for (const auto& item : equipment) if (item.rarity == rarity) candidates.push_back(item);
+		if (!candidates.empty()) result.push_back(RollLootInstance(candidates[std::uniform_int_distribution<std::size_t>(0, candidates.size() - 1)(rng)], instanceSeed));
 	}
 	const int consumableChance = boss ? 100 : elite ? 65 : context.enemyTier == EnemyTier::Epic ? 50 : rareEnemy ? 40 : 30;
 	const auto consumables = BuildConsumableCatalog();
-	if (!consumables.empty() && (boss || static_cast<int>((seed / 19) % 100) < consumableChance)) {
-		result.push_back(consumables[(seed / 23) % consumables.size()]);
+	if (!consumables.empty() && (boss || percent(rng) < consumableChance)) {
+		result.push_back(consumables[std::uniform_int_distribution<std::size_t>(0, consumables.size() - 1)(rng)]);
 	}
 	return result;
 }

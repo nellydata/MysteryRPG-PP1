@@ -8,6 +8,7 @@
 #include "Area.h"
 #include "ShimmerSkill.h"
 #include <cassert>
+#include "ProgressionRepairTests.h"
 
 namespace {
 EnemyDefinition TestEnemyDefinition() {
@@ -246,7 +247,8 @@ int main() {
 		const auto* flagellant = FindEnemyDefinition("Devotee Flagellant");
 		assert(flagellant != nullptr);
 		assert(flagellant->skills.front().effect == "def_down");
-		assert(flagellant->skills.front().multiplier == 180);
+		assert(flagellant->skills.front().multiplier == 120);
+		assert(flagellant->skills.front().statusPotency == 20);
 		std::string error;
 		assert(ValidateEnemyCatalogue(&error));
 	}
@@ -352,5 +354,6 @@ int main() {
 		assert(player.getHP() == 58);
 	}
 
+	ProgressionRepairValidation::Run();
 	return 0;
 }

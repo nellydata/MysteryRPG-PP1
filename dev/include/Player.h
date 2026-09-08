@@ -4,6 +4,7 @@
 #include <vector>
 #include "Clue.h"
 #include "GameplayTypes.h"
+#include "CombatResolution.h"
 #include "Item.h"
 #include "Inventory.h"
 
@@ -13,6 +14,9 @@ public:
     ~Player();
 
     void takeDamage(int amount);
+    const DamageResolution& GetLastDamageResult() const;
+    const std::vector<StatusDamageResolution>& GetStatusDamageResults() const;
+    const std::vector<StatusApplicationResolution>& GetStatusApplications() const;
     void heal(int amount);
     void RestoreHealth(int amount);
     int GetBarrier() const;
@@ -60,7 +64,7 @@ public:
     bool ToggleEquip(Item& item);
     bool UseConsumable(const std::string& itemName, class Enemy* target = nullptr);
     bool HasStatus(StatusType type) const;
-    void ApplyStatus(const StatusEffect& status, int accuracy = 100);
+    bool ApplyStatus(const StatusEffect& status, int accuracy = 100);
     void ProcessStatuses();
     void ProcessStatuses(std::vector<std::pair<StatusType, int>>& damageEvents, int& healing);
     void ClearStatuses();
@@ -78,6 +82,9 @@ public:
     void StartBattleEffects();
 
 private:
+    DamageResolution lastDamageResult_;
+    std::vector<StatusDamageResolution> statusDamageResults_;
+    std::vector<StatusApplicationResolution> statusApplications_;
     std::string name_;
     int hp_;
     int maxHp_;

@@ -40,24 +40,36 @@ Player::Player(const std::string& name, int maxHp, int maxSp)
 
 Player::~Player() = default;
 
+const std::vector<StatusApplicationResolution>& Player::GetStatusApplications() const { return statusApplications_; }
+const DamageResolution& Player::GetLastDamageResult() const { return lastDamageResult_; }
+const std::vector<StatusDamageResolution>& Player::GetStatusDamageResults() const { return statusDamageResults_; }
+
 void Player::takeDamage(int amount) {
+    lastDamageResult_ = {};
+    lastDamageResult_.requestedDamage = (std::max)(0, amount);
+    lastDamageResult_.remainingHP = hp_;
     if (amount <= 0) return;
     int damageReduction = 0;
     for (const auto& status : statuses_) {
         if (status.type == StatusType::DamageReduction) damageReduction += status.potency;
     }
     amount = amount * (100 - (std::min)(CombatMath::Balance::MaximumDamageReduction, damageReduction)) / 100;
-    if (amount <= 0) return;
+    const int barrierBefore = barrier_;
     amount = AbsorbDamage(amount);
-    if (amount <= 0) return;
-    const bool verdigrisSet = HasActiveSet("Verdigris Matron");
+    lastDamageResult_.barrierAbsorbed = barrierBefore - barrier_;
+    lastDamageResult_.barrierBroken = barrierBefore > 0 && barrier_ == 0;
     const int healthBefore = hp_;
-    hp_ -= amount;
-    if (hp_ < 0) hp_ = 0;
-    if (verdigrisSet && healthBefore > hp_) {
+    hp_ = (std::max)(0, hp_ - amount);
+    lastDamageResult_.hpDamage = healthBefore - hp_;
+    lastDamageResult_.remainingHP = hp_;
+    if (HasActiveSet("Verdigris Matron") && healthBefore > hp_) {
         const int recovery = healthBefore - hp_;
+        const int beforeHeal = hp_;
+        const int beforeBarrier = barrier_;
         heal(recovery / 2);
         AddBarrier(recovery / 4);
+        lastDamageResult_.healing = hp_ - beforeHeal;
+        lastDamageResult_.barrierGained = barrier_ - beforeBarrier;
     }
 }
 
@@ -124,11 +136,17 @@ int Player::AbsorbDamage(int amount) {
 }
 
 int Player::ApplyDamageOverTime(int amount) {
-    if (amount <= 0) return 0;
+    lastDamageResult_ = {};
+    lastDamageResult_.requestedDamage = (std::max)(0, amount);
+    const int barrierBefore = barrier_;
     const int remaining = AbsorbDamage(amount);
     const int healthBefore = hp_;
     hp_ = (std::max)(0, hp_ - remaining);
-    return healthBefore - hp_;
+    lastDamageResult_.barrierAbsorbed = barrierBefore - barrier_;
+    lastDamageResult_.barrierBroken = barrierBefore > 0 && barrier_ == 0;
+    lastDamageResult_.hpDamage = healthBefore - hp_;
+    lastDamageResult_.remainingHP = hp_;
+    return lastDamageResult_.hpDamage;
 }
 
 void Player::ReduceBarrier(int amount) {
@@ -348,25 +366,29 @@ bool Player::HasStatus(StatusType type) const {
     return false;
 }
 
-void Player::ApplyStatus(const StatusEffect& status, int accuracy) {
+bool Player::ApplyStatus(const StatusEffect& status, int accuracy) {
+    statusApplications_.push_back({status, false});
     StatusEffect adjusted = status;
     if (adjusted.type == StatusType::Stun || adjusted.type == StatusType::Bleed || adjusted.type == StatusType::Burn ||
         adjusted.type == StatusType::Poison || adjusted.type == StatusType::Slow || adjusted.type == StatusType::VerdigrisMark ||
         adjusted.type == StatusType::AttackDown || adjusted.type == StatusType::DefenseDown || adjusted.type == StatusType::AccuracyDown) {
         const int resistance = (std::min)(CombatMath::Balance::MaximumResistance, totalStats_.res);
         const unsigned roll = static_cast<unsigned>((hp_ * 17 + maxHp_ * 31 + static_cast<int>(adjusted.type) * 13) % 100);
-        if (roll >= static_cast<unsigned>(CombatMath::AccuracyChance(100, accuracy, resistance))) return;
+        if (roll >= static_cast<unsigned>(CombatMath::AccuracyChance(100, accuracy, resistance))) return false;
         adjusted.turns = (std::max)(1, adjusted.turns * (100 - (std::min)(CombatMath::Balance::MaximumDebuffReduction, totalStats_.debuffDurationReduction)) / 100);
     }
     if (GetStatusStackPolicy(adjusted.type) != StackPolicy::IndependentStacks) {
         for (auto& existing : statuses_) {
             if (existing.type == adjusted.type) {
                 existing = adjusted;
-                return;
+                statusApplications_.back() = {adjusted, true};
+                return true;
             }
         }
     }
     statuses_.push_back(adjusted);
+    statusApplications_.back() = {adjusted, true};
+    return true;
 }
 
 std::vector<std::pair<StatusType, int>>& Player::EmptyDamageEvents() {
@@ -388,6 +410,7 @@ int& Player::EmptyHealing() {
 }
 
 void Player::ProcessStatuses(std::vector<std::pair<StatusType, int>>& damageEvents, int& healing) {
+    statusDamageResults_.clear();
     damageEvents.clear();
     healing = 0;
     int expiredBarrier = 0;
@@ -411,6 +434,7 @@ void Player::ProcessStatuses(std::vector<std::pair<StatusType, int>>& damageEven
         if (status.type == StatusType::HealOverTime) healing += status.potency;
         if (damage > 0) {
             ApplyDamageOverTime(damage);
+            statusDamageResults_.push_back({status.type, lastDamageResult_});
             damageEvents.emplace_back(status.type, damage);
         }
         --status.turns;
@@ -420,7 +444,9 @@ void Player::ProcessStatuses(std::vector<std::pair<StatusType, int>>& damageEven
         return status.turns <= 0;
     }), statuses_.end());
     if (expiredBarrier > 0) barrier_ = (std::max)(0, barrier_ - expiredBarrier);
+    const int beforeHealing = hp_;
     if (healing > 0) heal(healing);
+    healing = hp_ - beforeHealing;
 }
 
 void Player::ClearStatuses() {

@@ -49,6 +49,8 @@ public:
     void SetUnlocked(bool unlocked);
     int GetSearchCount() const;
     void RecordSearch();
+    int GetDiscoveryFailures() const { return discoveryFailures_; }
+    void RecordDiscoveryAttempt(bool success) { discoveryFailures_ = success ? 0 : discoveryFailures_ + 1; }
     unsigned NextInvestigationSeed();
     bool RevealNextInteractable();
     const std::vector<std::string>& GetVisibleInteractables() const;
@@ -72,7 +74,7 @@ private:
         int remaining = 0;
 
         void Set(bool hasResource, int count) {
-            available = hasResource;
+            available = hasResource && count > 0;
             remaining = hasResource ? count : 0;
         }
 
@@ -94,6 +96,7 @@ private:
     EnemySpawnCondition spawnCondition_;
     bool unlocked_;
     int searchCount_;
+    int discoveryFailures_ = 0;
     unsigned investigationSeed_;
     std::vector<std::string> visibleInteractables_;
     bool discoveredNPC_;

@@ -157,6 +157,7 @@
     <ClInclude Include="dev\include\Area.h" />
     <ClInclude Include="dev\include\Clue.h" />
     <ClInclude Include="dev\include\CombatManager.h" />
+    <ClInclude Include="dev\include\CombatResolution.h" />
     <ClInclude Include="dev\include\EncounterManager.h" />
     <ClInclude Include="dev\include\Enemy.h" />
     <ClInclude Include="dev\include\EnemyCatalog.h" />

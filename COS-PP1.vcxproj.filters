@@ -44,6 +44,9 @@
     <ClInclude Include="dev\include\CombatManager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="dev\include\CombatResolution.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="dev\include\EncounterManager.h">
       <Filter>Header Files</Filter>
     </ClInclude>

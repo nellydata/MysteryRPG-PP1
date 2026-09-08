@@ -23,7 +23,8 @@ void AddNamedItem(Player& player, const std::vector<ItemDefinition>& definitions
 }
 
 void GameManager::Run() {
-    Player player("Adelaide", 30, 10);
+    Player player("Adelaide", 20, 10);
+    player.SetLevelStats(1);
     MapManager mapManager;
     CombatManager combat;
     EncounterManager encounterManager;
@@ -40,6 +41,9 @@ void GameManager::Run() {
     AddNamedItem(player, clues, "storage_key");
     AddNamedItem(player, cruxItems, "first_nuns_diary");
     if (Item* hand = player.FindItem("plain_rosary")) player.Equip(*hand);
+
+    player.RestoreHealth(player.getMaxHP());
+    progression.UnlockShimmerSkill("Pulsus Luminis");
 
     while (player.isAlive()) {
         const auto& rooms = mapManager.GetRooms();
@@ -85,7 +89,7 @@ void GameManager::Run() {
             ui.Prompt("Press 0 to continue.", 0, 0);
             continue;
         }
-        encounterManager.Explore(selectedRoom, player, progression, combat);
+        encounterManager.Explore(selectedRoom, player, progression, combat, &mapManager);
     }
 
     ui.Clear();

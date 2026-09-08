@@ -122,6 +122,7 @@ enum class EquipmentFamily { Plain, Choir, Occultist, Shimmer, Verdigris, Mechan
 struct WeightedEnemyEntry {
 	std::string enemyId;
 	int weight = 1;
+	int minimumLevel = 1;
 };
 
 struct RoomDefinition {
@@ -135,6 +136,9 @@ struct RoomDefinition {
 	int farmBossStartingChance = 8;
 	ConsumableProfile consumableProfile = ConsumableProfile::Devotional;
 	std::string nextRoomId;
+	int firstClearBossLevel = 1;
+	int intendedProgressionLevel = 1;
+	std::int64_t firstClearBossXP = 0;
 };
 
 struct LootContext {
@@ -160,6 +164,7 @@ struct EnemySkillDefinition {
 	int multiplier = 100;
 	int cooldown = 0;
 	int duration = 0;
+	int statusPotency = 20;
 };
 
 struct EnemyDefinition {
@@ -178,6 +183,7 @@ struct EnemyDefinition {
 	int legendaryDropChance = 0;
 	EnemyRole role = EnemyRole::Balanced;
 	std::string lootTag;
+	int minimumLevel = 1;
 };
 
 enum class ItemStat {

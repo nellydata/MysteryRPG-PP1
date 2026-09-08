@@ -61,6 +61,8 @@ void Area::SetCleared(bool cleared) {
     discoveredNPC_ = hasNPC_;
     bossDefeated_ = true;
     bossEncountered_ = false;
+    cluePool_.Set(false, 0);
+    discoveryFailures_ = 0;
 }
 
 bool Area::hasEnemies() const {

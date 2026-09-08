@@ -30,8 +30,7 @@ std::int64_t CalculateInvestigationXP(int playerLevel, int areaDepth) {
 
 std::int64_t CalculateEnemyXP(int enemyLevel, int enemyTier) {
     const int level = (std::max)(1, (std::min)(100, enemyLevel));
-    const double progress = static_cast<double>(level - 1) / 99.0;
-    const double baseShare = 0.08 - 0.03 * progress;
+    const double baseShare = 0.10;
     static const double tierMultipliers[] = {1.0, 1.4, 1.9, 2.7, 4.0};
     const int tier = (std::max)(0, (std::min)(4, enemyTier));
     return (std::max)(std::int64_t{1}, static_cast<std::int64_t>(std::llround(

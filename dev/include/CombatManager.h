@@ -4,6 +4,8 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <cstdint>
+#include "CombatResolution.h"
 
 class Player;
 class Enemy;
@@ -23,16 +25,31 @@ public:
         enum class Kind {
             Turn, Attack, Skill, Damage, DotTick, Heal, Shield, Buff, Debuff,
             Cleanse, ExtraTurn, PhaseTransition, Shimmer, Mutation, Death,
-            Revive, Environment, Status, Info
+            Revive, Environment, Status, Info, EncounterStart, Hit, Miss, Critical,
+            Resistance, BarrierBreak, Reward, Completion
         };
         Kind kind;
         std::string message;
         int value = 0;
+        std::uint64_t sequenceId = 0;
+        std::string actor;
+        std::string target;
+        std::string skill;
+        int requestedDamage = 0;
+        int barrierAbsorbed = 0;
+        int hpDamage = 0;
+        int remainingHP = -1;
+        int actorLevel = 0;
+        int targetLevel = 0;
+        int playerGauge = 0;
+        int enemyGauge = 0;
+        EnemyTier enemyTier = EnemyTier::Basic;
     };
     CombatManager();
     ~CombatManager();
 
     void BeginEncounter(Enemy& enemy);
+    void BeginEncounter(Player& player, Enemy& enemy, int playerLevel);
     void ContinueEncounter(Enemy& enemy);
     void PrepareTurn(Player& player, Enemy& enemy);
     void PrepareGroupTurn(Player& player, const std::vector<Enemy*>& enemies);
@@ -45,11 +62,15 @@ public:
     void enemyTurn(Player& player, Enemy& enemy, ProgressionManager* progression = nullptr);
     void enemyTurn(Player& player, Enemy& enemy, const std::vector<Enemy*>& enemies,
                    ProgressionManager* progression = nullptr);
+    bool StepEnemyPartyTurn(Player& player, const std::vector<Enemy*>& enemies,
+                           ProgressionManager* progression = nullptr);
     const ShimmerSkill* GetDefaultSkill() const;
     bool IsPlayerTurn() const;
     bool HasUsedConsumableThisTurn() const;
     const std::vector<CombatEvent>& GetEvents() const;
     void RecordInfo(const std::string& message);
+    void RecordReward(const std::string& message);
+    void CompleteEncounter(const std::string& outcome);
     int GetSkillCooldown(const std::string& skillName) const;
     void ClearEvents();
     void ResetEncounter();
@@ -68,13 +89,19 @@ private:
     Enemy* activeEnemy_;
     std::unique_ptr<ShimmerSkill> defaultSkill_;
     std::vector<CombatEvent> events_;
+    std::uint64_t nextEventSequence_ = 1;
+    std::size_t nextPartyEnemy_ = 0;
+    bool encounterCompleted_ = false;
     bool consumableUsedThisTurn_;
     bool battleStartEffectsApplied_ = false;
     bool groupEnemyTurn_ = false;
     std::map<std::string, int> shimmerCooldowns_;
     std::vector<Enemy*> currentEnemyParty_;
 
-    void AddEvent(CombatEvent::Kind kind, const std::string& message, int value = 0);
+    CombatEvent& AddEvent(CombatEvent::Kind kind, const std::string& message, int value = 0);
+    void RecordDamage(const std::string& actor, const std::string& target,
+                      const std::string& skill, const DamageResolution& result,
+                      CombatEvent::Kind kind = CombatEvent::Kind::Damage);
     void StartPlayerTurn(Player& player);
     void AdvanceTurn(Player& player, Enemy& enemy);
     void ResolveDefeatReward(Player& player, Enemy& enemy, ProgressionManager* progression);

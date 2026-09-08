@@ -8,8 +8,9 @@
 namespace {
 int ScaleStat(int base, double growth, int level, int cap) {
 	const int relativeLevel = (std::max)(0, (std::min)(100, level) - 1);
-	const double levelScale = 0.35 + 0.65 * (relativeLevel / 10.0);
-	const int scaled = static_cast<int>(std::lround(base * levelScale * std::pow(growth, relativeLevel / 10.0)));
+	// Match the player's linear early stat growth, with gradual later growth.
+	const double levelScale = 0.35 * (1.0 + 0.65 * relativeLevel);
+	const int scaled = static_cast<int>(std::lround(base * levelScale * std::pow(growth, relativeLevel / 25.0)));
 	return (std::max)(1, (std::min)(cap, scaled));
 }
 
@@ -38,19 +39,21 @@ int& Enemy::EmptyHealing() {
 	return healing;
 }
 
-Enemy::Enemy(const EnemyDefinition& definition, int level)
+Enemy::Enemy(const EnemyDefinition& definition, int level, bool firstClearBoss,
+             bool farmBoss, std::int64_t xpOverride)
 	: name_(definition.name),
 	  hp_(ScaleStat(definition.hpBase, definition.tier == EnemyTier::Boss ? 1.45 : definition.tier == EnemyTier::Elite ? 1.35 : 1.25, level, 250000)),
 	  maxHp_(hp_),
 	  atk_(ScaleStat(definition.atkBase, definition.tier == EnemyTier::Boss ? 1.22 : definition.tier == EnemyTier::Elite ? 1.18 : 1.14, level, 5000)),
-	  xpReward_(static_cast<int>((std::min)(std::int64_t{2147483647}, CalculateEnemyXP(level, static_cast<int>(definition.tier))))),
+	  xpReward_(xpOverride >= 0 ? xpOverride : CalculateEnemyXP(level, static_cast<int>(definition.tier))),
 	  defense_(ScaleStat(definition.defBase, definition.tier == EnemyTier::Boss ? 1.22 : definition.tier == EnemyTier::Elite ? 1.18 : 1.14, level, 5000)),
 	  speed_(NormalizeSpeed(definition.speed, definition.faction)),
 	  phaseBaseAtk_(atk_), phaseBaseDefense_(defense_), phaseBaseSpeed_(speed_),
-	  level_(level), resistance_(0), evasion_(0),
+	  level_((std::max)(1, (std::min)(100, level))), resistance_(0), evasion_(0),
 	  critRate_(5), critDamage_(150), accuracy_(100),
 	  faction_(definition.faction), tier_(definition.tier), skills_(definition.skills),
-		phase_(1), xpRewardClaimed_(false), investigationRewardClaimed_(false) {
+		phase_(1), xpRewardClaimed_(false), investigationRewardClaimed_(false),
+		lootRewardClaimed_(false), firstClearBoss_(firstClearBoss), farmBoss_(farmBoss) {
 	skillCooldowns_.assign(skills_.size(), 0);
 }
 
@@ -59,6 +62,9 @@ const std::vector<StatusEffect>& Enemy::GetStatuses() const { return statuses_; 
 Enemy::~Enemy() = default;
 
 void Enemy::takeDamage(int amount) {
+	lastDamageResult_ = {};
+	lastDamageResult_.requestedDamage = (std::max)(0, amount);
+	lastDamageResult_.remainingHP = hp_;
 	if (amount <= 0) return;
 	for (auto status = statuses_.begin(); status != statuses_.end() && amount > 0;) {
 		if (status->type != StatusType::Barrier) {
@@ -68,17 +74,24 @@ void Enemy::takeDamage(int amount) {
 		const int absorbed = (std::min)(status->potency, amount);
 		status->potency -= absorbed;
 		amount -= absorbed;
-		if (status->potency <= 0) status = statuses_.erase(status);
+		lastDamageResult_.barrierAbsorbed += absorbed;
+		if (status->potency <= 0) {
+			lastDamageResult_.barrierBroken = true;
+			status = statuses_.erase(status);
+		}
 		else ++status;
 	}
 	if (amount <= 0) return;
+	lastDamageResult_.hpDamage = (std::min)(hp_, amount);
 	hp_ -= amount;
 	if (hp_ < 0) hp_ = 0;
+	lastDamageResult_.remainingHP = hp_;
 }
 
 void Enemy::ProcessStatuses(std::vector<std::pair<StatusType, int>>& damageEvents, int& healing) {
 	healing = 0;
 	damageEvents.clear();
+	statusDamageResults_.clear();
 	std::vector<std::pair<StatusType, int>> pendingDamage;
 	for (auto& status : statuses_) {
 		int damage = 0;
@@ -105,10 +118,14 @@ void Enemy::ProcessStatuses(std::vector<std::pair<StatusType, int>>& damageEvent
 		return status.turns <= 0;
 	}), statuses_.end());
 	for (const auto& tick : pendingDamage) {
+		if (!isAlive()) break;
 		takeDamage(tick.second);
-		damageEvents.push_back(tick);
+		statusDamageResults_.push_back({tick.first, lastDamageResult_});
+		damageEvents.emplace_back(tick.first, lastDamageResult_.hpDamage);
 	}
-	if (healing > 0) heal(healing);
+	const int beforeHealing = hp_;
+	if (healing > 0 && isAlive()) heal(healing);
+	healing = hp_ - beforeHealing;
 }
 
 bool Enemy::isAlive() const { return hp_ > 0; }
@@ -132,6 +149,16 @@ bool Enemy::ClaimInvestigationReward() {
 	investigationRewardClaimed_ = true;
 	return true;
 }
+bool Enemy::ClaimLootReward() {
+	if (lootRewardClaimed_) return false;
+	lootRewardClaimed_ = true;
+	return true;
+}
+bool Enemy::IsFirstClearBoss() const { return firstClearBoss_; }
+bool Enemy::IsFarmBoss() const { return farmBoss_; }
+const DamageResolution& Enemy::GetLastDamageResult() const { return lastDamageResult_; }
+const std::vector<StatusDamageResolution>& Enemy::GetStatusDamageResults() const { return statusDamageResults_; }
+const std::vector<StatusApplicationResolution>& Enemy::GetStatusApplications() const { return statusApplications_; }
 int Enemy::getDefense() const { return (std::max)(0, defense_ * (100 + SumStatusBonus(StatusType::DefenseUp) - SumStatusBonus(StatusType::DefenseDown)) / 100); }
 int Enemy::getSpeed() const {
 	const int slow = SumStatusBonus(StatusType::Slow);
@@ -182,18 +209,23 @@ bool Enemy::ApplyStatus(const StatusEffect& status, int accuracy) {
 	const unsigned roll = static_cast<unsigned>((hp_ * 17 + level_ * 31 + static_cast<int>(status.type) * 13) % 100);
 	if (GetStatusStackPolicy(status.type) != StackPolicy::IndependentStacks) {
 		const int hitChance = CombatMath::AccuracyChance(100, accuracy, resistance_);
-		if (roll >= static_cast<unsigned>(hitChance)) return false;
+		if (roll >= static_cast<unsigned>(hitChance)) {
+			statusApplications_.push_back({status, false});
+			return false;
+		}
 	}
 	if (status.type != StatusType::HealOverTime &&
 		GetStatusStackPolicy(status.type) != StackPolicy::IndependentStacks) {
 		for (auto& existing : statuses_) {
 			if (existing.type == status.type) {
 				existing = status;
+				statusApplications_.push_back({status, true});
 				return true;
 			}
 		}
 	}
 	statuses_.push_back(status);
+	statusApplications_.push_back({status, true});
 	return true;
 }
 

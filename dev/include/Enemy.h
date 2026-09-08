@@ -4,10 +4,12 @@
 #include <vector>
 #include <cstdint>
 #include "GameplayTypes.h"
+#include "CombatResolution.h"
 
 class Enemy {
 public:
-    Enemy(const EnemyDefinition& definition, int level);
+    Enemy(const EnemyDefinition& definition, int level, bool firstClearBoss = false,
+          bool farmBoss = false, std::int64_t xpOverride = -1);
     virtual ~Enemy();
 
     virtual void takeDamage(int amount);
@@ -20,6 +22,12 @@ public:
     std::int64_t getXPReward() const;
     bool ClaimXPReward();
     bool ClaimInvestigationReward();
+    bool ClaimLootReward();
+    bool IsFirstClearBoss() const;
+    bool IsFarmBoss() const;
+    const DamageResolution& GetLastDamageResult() const;
+    const std::vector<StatusDamageResolution>& GetStatusDamageResults() const;
+    const std::vector<StatusApplicationResolution>& GetStatusApplications() const;
     int getDefense() const;
     int getSpeed() const;
     int getLevel() const;
@@ -70,6 +78,12 @@ protected:
     int phase_;
     bool xpRewardClaimed_;
     bool investigationRewardClaimed_;
+    bool lootRewardClaimed_;
+    bool firstClearBoss_;
+    bool farmBoss_;
+    DamageResolution lastDamageResult_;
+    std::vector<StatusDamageResolution> statusDamageResults_;
+    std::vector<StatusApplicationResolution> statusApplications_;
 
 private:
     static std::vector<std::pair<StatusType, int>>& EmptyDamageEvents();

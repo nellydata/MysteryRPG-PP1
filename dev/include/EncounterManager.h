@@ -10,6 +10,7 @@ class CombatManager;
 class Player;
 class ProgressionManager;
 class Enemy;
+class MapManager;
 
 enum class InvestigationEventType {
     FountainDiscovery, EnemyEncounter, ItemDiscovery, ExplorationXP,
@@ -29,15 +30,26 @@ struct InvestigationResult {
     bool primaryResolved = false;
 };
 
+struct VictoryResult {
+    bool resolved = false;
+    bool firstClear = false;
+    std::vector<ItemDefinition> items;
+    std::vector<std::string> messages;
+};
+
 class EncounterManager {
 public:
     EncounterManager();
 
     InvestigationResult ResolveInvestigation(Area& area, Player& player,
                                               ProgressionManager& progression);
+    InvestigationResult ResolveInvestigation(Area& area, Player& player,
+                                              ProgressionManager& progression, unsigned seed);
+    VictoryResult ResolveVictory(Area& area, Player& player, ProgressionManager& progression,
+                                MapManager& map, Enemy& enemy);
 
     bool Explore(Area& area, Player& player, ProgressionManager& progression,
-                 CombatManager& combat);
+                 CombatManager& combat, MapManager* map = nullptr);
     bool Explore(Area& area, Player& player, ProgressionManager& progression);
     bool explore(Area& area, Player& player, CombatManager& combat,
                  ProgressionManager& progression);

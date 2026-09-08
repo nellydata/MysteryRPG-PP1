@@ -350,14 +350,26 @@ inline void SimulateFreshProgression() {
         std::mt19937 seeds(0xA11CEu + run);
         Totals counts;
         auto guardian = encounters.ResolveInvestigation(fountain, player, progression, seeds());
+        std::cout << "DEBUG run=" << run << " guardian=" << (guardian.spawnedEnemy ? guardian.spawnedEnemy->getName() : "null")
+                  << " playerHP=" << player.getHP() << "/" << player.getMaxHP() << " level=" << progression.GetLevel() << '\n';
         assert(guardian.spawnedEnemy);
         auto guardianFight = Fight(player, *guardian.spawnedEnemy, &progression);
+        std::cout << "DEBUG run=" << run << " guardianFight victory=" << guardianFight.victory
+                  << " actions=" << guardianFight.actions << " damage=" << guardianFight.damageReceived << '\n';
         assert(guardianFight.victory);
         encounters.ResolveVictory(fountain, player, progression, map, *guardian.spawnedEnemy);
+        std::cout << "DEBUG run=" << run << " healingUnlocked=" << fountain.IsHealingUnlocked()
+                  << " roomUnlocked=" << room.IsUnlocked() << " level=" << progression.GetLevel() << '\n';
         assert(fountain.IsHealingUnlocked() && room.IsUnlocked());
         ++counts.battles; ++counts.wins; counts.actions += guardianFight.actions;
         int target = 0;
+        int loopGuard = 0;
         while (progression.GetLevel() < 10 && counts.investigations < 2000) {
+            if (++loopGuard % 25 == 0)
+                std::cout << "DEBUG run=" << run << " loop=" << loopGuard << " level=" << progression.GetLevel()
+                          << " investigations=" << counts.investigations << " playerHP=" << player.getHP() << "/" << player.getMaxHP()
+                          << " xp=" << progression.GetXP() << "/" << progression.GetXPToNextLevel()
+                          << " defeats=" << counts.defeats << " itemEvents=" << counts.itemEvents << " xpEvents=" << counts.xpEvents << '\n';
             if (player.getHP() < player.getMaxHP() * 60 / 100) {
                 player.ClearStatuses(); player.RestoreHealth(player.getMaxHP()); ++counts.recoveries;
             }
@@ -371,7 +383,11 @@ inline void SimulateFreshProgression() {
                     CombatManager combat;
                     combat.BeginEncounter(*result.spawnedEnemy); combat.PrepareTurn(player, *result.spawnedEnemy);
                     while (player.isAlive() && !combat.IsPlayerTurn()) combat.enemyTurn(player, *result.spawnedEnemy);
-                    if (player.isAlive()) assert(combat.resolve(CombatAction::Flee, player, *result.spawnedEnemy));
+                    if (player.isAlive()) {
+                        std::cout << "DEBUG run=" << run << " bossFlee playerTurn=" << combat.IsPlayerTurn()
+                                  << " playerHP=" << player.getHP() << " boss=" << result.spawnedEnemy->getName() << '\n';
+                        assert(combat.resolve(CombatAction::Flee, player, *result.spawnedEnemy));
+                    }
                     ++counts.bossWithdrawals;
                 } else {
                     ++counts.battles;
@@ -404,6 +420,9 @@ inline void SimulateFreshProgression() {
                 ++target;
             }
         }
+        std::cout << "DEBUG run=" << run << " level=" << progression.GetLevel()
+                  << " investigations=" << counts.investigations << " target=" << target
+                  << " itemEvents=" << counts.itemEvents << " xpEvents=" << counts.xpEvents << '\n';
         assert(target == 3 && !room.HasBossBeenDefeated() && counts.itemEvents > 0 && counts.xpEvents > 0);
         player.ClearStatuses(); player.RestoreHealth(player.getMaxHP());
         auto boss = CreateFirstClearBoss(*map.GetRoomDefinition(room));

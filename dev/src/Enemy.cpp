@@ -9,7 +9,10 @@ namespace {
 int ScaleStat(int base, double growth, int level, int cap) {
 	const int relativeLevel = (std::max)(0, (std::min)(100, level) - 1);
 	// Match the player's linear early stat growth, with gradual later growth.
-	const double levelScale = 0.35 * (1.0 + 0.65 * relativeLevel);
+	// The 0.5 coefficient keeps Rare/Epic enemies killable in 4 player actions
+	// through the early progression window (levels 1-10) while preserving the
+	// intended tier identity at higher levels.
+	const double levelScale = 0.35 * (1.0 + 0.5 * relativeLevel);
 	const int scaled = static_cast<int>(std::lround(base * levelScale * std::pow(growth, relativeLevel / 25.0)));
 	return (std::max)(1, (std::min)(cap, scaled));
 }

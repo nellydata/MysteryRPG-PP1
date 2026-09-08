@@ -112,9 +112,9 @@ std::vector<EnemyDefinition> BuildCatalogue() {
 	return {
 		{"Devotee Acolyte", EnemyFaction::Devotee, EnemyTier::Basic, 155, 24, 18, 50, 35,
 			{Skill("Purify Lash", "cleanse_self", 100, 2), Skill("Weak Prayer", "heal_self", 0, 3)}, "Sanctity Logic", 75, 20, 0, EnemyRole::Support, "devotee", 1},
-		{"Devotee Penitent", EnemyFaction::Devotee, EnemyTier::Rare, 230, 36, 22, 75, 55,
+		{"Devotee Penitent", EnemyFaction::Devotee, EnemyTier::Rare, 230, 30, 22, 75, 55,
 			{Skill("Blood Offering", "bleed", 125, 3, 2), Skill("Pain Conversion", "attack_up", 0, 4, 2)}, "Sanctity Logic", 20, 60, 10, EnemyRole::DotCaster, "devotee", 1},
-		{"Devotee Flagellant", EnemyFaction::Devotee, EnemyTier::Rare, 250, 38, 30, 80, 58,
+		{"Devotee Flagellant", EnemyFaction::Devotee, EnemyTier::Rare, 250, 32, 30, 80, 58,
 			{Skill("Flagellation", "def_down", 120, 3, 2, 20), Skill("Purity Chant", "cleanse_self", 0, 4)}, "Sanctity Logic", 20, 60, 10, EnemyRole::Striker, "devotee", 1},
 		{"Choir Ascetic", EnemyFaction::Devotee, EnemyTier::Epic, 360, 46, 45, 110, 85,
 			{Skill("Ascetic Strike", "accuracy_down", 165, 3, 2), Skill("Choir Mend", "heal_resistance", 0, 5, 2)}, "Sanctity Logic", 10, 70, 20, EnemyRole::Controller, "devotee", 5},

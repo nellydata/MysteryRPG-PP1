@@ -70,8 +70,6 @@ private:
 	void LeaveCombat();
 	void ShowDefeatRecovery();
 	void AcknowledgeDefeat();
-	void ResolveCombatAfterAction();
-	void FinishCombatPresentation();
 	void ShowFullBattleLog();
 	void EnterRoom(int roomIndex);
 	void Inspect(int interactableIndex);

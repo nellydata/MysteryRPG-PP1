@@ -131,6 +131,8 @@ void Win32UI::LeaveCombat() {
 	combatDefeatRecovery_ = false;
 	combat_.ClearEvents();
 	combat_.ResetEncounter();
+	loggedCombatSequence_ = 0;
+	savedCombatHistory_.clear();
 	if (selectedRoom_ >= 0 && selectedRoom_ < static_cast<int>(mapManager_.GetRooms().size())) {
 		mapManager_.GetRooms()[selectedRoom_].ClearEnemies();
 	}
@@ -145,8 +147,33 @@ void Win32UI::ResetCombatSelection() {
 }
 
 void Win32UI::ShowDefeatRecovery() {
-	if (player_.isAlive() || combatDefeatRecovery_) return;
+	if (player_.isAlive() || combatDefeatRecovery_ || defeatPresentationPending_) return;
+	// Drain remaining combat events into the persistent history before anything can clear them.
+	SyncCombatEvents();
+	defeatSnapshot_ = savedCombatHistory_;
+	defeatCause_.clear();
+	for (auto it = defeatSnapshot_.rbegin(); it != defeatSnapshot_.rend(); ++it) {
+		if (it->kind == CombatManager::CombatEvent::Kind::Death) { defeatCause_ = it->message; continue; }
+		if (defeatCause_.empty() && (it->kind == CombatManager::CombatEvent::Kind::Damage ||
+			it->kind == CombatManager::CombatEvent::Kind::DotTick || it->kind == CombatManager::CombatEvent::Kind::Attack)) {
+			defeatCause_ = it->message;
+			break;
+		}
+	}
+	if (defeatCause_.empty() && !defeatSnapshot_.empty()) defeatCause_ = defeatSnapshot_.back().message;
 	AddLog(player_.getName() + " has fallen.");
+	KillTimer(window_, 1);
+	enemyTurnPending_ = false;
+	combatTransition_ = false;
+	defeatPresentationPending_ = true;
+	statusMessage_ = defeatCause_.empty() ? "Defeated." : "Defeated: " + defeatCause_;
+}
+
+void Win32UI::AcknowledgeDefeat() {
+	if (!defeatPresentationPending_) return;
+	defeatPresentationPending_ = false;
+	defeatSnapshot_.clear();
+	defeatCause_.clear();
 	LeaveCombat();
 	for (std::size_t index = 0; index < mapManager_.GetRooms().size(); ++index) {
 		if (mapManager_.GetRooms()[index].getName() == "Fountain") {
@@ -159,6 +186,10 @@ void Win32UI::ShowDefeatRecovery() {
 	viewHistory_.clear();
 	statusMessage_ = "You awaken in the Fountain Room at full health.";
 	AddLog("You return to the Fountain Room and recover to full health.");
+}
+
+void Win32UI::ShowFullBattleLog() {
+	ChangeView(View::BattleLog);
 }
 
 std::wstring Win32UI::FormatDisplayText(const std::string& text) const {
@@ -419,8 +450,15 @@ void Win32UI::RefreshControls() {
 		SetWindowTextW(controls_[33], L"Equip / Unequip");
 		SetWindowTextW(controls_[30], L"Sort / filter");
 	} else if (view_ == View::Combat) {
-			if (!combatDefeatRecovery_ && !combatTransition_ && !combat_.IsPlayerTurn() && activeEnemy_ != nullptr && activeEnemy_->isAlive() && player_.isAlive()) ScheduleEnemyTurn();
-		if (combatDefeatRecovery_) {
+			if (!combatDefeatRecovery_ && !combatTransition_ && !defeatPresentationPending_ && !combat_.IsPlayerTurn() && activeEnemy_ != nullptr && activeEnemy_->isAlive() && player_.isAlive()) ScheduleEnemyTurn();
+		if (defeatPresentationPending_) {
+			SetWindowTextW(controls_[24], L"RETURN TO FOUNTAIN");
+			SetWindowTextW(controls_[31], L"FULL LOG");
+			ShowWindow(controls_[24], SW_SHOW);
+			ShowWindow(controls_[31], SW_SHOW);
+			EnableWindow(controls_[24], TRUE);
+			EnableWindow(controls_[31], TRUE);
+		} else if (combatDefeatRecovery_) {
 			SetWindowTextW(controls_[24], L"RESPAWN (10% HP)");
 			SetWindowTextW(controls_[31], L"END BATTLE (FULL HP)");
 			ShowWindow(controls_[24], SW_SHOW);
@@ -752,7 +790,7 @@ void Win32UI::HandleCommand(int controlId) {
 		controlId == ButtonShimmer || controlId == ButtonFlee ||
 		(controlId >= InventoryButtonBase && controlId < InventoryButtonBase + 12) ||
 		(controlId >= SkillButtonBase && controlId < SkillButtonBase + 15);
-	if (view_ == View::Combat && combatActionControl && !combat_.IsPlayerTurn()) {
+	if (view_ == View::Combat && combatActionControl && !combat_.IsPlayerTurn() && !defeatPresentationPending_) {
 		handlingCommand_ = false;
 		return;
 	}
@@ -989,7 +1027,9 @@ void Win32UI::HandleCommand(int controlId) {
 	} else if (controlId == ButtonSkills) {
 		if (activeEnemy_ == nullptr) ChangeView(View::Skills);
 	} else if (controlId == ButtonAttack) {
-		if (combatDefeatRecovery_) {
+		if (defeatPresentationPending_) {
+			AcknowledgeDefeat();
+		} else if (combatDefeatRecovery_) {
 			player_.RestoreHealth((std::max)(1, player_.getMaxHP() * 10 / 100));
 			combatDefeatRecovery_ = false;
 			statusMessage_ = "Respawned at the fountain with 10% HP. Continue the battle.";
@@ -1002,7 +1042,9 @@ void Win32UI::HandleCommand(int controlId) {
 			statusMessage_ = "Choose an enemy or cancel.";
 		}
 	} else if (controlId == ButtonItem) {
-		if (combatDefeatRecovery_) {
+		if (defeatPresentationPending_) {
+			ShowFullBattleLog();
+		} else if (combatDefeatRecovery_) {
 			player_.heal(player_.getMaxHP());
 			LeaveCombat();
 			view_ = View::Floor;
@@ -1067,10 +1109,13 @@ void Win32UI::EnterRoom(int roomIndex) {
 
 void Win32UI::SyncCombatEvents() {
 	const auto& events = combat_.GetEvents();
-	if (loggedCombatEvents_ > events.size()) loggedCombatEvents_ = 0;
-	while (loggedCombatEvents_ < events.size()) {
-		AddLog(events[loggedCombatEvents_].message);
-		++loggedCombatEvents_;
+	if (loggedCombatSequence_ > events.size()) loggedCombatSequence_ = 0;
+	while (loggedCombatSequence_ < events.size()) {
+		const auto& event = events[static_cast<std::size_t>(loggedCombatSequence_)];
+		AddLog(event.message);
+		// The transient event buffer is capped and cleared between encounters; this history is not.
+		savedCombatHistory_.push_back(event);
+		++loggedCombatSequence_;
 	}
 }
 
@@ -1108,6 +1153,8 @@ void Win32UI::SearchRoom() {
 	if (selectedRoom_ < 0 || selectedRoom_ >= static_cast<int>(mapManager_.GetRooms().size())) return;
 	statusMessage_ = "Investigating the room...";
 	combat_.ClearEvents();
+	loggedCombatSequence_ = 0;
+	savedCombatHistory_.clear();
 	Area& area = mapManager_.GetRooms()[selectedRoom_];
 	if (activeEnemy_ != nullptr && activeEnemy_->isAlive()) {
 		statusMessage_ = "Resolve the current encounter before investigating again.";
@@ -1693,6 +1740,21 @@ void Win32UI::Paint(HDC deviceContext) {
 				DrawTextLine(deviceContext, 440, mapY, L"[ " + ToWide(room.getName()) + L" ]", Text, 18);
 				mapY += 32;
 			}
+		}
+	} else if (view_ == View::BattleLog) {
+		DrawTextLine(deviceContext, 425, contentY, L"FULL ENCOUNTER LOG", Shimmer, 22, true);
+		int logY = contentY + 35;
+		if (!defeatCause_.empty()) {
+			logY += DrawTextLine(deviceContext, 425, logY, L"Cause of defeat: " + FormatDisplayText(defeatCause_), Danger, 16, true, client.right - 445) + 10;
+		}
+		const auto& fullLog = defeatPresentationPending_ ? defeatSnapshot_ : savedCombatHistory_;
+		for (const auto& event : fullLog) {
+			if (logY > client.bottom - 40) break;
+			COLORREF eventColor = Text;
+			if (event.kind == CombatManager::CombatEvent::Kind::Damage || event.kind == CombatManager::CombatEvent::Kind::Attack || event.kind == CombatManager::CombatEvent::Kind::Skill || event.kind == CombatManager::CombatEvent::Kind::DotTick || event.kind == CombatManager::CombatEvent::Kind::Death) eventColor = Danger;
+			else if (event.kind == CombatManager::CombatEvent::Kind::Heal) eventColor = RGB(90, 210, 110);
+			else if (event.kind == CombatManager::CombatEvent::Kind::Shield || event.kind == CombatManager::CombatEvent::Kind::Buff) eventColor = RGB(90, 160, 245);
+			logY += DrawTextLine(deviceContext, 425, logY, FormatDisplayText(event.message), eventColor, 14, false, client.right - 449) + 5;
 		}
 	}
 

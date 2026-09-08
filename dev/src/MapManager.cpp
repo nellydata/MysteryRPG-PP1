@@ -13,16 +13,16 @@ const std::vector<RoomDefinition>& MapManager::GetFloor1Definitions() {
             {{"Devotee Acolyte", 70}, {"Devotee Penitent", 30}}, "", 0, 0, ConsumableProfile::Restorative, "Entrance Hall"},
         {"Entrance Hall", "Entrance Hall", RoomType::Entrance,
             {{"Devotee Acolyte", 30}, {"Devotee Penitent", 20}, {"Devotee Flagellant", 15}, {"Choir Ascetic", 10}, {"Benediction Sister", 10}, {"Automata Unit-01", 5}},
-            {{"Devotee Acolyte", 25}, {"Devotee Penitent", 20}, {"Devotee Flagellant", 15}, {"Choir Ascetic", 15}, {"Benediction Sister", 15}, {"Choir Warden", 10}}, "Matron of the Catacombs", 50, 8, ConsumableProfile::Devotional, "Archive Room"},
+            {{"Devotee Acolyte", 25}, {"Devotee Penitent", 20}, {"Devotee Flagellant", 15}, {"Choir Ascetic", 15}, {"Benediction Sister", 15}, {"Choir Warden", 10}}, "Matron of the Catacombs", 50, 8, ConsumableProfile::Devotional, "Archive Room", 8, 8, 200},
         {"Archive Room", "Archive Room", RoomType::Archive,
             {{"Automata Unit-01", 30}, {"Automata Sharpsight", 20}, {"Automata Striker", 20}, {"Automata Vanguard", 15}, {"Automata Oracle Unit", 10}, {"Oracle-VII", 5}},
-            {{"Automata Unit-01", 20}, {"Automata Striker", 20}, {"Automata Sharpsight", 15}, {"Automata Vanguard", 20}, {"Automata Oracle Unit", 15}, {"Oracle-VII", 10}}, "Overlord-Prime", 50, 8, ConsumableProfile::OccultMechanica, "Chapel"},
+            {{"Automata Unit-01", 20}, {"Automata Striker", 20}, {"Automata Sharpsight", 15}, {"Automata Vanguard", 20}, {"Automata Oracle Unit", 15}, {"Oracle-VII", 10}}, "Overlord-Prime", 50, 8, ConsumableProfile::OccultMechanica, "Chapel", 15, 15, 400},
         {"Chapel", "Chapel", RoomType::Chapel,
             {{"Devotee Flagellant", 12}, {"Benediction Sister", 12}, {"Verdigris Rotbearer", 15}, {"Verdigris Bleedcaller", 15}, {"Choir Ascetic", 12}, {"Verdigris Pyre Sister", 10}, {"Rot Herald", 6}, {"Pyre Matron", 6}},
-            {{"Benediction Sister", 10}, {"Verdigris Rotbearer", 12}, {"Verdigris Bleedcaller", 12}, {"Verdigris Pyre Sister", 12}, {"Rot Herald", 10}, {"Pyre Matron", 10}, {"Ascetic Purifier", 7}, {"Choir Ascetic", 10}}, "Matron of Rot", 50, 8, ConsumableProfile::Ritual, "Storage Room"},
+            {{"Benediction Sister", 10}, {"Verdigris Rotbearer", 12}, {"Verdigris Bleedcaller", 12}, {"Verdigris Pyre Sister", 12}, {"Rot Herald", 10}, {"Pyre Matron", 10}, {"Ascetic Purifier", 7}, {"Choir Ascetic", 10}}, "Matron of Rot", 50, 8, ConsumableProfile::Ritual, "Storage Room", 22, 22, 800},
         {"Storage Room", "Storage Room", RoomType::Storage,
             {{"Automata Unit-01", 25}, {"Automata Striker", 20}, {"Automata Vanguard", 15}, {"Automata Sharpsight", 15}, {"Verdigris Thrall", 15}, {"Verdigris Rotbearer", 10}},
-            {{"Automata Striker", 20}, {"Automata Vanguard", 20}, {"Automata Sharpsight", 15}, {"Automata Oracle Unit", 15}, {"Verdigris Thrall", 15}, {"Verdigris Rotbearer", 15}}, "The Reliquary Engine", 50, 8, ConsumableProfile::SupplyCache, ""}
+            {{"Automata Striker", 20}, {"Automata Vanguard", 20}, {"Automata Sharpsight", 15}, {"Automata Oracle Unit", 15}, {"Verdigris Thrall", 15}, {"Verdigris Rotbearer", 15}}, "The Reliquary Engine", 50, 8, ConsumableProfile::SupplyCache, "", 30, 30, 1600}
     };
     return definitions;
 }

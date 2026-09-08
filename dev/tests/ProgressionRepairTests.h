@@ -248,6 +248,7 @@ inline void TestFixedBossAndFirstClear() {
     EncounterManager encounters;
     const auto* definition = map.GetRoomDefinition("Entrance Hall");
     assert(definition && definition->firstBossSpawnChance == 50);
+    assert(definition->firstClearBossLevel == 8 && definition->firstClearBossXP == 200);
     auto reference = CreateFirstClearBoss(*definition);
     assert(reference && reference->IsFirstClearBoss() && !reference->IsFarmBoss());
     std::cout << "BOSS id=" << reference->getName() << " fixedLevel=" << reference->getLevel() << " hp=" << reference->getMaxHP()

@@ -89,9 +89,10 @@ bool ProgressionManager::SelectPendingShimmerSkill(const std::string& skillName)
     if (!HasPendingShimmerChoice() ||
         std::find(GetPendingShimmerChoices().begin(), GetPendingShimmerChoices().end(), skillName) == GetPendingShimmerChoices().end() ||
         HasShimmerSkill(skillName)) return false;
-    UnlockShimmerSkill(skillName);
+    const std::string selected = skillName;
+    UnlockShimmerSkill(selected);
     pendingLevelUpRewards_.pop_front();
-    levelUpMessages_.push_back("Shimmer skill unlocked: " + skillName + ".");
+    levelUpMessages_.push_back("Shimmer skill unlocked: " + selected + ".");
     return true;
 }
 
@@ -192,7 +193,19 @@ bool ProgressionManager::HasCrux(const std::string& itemName) const {
 }
 
 bool ProgressionManager::UnlockShimmerSkill(const std::string& skillName) {
-    return !skillName.empty() && shimmerSkills_.insert(skillName).second;
+    const std::string selected = skillName;
+    if (selected.empty() || !shimmerSkills_.insert(selected).second) return false;
+    for (auto& reward : pendingLevelUpRewards_) {
+        auto& choices = reward.shimmerChoices;
+        choices.erase(std::remove(choices.begin(), choices.end(), selected), choices.end());
+        if (choices.empty()) {
+            for (const auto& candidate : BuildLatinShimmerSkillNames()) {
+                if (!HasShimmerSkill(candidate) && ShimmerSkill::Create(candidate)) choices.push_back(candidate);
+                if (choices.size() == 3) break;
+            }
+        }
+    }
+    return true;
 }
 
 bool ProgressionManager::HasShimmerSkill(const std::string& skillName) const {

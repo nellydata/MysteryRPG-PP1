@@ -99,7 +99,7 @@ void CombatManager::AdvanceTurn(Player& player, Enemy& enemy) {
 }
 
 void CombatManager::ResolveDefeatReward(Player& player, Enemy& enemy, ProgressionManager* progression) {
-    if (progression != nullptr && !enemy.isAlive() && enemy.ClaimXPReward()) {
+    if (progression != nullptr && player.isAlive() && !enemy.isAlive() && enemy.ClaimXPReward()) {
         progression->GrantXP(enemy.getXPReward());
         progression->CheckLevelUp(player);
         AddEvent(CombatEvent::Kind::Reward, "XP gained: +" + std::to_string(enemy.getXPReward()) + ".");
@@ -166,6 +166,18 @@ void CombatManager::ResetEncounter() {
 }
 void CombatManager::RecordInfo(const std::string& message) { AddEvent(CombatEvent::Kind::Info, message); }
 void CombatManager::RecordReward(const std::string& message) { AddEvent(CombatEvent::Kind::Reward, message); }
+void CombatManager::RecordEnvironmentalDefeat(const std::string& source, const Player& player) {
+    if (player.isAlive()) return;
+    // A lethal exploration hazard starts a new history after the prior fight.
+    // Use the damage result captured by Player at the actual HP mutation.
+    ResetEncounter();
+    events_.clear();
+    encounterCompleted_ = false;
+    AddEvent(CombatEvent::Kind::EncounterStart, "Exploration hazard: " + source + ".");
+    RecordDamage(source, player.getName(), source, player.GetLastDamageResult(), CombatEvent::Kind::Environment);
+    AddEvent(CombatEvent::Kind::Death, player.getName() + " has fallen.");
+    CompleteEncounter("defeat");
+}
 void CombatManager::CompleteEncounter(const std::string& outcome) {
     if (encounterCompleted_) return;
     encounterCompleted_ = true;
@@ -204,6 +216,13 @@ void CombatManager::RecordDamage(const std::string& actor, const std::string& ta
 
 void CombatManager::PrepareTurn(Player& player, Enemy& enemy) {
     if (!enemy.isAlive()) return;
+    if (!battleStartEffectsApplied_) {
+        const int before = player.GetBarrier();
+        player.StartBattleEffects();
+        battleStartEffectsApplied_ = true;
+        const int gained = player.GetBarrier() - before;
+        if (gained > 0) AddEvent(CombatEvent::Kind::Shield, player.getName() + " gains " + std::to_string(gained) + " barrier at battle start.", gained);
+    }
     if (playerGauge_ == 0 && enemyGauge_ == 0 && !playerTurn_) {
         AccumulateGaugesUntilReady(playerGauge_, enemyGauge_, player.getSpeed(), enemy.getSpeed());
         playerTurn_ = playerGauge_ >= 1000;
@@ -235,6 +254,7 @@ void CombatManager::BeginEncounter(Enemy& enemy) {
     consumableUsedThisTurn_ = false;
     shimmerCooldowns_.clear();
     events_.clear();
+    battleStartEffectsApplied_ = false;
     encounterCompleted_ = false;
     groupEnemyTurn_ = false;
     nextPartyEnemy_ = 0;
@@ -340,27 +360,39 @@ bool CombatManager::resolve(CombatAction action, Player& player, Enemy& enemy,
             AddEvent(CombatEvent::Kind::Info, skill->getName() + " is recharging for " + std::to_string(remainingCooldown) + (remainingCooldown == 1 ? " turn." : " turns."));
             return false;
         }
-        const int enemyHealthBefore = enemy.getHP();
         const int playerHealthBefore = player.getHP();
-        AddEvent(CombatEvent::Kind::Shimmer, player.getName() + " uses Shimmer skill " + skill->getName() + " on " + enemy.getName() + ". Effect: " + effect + ".");
+        const int barrierBefore = player.GetBarrier();
+        const auto playerApplications = player.GetStatusApplications().size();
+        const auto enemyApplications = enemy.GetStatusApplications().size();
+        const auto statusesBefore = player.GetStatuses().size();
+        const bool offensive = skill->getTargetType() != ShimmerSkill::TargetType::Self;
+        auto& actionEvent = AddEvent(CombatEvent::Kind::Shimmer, player.getName() + " uses Shimmer skill " + skill->getName() + " on " + (offensive ? enemy.getName() : player.getName()) + ".");
+        actionEvent.actor = player.getName(); actionEvent.target = offensive ? enemy.getName() : player.getName(); actionEvent.skill = skill->getName();
         skill->apply(player, enemy);
-
-        const int dealt = enemyHealthBefore - enemy.getHP();
-        const int healed = player.getHP() - playerHealthBefore;
-        if (dealt > 0) AddEvent(CombatEvent::Kind::Damage, player.getName() + " deals " + std::to_string(dealt) + " damage with " + skill->getName() + ".", dealt);
-        if (healed > 0) AddEvent(CombatEvent::Kind::Heal, player.getName() + " restores " + std::to_string(healed) + " HP with " + skill->getName() + ".", healed);
-        if (effect.find("barrier") != std::string::npos) AddEvent(CombatEvent::Kind::Shield, player.getName() + " gains a Shimmer barrier.");
-        if (effect.find("stun") != std::string::npos && enemy.HasStatus(StatusType::Stun)) AddEvent(CombatEvent::Kind::Debuff, enemy.getName() + " is stunned by Shimmer.");
-        if (effect.find("burn") != std::string::npos && enemy.HasStatus(StatusType::Burn)) AddEvent(CombatEvent::Kind::Debuff, enemy.getName() + " suffers Burn from Shimmer.");
-        if (effect.find("mark") != std::string::npos && enemy.HasStatus(StatusType::VerdigrisMark)) AddEvent(CombatEvent::Kind::Debuff, enemy.getName() + " is marked by Shimmer.");
-        if (effect == "stat_boost") AddEvent(CombatEvent::Kind::Info, player.getName() + " gains a major Shimmer stat increase.");
-        if (effect == "extra_turn") AddEvent(CombatEvent::Kind::Info, player.getName() + " accelerates the next combat action.");
-        if (dealt == 0 && healed == 0 && effect.find("barrier") == std::string::npos &&
-            effect.find("stun") == std::string::npos && effect.find("burn") == std::string::npos &&
-            effect.find("mark") == std::string::npos && effect != "stat_boost" && effect != "extra_turn") {
-            AddEvent(CombatEvent::Kind::Info, "Shimmer effect resolved: " + effect + ".");
+        if (offensive && effect.find("damage") == 0) {
+            auto& hit = AddEvent(CombatEvent::Kind::Hit, skill->getName() + " hits " + enemy.getName() + ".");
+            hit.actor = player.getName(); hit.target = enemy.getName(); hit.skill = skill->getName();
+            RecordDamage(player.getName(), enemy.getName(), skill->getName(), enemy.GetLastDamageResult());
+            if (player.HasActiveSet("Shimmer Ascendant") && enemy.GetLastDamageResult().hpDamage > 0)
+                player.heal(player.getMaxHP() * 5 / 100);
         }
-        if (player.HasActiveSet("Shimmer Ascendant") && dealt > 0) player.heal(player.getMaxHP() * 5 / 100);
+        const auto recordStatuses = [&](const std::vector<StatusApplicationResolution>& applications, std::size_t first, const std::string& target) {
+            for (std::size_t index = first; index < applications.size(); ++index) {
+                const auto& application = applications[index];
+                auto& statusEvent = AddEvent(application.applied ? CombatEvent::Kind::Status : CombatEvent::Kind::Resistance,
+                    target + (application.applied ? " receives " : " resists ") + StatusDisplayName(application.status.type) + " from " + skill->getName() + ".");
+                statusEvent.actor = player.getName(); statusEvent.target = target; statusEvent.skill = skill->getName();
+            }
+        };
+        recordStatuses(player.GetStatusApplications(), playerApplications, player.getName());
+        recordStatuses(enemy.GetStatusApplications(), enemyApplications, enemy.getName());
+        const int healed = player.getHP() - playerHealthBefore;
+        if (healed > 0) AddEvent(CombatEvent::Kind::Heal, player.getName() + " restores " + std::to_string(healed) + " HP with " + skill->getName() + ".", healed);
+        const int shield = player.GetBarrier() - barrierBefore;
+        if (shield > 0) AddEvent(CombatEvent::Kind::Shield, player.getName() + " gains " + std::to_string(shield) + " barrier with " + skill->getName() + ".", shield);
+        if (effect == "cleanse_resist" && statusesBefore + (player.GetStatusApplications().size() - playerApplications) > player.GetStatuses().size())
+            AddEvent(CombatEvent::Kind::Cleanse, player.getName() + " cleanses negative statuses with " + skill->getName() + ".");
+        if (enemy.isAlive() && enemy.UpdatePhase()) AddEvent(CombatEvent::Kind::PhaseTransition, "Boss enters Phase " + std::to_string(enemy.GetPhase()) + ".");
         shimmerCooldowns_[skill->getName()] = skill->getCooldown();
         if (!enemy.isAlive()) {
             AddEvent(CombatEvent::Kind::Death, enemy.getName() + " has been defeated.");
@@ -389,12 +421,13 @@ bool CombatManager::resolve(CombatAction action, Player& player, Enemy& enemy,
 }
 
 bool CombatManager::UseConsumable(const std::string& itemName, Player& player, Enemy& enemy, ProgressionManager* progression) {
-    if (!playerTurn_ || consumableUsedThisTurn_) {
+    if (!player.isAlive() || !enemy.isAlive() || !playerTurn_ || consumableUsedThisTurn_) {
         AddEvent(CombatEvent::Kind::Info, "Only one consumable can be used per turn.");
         return false;
     }
     const int healthBefore = player.getHP();
     const int enemyHealthBefore = enemy.getHP();
+    const auto enemyStatusesBefore = enemy.GetStatuses().size();
     if (!player.UseConsumable(itemName, &enemy)) {
         AddEvent(CombatEvent::Kind::Info, "That consumable cannot be used in battle.");
         return false;
@@ -404,7 +437,10 @@ bool CombatManager::UseConsumable(const std::string& itemName, Player& player, E
     const int healing = player.getHP() - healthBefore;
     const int damage = enemyHealthBefore - enemy.getHP();
     if (healing > 0) AddEvent(CombatEvent::Kind::Heal, player.getName() + " heals " + std::to_string(healing) + " HP.", healing);
-    if (damage > 0) AddEvent(CombatEvent::Kind::Damage, player.getName() + " deals " + std::to_string(damage) + " damage to " + enemy.getName() + ".", damage);
+    if (damage > 0) RecordDamage(player.getName(), enemy.getName(), itemName, enemy.GetLastDamageResult());
+    if (enemy.GetStatuses().size() > enemyStatusesBefore)
+        AddEvent(CombatEvent::Kind::Status, enemy.getName() + " receives " + StatusDisplayName(enemy.GetStatuses().back().type) + " from " + itemName + ".");
+    if (!enemy.isAlive()) AddEvent(CombatEvent::Kind::Death, enemy.getName() + " has been defeated.");
     ResolveDefeatReward(player, enemy, progression);
     playerGauge_ -= 1000;
     playerTurn_ = false;
@@ -453,7 +489,7 @@ void CombatManager::enemyTurn(Player& player, Enemy& enemy, ProgressionManager* 
         playerTurn_ = false;
         AdvanceTurn(player, enemy);
     };
-    const auto damagePlayer = [&](int requested, const std::string& skillName) {
+    const auto damagePlayer = [&](int requested, const std::string& skillName, bool guaranteedCritical = false) {
         const int hitRoll = (turnNumber_ * 41 + enemy.getAtk() * 7 + player.getHP()) % 100;
         const int hitChance = CombatMath::AccuracyChance(100, enemy.getAccuracy(), player.getEvasion());
         if (hitRoll >= hitChance) {
@@ -462,7 +498,7 @@ void CombatManager::enemyTurn(Player& player, Enemy& enemy, ProgressionManager* 
             return false;
         }
         const unsigned critRoll = static_cast<unsigned>((turnNumber_ * 53 + enemy.getAtk() * 7 + player.getHP() * 3) % 100);
-        const bool critical = enemy.HasStatus(StatusType::GuaranteedCrit) ||
+        const bool critical = guaranteedCritical || enemy.HasStatus(StatusType::GuaranteedCrit) ||
             critRoll < static_cast<unsigned>((std::min)(100, enemy.getCritRate() + (enemy.HasStatus(StatusType::CritUp) ? 20 : 0)));
         const int rawDamage = critical ? requested * (enemy.getCritDamage() + (enemy.HasStatus(StatusType::CritDamageUp) ? 50 : 0)) / 100 : requested;
         auto& hit = AddEvent(critical ? CombatEvent::Kind::Critical : CombatEvent::Kind::Hit,
@@ -494,10 +530,12 @@ void CombatManager::enemyTurn(Player& player, Enemy& enemy, ProgressionManager* 
                 if (candidate != nullptr && candidate != &enemy && candidate->isAlive()) { ally = candidate; break; }
             if (ally == nullptr && skill.multiplier <= 0) continue;
         }
-        const std::string target = ally != nullptr ? ally->getName() : skill.multiplier > 0 ? player.getName() : enemy.getName();
+        const bool offensive = skill.multiplier > 0 || skill.effect == "bleed" || skill.effect == "burn" || skill.effect == "poison" ||
+            skill.effect == "tri_dot" || skill.effect == "burn_bleed" || skill.effect == "def_down" || skill.effect == "accuracy_down";
+        const std::string target = ally != nullptr ? ally->getName() : offensive ? player.getName() : enemy.getName();
         auto& action = AddEvent(CombatEvent::Kind::Skill, enemy.getName() + " uses " + skill.name + " on " + target + ".");
         action.actor = enemy.getName(); action.target = target; action.skill = skill.name;
-        const bool landed = skill.multiplier <= 0 || damagePlayer((std::max)(1, enemy.getAtk() * skill.multiplier / 100), skill.name);
+        const bool landed = skill.multiplier <= 0 || damagePlayer((std::max)(1, enemy.getAtk() * skill.multiplier / 100), skill.name, skill.effect == "guaranteed_crit");
         if (ally != nullptr && skill.effect.find("heal") != std::string::npos) {
             const int before = ally->getHP();
             ally->heal((std::max)(1, ally->getMaxHP() * 15 / 100));
@@ -520,10 +558,12 @@ void CombatManager::enemyTurn(Player& player, Enemy& enemy, ProgressionManager* 
         if (skill.effect == "cleanse_self" || skill.effect == "heal_cleanse") {
             const int count = enemy.CleanseNegativeStatuses();
             AddEvent(CombatEvent::Kind::Cleanse, enemy.getName() + " cleanses " + std::to_string(count) + " negative statuses.", count);
-        } else if (skill.effect == "barrier") {
+        } else if (skill.effect == "barrier" || skill.effect == "barrier_accuracy") {
             const int amount = enemy.getMaxHP() / 5;
             const bool applied = enemy.ApplyStatus({StatusType::Barrier, skill.duration > 0 ? skill.duration : 2, amount});
             if (applied) AddEvent(CombatEvent::Kind::Shield, enemy.getName() + " gains " + std::to_string(amount) + " barrier.", amount);
+            if (skill.effect == "barrier_accuracy" && enemy.ApplyStatus({StatusType::AccuracyUp, skill.duration > 0 ? skill.duration : 2, skill.statusPotency}))
+                AddEvent(CombatEvent::Kind::Buff, enemy.getName() + " gains Accuracy Up.");
         } else {
             std::vector<StatusType> buffs;
             if (skill.effect == "attack_up") buffs.push_back(StatusType::AttackUp);

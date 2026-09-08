@@ -181,176 +181,127 @@ VictoryResult EncounterManager::ResolveVictory(Area& area, Player& player, Progr
     return result;
 }
 
-bool EncounterManager::Explore(Area& area, Player& player,
-                               ProgressionManager& progression,
+bool EncounterManager::Explore(Area& area, Player& player, ProgressionManager& progression,
                                CombatManager& combat, MapManager* map) {
     ConsoleUI ui;
     MapManager fallbackMap;
     MapManager& activeMap = map ? *map : fallbackMap;
-    auto finishVictory = [&](Enemy& defeated) {
-        auto victory = ResolveVictory(area, player, progression, activeMap, defeated);
-        for (const auto& message : victory.messages) ui.ShowMessage(message);
-        for (const auto& item : victory.items) ui.ShowMessage("Found: " + item.name + ".");
-    };
-    if (area.GetVisibleInteractables().empty()) area.RevealNextInteractable();
-
-    while (player.isAlive()) {
+    Enemy* encounterEnemy = nullptr;
+    while (std::cin && player.isAlive()) {
         Enemy* enemy = area.getFirstAliveEnemy();
-        if (enemy != nullptr) {
-            combat.BeginEncounter(*enemy);
-            combat.PrepareTurn(player, *enemy);
-            if (!combat.IsPlayerTurn() && player.isAlive() && enemy->isAlive()) {
-                combat.enemyTurn(player, *enemy, &progression);
-                ui.RenderCombat(player, progression, *enemy, combat);
-                if (!enemy->isAlive()) { finishVictory(*enemy); area.removeDeadEnemies(); }
-                continue;
+        if (enemy) {
+            if (encounterEnemy != enemy) {
+                combat.BeginEncounter(player, *enemy, progression.GetLevel());
+                combat.PrepareTurn(player, *enemy);
+                encounterEnemy = enemy;
             }
+            ui.PresentEvents(combat);
+            if (!player.isAlive()) break;
             ui.RenderCombat(player, progression, *enemy, combat);
-            const int choice = ui.Prompt("Choose a combat action.", 1, 4);
-
-            if (choice == 4) {
-                combat.resolve(CombatAction::Flee, player, *enemy);
-                player.ClearStatuses();
-                combat.ResetEncounter();
-                area.ClearEnemies();
-                return false;
-            }
-
-            if (choice == 2) {
-                std::vector<std::string> consumables;
-                for (const auto& item : player.GetInventory().GetItems()) {
-                    if (item->getCategory() != ItemCategory::Consumable) continue;
-                    if (player.GetInventory().GetQuantity(item->getName()) <= 0) continue;
-                    bool duplicate = false;
-                    for (const auto& name : consumables) {
-                        if (name == item->getName()) {
-                            duplicate = true;
-                            break;
-                        }
-                    }
-                    if (!duplicate) consumables.push_back(item->getName());
-                }
-                if (consumables.empty()) {
-                    ui.ShowMessage("No consumables are available.");
-                    continue;
-                }
-                std::cout << "\nConsumables:\n";
-                for (std::size_t i = 0; i < consumables.size(); ++i)
-                    std::cout << "  " << i + 1 << ". " << consumables[i] << "\n";
-                const int itemChoice = ui.Prompt("Choose a consumable, or 0 to cancel.", 0,
-                                                 static_cast<int>(consumables.size()));
-                if (itemChoice == 0) continue;
-                if (!combat.UseConsumable(consumables[static_cast<std::size_t>(itemChoice - 1)], player, *enemy, &progression))
-                    ui.ShowMessage("That consumable cannot be used right now.");
-                if (!enemy->isAlive()) { finishVictory(*enemy); area.removeDeadEnemies(); }
-                continue;
-            }
-
-            if (choice == 3) {
-                const auto equipped = progression.GetEquippedShimmerSkills();
-                if (equipped.empty()) {
-                    ui.ShowMessage("No Shimmer skills are equipped.");
-                    continue;
-                }
-                std::cout << "\nEquipped Shimmer skills:\n";
-                for (std::size_t i = 0; i < equipped.size(); ++i)
-                    std::cout << "  " << i + 1 << ". " << equipped[i] << "\n";
-                const int skillChoice = ui.Prompt("Choose a skill, or 0 to cancel.", 0,
-                                                 static_cast<int>(equipped.size()));
-                if (skillChoice == 0) continue;
-                auto selectedSkill = ShimmerSkill::Create(equipped[static_cast<std::size_t>(skillChoice - 1)]);
-                if (!selectedSkill || !combat.resolve(CombatAction::Shimmer, player, *enemy, selectedSkill.get(), &progression))
-                    ui.ShowMessage("That Shimmer skill cannot be used right now.");
-                if (!enemy->isAlive()) { finishVictory(*enemy); area.removeDeadEnemies(); }
-                continue;
-            }
-
-            CombatAction action;
-            switch (choice) {
-            case 1: action = CombatAction::Attack; break;
-            case 3: continue;
-            default:
-                std::cout << "That is not a combat action.\n";
-                continue;
-            }
-
-            if (!combat.resolve(action, player, *enemy, nullptr, &progression)) continue;
-            if (!enemy->isAlive()) {
-                finishVictory(*enemy);
-                area.removeDeadEnemies();
+            if (!combat.IsPlayerTurn()) {
+                combat.enemyTurn(player, *enemy, &progression);
             } else {
-                while (!combat.IsPlayerTurn() && player.isAlive() && enemy->isAlive())
-                {
-                    combat.enemyTurn(player, *enemy, &progression);
-                    ui.RenderCombat(player, progression, *enemy, combat);
-                    if (!player.isAlive()) break;
+                const int choice = ui.Prompt("Combat action:", 1, 6);
+                if (!std::cin) break;
+                if (choice == 5) { ui.ShowBattleHistory(combat); continue; }
+                if (choice == 6) {
+                    ConsoleUI::SetFast(!ConsoleUI::IsFast());
+                    ui.ShowMessage(ConsoleUI::IsFast() ? "Fast presentation enabled." : "Normal presentation enabled.");
+                    continue;
                 }
-                if (!enemy->isAlive()) { finishVictory(*enemy); area.removeDeadEnemies(); }
+                if (choice == 4) {
+                    combat.resolve(CombatAction::Flee, player, *enemy);
+                    ui.PresentEvents(combat);
+                    combat.ResetEncounter();
+                    player.ClearStatuses();
+                    area.ClearEnemies();
+                    encounterEnemy = nullptr;
+                    continue;
+                }
+                if (choice == 2) {
+                    std::vector<std::string> consumables;
+                    for (const auto& entry : player.GetInventory().GetItems())
+                        if (entry->getCategory() == ItemCategory::Consumable && entry.quantity > 0)
+                            consumables.push_back(entry->getName());
+                    if (consumables.empty()) { ui.ShowMessage("No consumables available."); continue; }
+                    for (std::size_t index = 0; index < consumables.size(); ++index)
+                        ui.ShowMessage(std::to_string(index + 1) + ". " + consumables[index] + " x" +
+                            std::to_string(player.GetInventory().GetQuantity(consumables[index])));
+                    const int selected = ui.Prompt("Choose consumable, 0 cancel:", 0, static_cast<int>(consumables.size()));
+                    if (!selected) continue;
+                    combat.UseConsumable(consumables[selected - 1], player, *enemy, &progression);
+                } else if (choice == 3) {
+                    const auto equipped = progression.GetEquippedShimmerSkills();
+                    if (equipped.empty()) { ui.ShowMessage("Equip a Shimmer skill from the room's Skills menu first."); continue; }
+                    for (std::size_t index = 0; index < equipped.size(); ++index)
+                        ui.ShowMessage(std::to_string(index + 1) + ". " + equipped[index] + " cooldown " +
+                            std::to_string(combat.GetSkillCooldown(equipped[index])));
+                    const int selected = ui.Prompt("Choose combat Shimmer, 0 cancel:", 0, static_cast<int>(equipped.size()));
+                    if (!selected) continue;
+                    auto skill = ShimmerSkill::Create(equipped[selected - 1]);
+                    combat.resolve(CombatAction::Shimmer, player, *enemy, skill.get(), &progression);
+                } else combat.resolve(CombatAction::Attack, player, *enemy, nullptr, &progression);
             }
-            for (const auto& message : progression.ConsumeLevelUpMessages()) ui.ShowMessage(message);
-            while (progression.HasPendingShimmerChoice()) {
-                if (!ui.ChoosePendingShimmerSkill(progression)) break;
+            ui.PresentEvents(combat);
+            if (!player.isAlive()) break;
+            if (!enemy->isAlive()) {
+                const auto victory = ResolveVictory(area, player, progression, activeMap, *enemy);
+                for (const auto& message : victory.messages) combat.RecordReward(message);
+                for (const auto& item : victory.items) combat.RecordReward("Found: " + item.name + ".");
+                combat.CompleteEncounter("victory");
+                ui.PresentEvents(combat);
+                combat.ResetEncounter();
+                player.ClearStatuses();
+                area.removeDeadEnemies();
+                encounterEnemy = nullptr;
+                const auto* room = activeMap.GetRoomDefinition(area);
+                if (room && room->nextRoomId.empty() && area.HasBossBeenDefeated())
+                    ui.ShowMessage("Floor I cleared. The cathedral falls silent.");
+                ui.PresentLevelUpRewards(progression);
             }
             continue;
         }
-
         ui.RenderRoom(area, player, progression);
-        const int maximumChoice = area.getName() == "Fountain" && area.IsHealingUnlocked() ? 5 : 4;
-        const int choice = ui.Prompt("Choose an exploration action.", 0, maximumChoice);
-        switch (choice) {
-        case 1:
-        case 2: {
-            InvestigationResult result = ResolveInvestigation(area, player, progression);
-            ui.ShowMessage(result.narrative);
-            if (result.xpAwarded > 0) ui.ShowMessage("Investigation gained " + std::to_string(result.xpAwarded) + " XP.");
-            for (const auto& item : result.items) {
-                ui.ShowMessage("Found: " + item.name + ".");
-            }
-            if (result.hpDelta < 0) ui.ShowMessage("You lose " + std::to_string(-result.hpDelta) + " HP. Current HP: " +
-                std::to_string(player.getHP()) + "/" + std::to_string(player.getMaxHP()) + ".");
-            if (result.spawnedEnemy != nullptr) {
-                area.addEnemy(std::move(result.spawnedEnemy));
-                ui.ShowMessage("Combat begins.");
-            }
-            progression.CheckLevelUp(player);
-            break;
-        }
-        case 3:
-            ui.ShowInventory(player);
-            ui.Prompt("Press 0 to return.", 0, 0);
-            break;
-        case 4:
-            ui.ShowMessage("The floor map is etched into the cathedral ledger. Return to the room selection to view it.");
-            break;
-        case 5:
+        const int maximum = area.IsHealingRoom() && area.IsHealingUnlocked() ? 7 : 6;
+        const int choice = ui.Prompt("Room action:", 0, maximum);
+        if (!std::cin || choice == 0) return true;
+        if (choice == 3) { ui.ManageInventory(player); continue; }
+        if (choice == 4) { ui.ShowMap(activeMap.GetRooms()); continue; }
+        if (choice == 5) { ui.ManageShimmerSkills(progression); continue; }
+        if (choice == 6) { ui.ShowBattleHistory(combat); continue; }
+        if (choice == 7) {
             player.RestoreHealth(player.getMaxHP());
-            ui.ShowMessage("The Fountain restores Adelaide to full health.");
-            break;
-        case 0: return true;
-        default: ui.ShowMessage("That action is not available."); break;
+            ui.ShowMessage("The Fountain restores you to full health.");
+            continue;
         }
+        auto result = ResolveInvestigation(area, player, progression);
+        ui.ShowMessage(result.narrative);
+        if (result.xpAwarded > 0) ui.ShowMessage("Investigation gained " + std::to_string(result.xpAwarded) + " XP.");
+        for (const auto& item : result.items) ui.ShowMessage("Found: " + item.name + ".");
+        if (result.hpDelta < 0) ui.ShowMessage("Investigation damage: " + std::to_string(-result.hpDelta) + " HP.");
+        if (result.spawnedEnemy) area.addEnemy(std::move(result.spawnedEnemy));
+        if (!player.isAlive()) {
+            combat.RecordEnvironmentalDefeat("Falling masonry", player);
+        }
+        progression.CheckLevelUp(player);
+        if (player.isAlive()) ui.PresentLevelUpRewards(progression);
     }
-
-    // Retain the full encounter until the player acknowledges the defeat.
-    for (const auto& event : combat.GetEvents()) ui.ShowMessage(event.message);
-    ui.ShowMessage("Adelaide is defeated. Review the encounter above.");
-    ui.Prompt("Press 0 to return to the Fountain.", 0, 0);
-    player.ClearStatuses();
+    if (!player.isAlive()) {
+        combat.CompleteEncounter("defeat");
+        ui.ShowDefeat(player, combat);
+    }
+    // Keep the event snapshot; reset only temporary combat state after acknowledgment.
     combat.ResetEncounter();
+    player.ClearStatuses();
     area.ClearEnemies();
-    player.RestoreHealth(player.getMaxHP());
-    ui.ShowMessage("You return to the Fountain at full health.");
     return false;
 }
 
-bool EncounterManager::Explore(Area& area, Player& player,
-                               ProgressionManager& progression) {
+bool EncounterManager::Explore(Area& area, Player& player, ProgressionManager& progression) {
     CombatManager combat;
     return Explore(area, player, progression, combat);
 }
 
-bool EncounterManager::explore(Area& area, Player& player,
-                               CombatManager& combat,
-                               ProgressionManager& progression) {
+bool EncounterManager::explore(Area& area, Player& player, CombatManager& combat, ProgressionManager& progression) {
     return Explore(area, player, progression, combat);
 }

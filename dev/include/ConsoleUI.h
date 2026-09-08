@@ -1,5 +1,5 @@
 #pragma once
-
+#include <cstdint>
 #include <string>
 #include <vector>
 
@@ -11,31 +11,24 @@ class ProgressionManager;
 
 class ConsoleUI {
 public:
-	ConsoleUI();
-
-	void Clear() const;
-	void RenderDashboard(const Player& player, const ProgressionManager& progression,
-						 const std::vector<Area>& rooms, const std::string& context) const;
-	void RenderRoom(const Area& area, const Player& player,
-					const ProgressionManager& progression) const;
-	void RenderCombat(const Player& player, const ProgressionManager& progression,
-					  const Enemy& enemy, const CombatManager& combat) const;
-	void ShowInventory(const Player& player) const;
-	void ShowMap(const std::vector<Area>& rooms) const;
-	void ShowShimmerSkills(const CombatManager& combat) const;
-	void ShowDeveloperPanel() const;
-	void ShowMessage(const std::string& message) const;
-	bool ChoosePendingShimmerSkill(ProgressionManager& progression) const;
-	int Prompt(const std::string& prompt, int minimum, int maximum) const;
-	bool IsDeveloperMode() const;
+    void RenderDashboard(const Player&, const ProgressionManager&, const std::vector<Area>&,
+                         const std::string& context) const;
+    void RenderRoom(const Area&, const Player&, const ProgressionManager&) const;
+    void RenderCombat(const Player&, const ProgressionManager&, const Enemy&, const CombatManager&) const;
+    void PresentEvents(const CombatManager&) const;
+    void ShowBattleHistory(const CombatManager&) const;
+    void ShowDefeat(const Player&, const CombatManager&) const;
+    void ManageInventory(Player&) const;
+    void ManageShimmerSkills(ProgressionManager&) const;
+    void ShowMap(const std::vector<Area>&) const;
+    void ShowMessage(const std::string&) const;
+    void PresentLevelUpRewards(ProgressionManager&) const;
+    bool ChoosePendingShimmerSkill(ProgressionManager&) const;
+    int Prompt(const std::string&, int minimum, int maximum) const;
+    static void SetFast(bool fast);
+    static bool IsFast();
 
 private:
-	bool colorEnabled_;
-
-	void PrintTitle(const std::string& title) const;
-	void PrintPlayerPanel(const Player& player, const ProgressionManager& progression) const;
-	void PrintStatusEffects(const Player& player) const;
-	void PrintEquipment(const Player& player) const;
-	void PrintRule() const;
-	std::string StatusName(int statusType) const;
+    mutable std::uint64_t lastEventSequence_ = 0;
+    void PrintPlayerPanel(const Player&, const ProgressionManager&) const;
 };

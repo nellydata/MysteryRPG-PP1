@@ -30,7 +30,7 @@
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir)dev\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
@@ -39,18 +39,23 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="dev\tests\EquipmentV2Tests.cpp" />
-    <ClCompile Include="dev\src\Area.cpp" />
-    <ClCompile Include="dev\src\Clue.cpp" />
-    <ClCompile Include="dev\src\ContentCatalog.cpp" />
-    <ClCompile Include="dev\src\Enemy.cpp" />
-    <ClCompile Include="dev\src\EnemyCatalog.cpp" />
-    <ClCompile Include="dev\src\Inventory.cpp" />
-    <ClCompile Include="dev\src\Item.cpp" />
-    <ClCompile Include="dev\src\MapManager.cpp" />
-    <ClCompile Include="dev\src\Player.cpp" />
-    <ClCompile Include="dev\src\ProgressionManager.cpp" />
-    <ClCompile Include="dev\src\ShimmerSkill.cpp" />
+    <ClCompile Include="tests\EquipmentV2Tests.cpp" />
+    <ClCompile Include="src\Area.cpp" />
+    <ClCompile Include="src\Clue.cpp" />
+    <ClCompile Include="src\ContentCatalog.cpp" />
+    <ClCompile Include="src\Enemy.cpp" />
+    <ClCompile Include="src\EnemyCatalog.cpp" />
+    <ClCompile Include="src\Inventory.cpp" />
+    <ClCompile Include="src\Item.cpp" />
+    <ClCompile Include="src\MapManager.cpp" />
+    <ClCompile Include="src\Player.cpp" />
+    <ClCompile Include="src\ProgressionManager.cpp" />
+    <ClCompile Include="src\ShimmerSkill.cpp" />
   </ItemGroup>
+  <PropertyGroup>
+    <OutDir>$(ProjectDir)bin\$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(ProjectDir)obj\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
+    <LocalDebuggerWorkingDirectory>$(ProjectDir)</LocalDebuggerWorkingDirectory>
+  </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>

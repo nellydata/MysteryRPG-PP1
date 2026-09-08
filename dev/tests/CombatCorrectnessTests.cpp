@@ -9,6 +9,7 @@
 #include "ShimmerSkill.h"
 #include <cassert>
 #include "ProgressionRepairTests.h"
+#include "ConsoleConversionTests.h"
 
 namespace {
 EnemyDefinition TestEnemyDefinition() {
@@ -355,5 +356,6 @@ int main() {
 	}
 
 	ProgressionRepairValidation::Run();
+	TestConsoleConversion();
 	return 0;
 }

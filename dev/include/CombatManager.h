@@ -70,6 +70,7 @@ public:
     const std::vector<CombatEvent>& GetEvents() const;
     void RecordInfo(const std::string& message);
     void RecordReward(const std::string& message);
+    void RecordEnvironmentalDefeat(const std::string& source, const Player& player);
     void CompleteEncounter(const std::string& outcome);
     int GetSkillCooldown(const std::string& skillName) const;
     void ClearEvents();

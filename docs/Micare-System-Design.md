@@ -10,7 +10,7 @@ This document describes the current implementation. Historical progress notes ma
 
 - [`dev/include/`](../dev/include/) contains public class declarations and shared data types.
 - [`dev/src/`](../dev/src/) contains class implementations and the program entry point.
-- [`COS-PP1.vcxproj`](../COS-PP1.vcxproj) defines the Visual Studio C++17 build.
+- [`COS-PP1.vcxproj`](../dev/COS-PP1.vcxproj) defines the Visual Studio C++17 build.
 - [`README.md`](../README.md) contains the user-facing feature summary and build instructions.
 
 ## Class design
@@ -76,11 +76,11 @@ The current tutorial route starts in the Fountain and keeps Entrance Hall locked
 
 [`GameManager.h`](../dev/include/GameManager.h) and [`GameManager.cpp`](../dev/src/GameManager.cpp) connect the console-facing map, room, encounter, combat, and progression loop.
 
-### Win32 UI
+### Console presentation
 
-[`Win32UI.h`](../dev/include/Win32UI.h) and [`Win32UI.cpp`](../dev/src/Win32UI.cpp) implement the desktop presentation layer. `Win32UI` owns the player, map manager, combat manager, progression manager, active UI view, window controls, navigation history, and display-oriented selections.
+[`ConsoleUI.h`](../dev/include/ConsoleUI.h) and [`ConsoleUI.cpp`](../dev/src/ConsoleUI.cpp) implement keyboard menus, inventory and Shimmer loadout controls, room/map views, and combat/defeat review. `GameManager` owns the running session; `EncounterManager` invokes shared investigation and victory resolution. The UI does not implement damage, XP, loot-generation, or boss-unlock formulas.
 
-The UI does not duplicate the combat rules. It sends actions to `CombatManager`, schedules grouped enemy turns, synchronizes combat events into the visible log, and redraws current model state. Deferred refresh flags protect Win32 command handling from recursive refreshes.
+`CombatManager` owns sequenced append-only encounter events. ConsoleUI consumes each event once, prints actual resolution results, and retains terminal scrollback. Explicit full-log review is available during combat, after victory, and before acknowledging defeat. Returning to the Fountain resets temporary gameplay state only after that acknowledgment. The current course application has no graphical interface; the earlier Win32 implementation is preserved on `archive/gui-before-course-conversion`.
 
 ## Vector usage
 
@@ -89,12 +89,11 @@ The project uses `std::vector` for ordered, variable-length collections:
 - `MapManager::rooms_` stores Floor 1 rooms in deterministic navigation order.
 - `Area::enemies_` stores owned enemies in room order.
 - `Area::interactables_` and `visibleInteractables_` store room interaction data.
-- `Inventory::items_` stores owned item objects, while `quantities_`, `locked_`, and `acquisitionOrder_` store parallel item metadata.
+- `Inventory::items_` stores ItemEntry values containing an owned item, quantity, lock state, and acquisition order.
 - `Player::statuses_` and `Enemy::statuses_` store active effects.
 - `Enemy::skills_` and `skillCooldowns_` keep skill definitions aligned with cooldown state.
 - `CombatManager::events_` stores the ordered event history used by the battle log.
 - `CombatManager::currentEnemyParty_` stores non-owning pointers for the current grouped enemy turn.
-- `Win32UI` vectors store navigation history, visible indices, target selections, and display lists.
 
 Vectors are appropriate here because the game needs stable ordering for room navigation, deterministic catalog results, combat logs, and turn processing. Most collections are small, so contiguous storage and straightforward iteration are preferred over more complex containers.
 
@@ -104,7 +103,7 @@ Vectors do not automatically express ownership. The element type and surrounding
 
 ### Owning pointers
 
-`Area` owns live enemies through `std::vector<std::unique_ptr<Enemy>>`. `Inventory` owns live items through `std::vector<std::unique_ptr<Item>>`. This gives each subsystem a clear lifetime boundary and automatically destroys objects when the owning container or owner is destroyed.
+`Area` owns live enemies through `std::vector<std::unique_ptr<Enemy>>`. `Inventory` owns live items through `std::vector<ItemEntry>`, each containing a `std::unique_ptr<Item>`. This gives each subsystem a clear lifetime boundary and automatically destroys objects when the owning container or owner is destroyed.
 
 `Player::AddItem` and `Inventory::AddItem` accept `std::unique_ptr`, which makes ownership transfer explicit. Copying an `Area` is disabled because copying its unique-owned enemy objects would be ambiguous; moving an `Area` is allowed.
 
@@ -115,7 +114,6 @@ Vectors do not automatically express ownership. The element type and surrounding
 Combat and UI managers observe objects owned elsewhere:
 
 - `CombatManager` receives `Player&`, `Enemy&`, and `std::vector<Enemy*>` for actions.
-- `Win32UI::activeEnemy_` and `targetEnemies_` point into the current room's enemy collection.
 - `CombatManager::activeEnemy_` and `currentEnemyParty_` point into the current encounter.
 - Inventory sorting returns `Item*` pointers into the inventory's owned collection.
 - Equipped item pointers in `Player` refer to items owned by `Inventory`.
@@ -135,12 +133,12 @@ The game follows a layered, manager-based design:
 1. **Definitions and catalogues** describe rooms, enemies, skills, items, and loot rules.
 2. **Runtime models** (`Player`, `Enemy`, `Item`, `Area`, `Inventory`) store mutable game state.
 3. **Managers** coordinate map generation, encounters, combat, progression, and content validation.
-4. **Presentation layers** (`Win32UI` and `ConsoleUI`) read model state and send commands to managers.
-5. **Application entry** in [`main.cpp`](../dev/src/main.cpp) selects validation, console, or Win32 mode.
+4. **Presentation** (`ConsoleUI`) read model state and send commands to managers.
+5. **Application entry** in [`main.cpp`](../dev/src/main.cpp) runs the console game or command-line content validation.
 
-### Startup and mode selection
+### Console startup
 
-[`main.cpp`](../dev/src/main.cpp) checks `MICARE_VALIDATE` first. Validation runs catalogue/content checks and returns a process status. Otherwise, `MICARE_CONSOLE_MODE` selects the console path; the default launches the Win32 interface.
+[`main.cpp`](../dev/src/main.cpp) defines standard `int main`. `--validate` runs content checks; `--fast` removes console presentation delays. Normal startup initializes a named character and enters the keyboard-driven game loop.
 
 ### Exploration flow
 
@@ -160,11 +158,9 @@ The content builders and validation functions in [`ContentCatalog.h`](../dev/inc
 
 ## Build and reference sources
 
-Build with Visual Studio using the C++17 configuration in [`COS-PP1.vcxproj`](../COS-PP1.vcxproj). The project intentionally uses the C++ standard library and Windows APIs without external libraries.
+Build with Visual Studio using the C++17 configuration in [`COS-PP1.vcxproj`](../dev/COS-PP1.vcxproj). The course solution is inside `dev`, uses the C++ standard library, and has no GUI or Python dependency. See [the validated conversion report](../dev/validation/course-conversion.md).
 
 - [C++17 language support](https://learn.microsoft.com/cpp/overview/visual-cpp-language-conformance)
-- [Microsoft Win32 API documentation](https://learn.microsoft.com/windows/win32/api/)
-- [Microsoft GDI documentation](https://learn.microsoft.com/windows/win32/gdi/windows-gdi)
 - [Visual Studio C++ projects and build systems](https://learn.microsoft.com/cpp/build/projects-and-build-systems-cpp)
 - [C++ standard library reference](https://en.cppreference.com/w/cpp)
 - [Microsoft smart pointers overview](https://learn.microsoft.com/cpp/cpp/smart-pointers-modern-cpp)
@@ -182,6 +178,6 @@ The current cleanup pass aligned the runtime with the catalogue and UI promises:
 - Room bosses and progression use `RoomDefinition` data, including required-interactable completion, `bossId`, `firstBossSpawnChance`, `farmBossStartingChance`, and `nextRoomId`.
 - Loot favors Epic equipment for bosses, keeps Legendary and Artifact rare, can include consumables, and applies family-aware per-drop rolls. Inventory stores same-name equipment as separate owned instances.
 - Shimmer stat boosts are temporary statuses, and the former fake long-duration revival has been replaced with a timed emergency barrier.
-- The desktop combat view uses health bars without exposing exact enemy HP values.
+- The console combat view displays current HP, enemy level and tier, the acting character, and the shared event history.
 
-Validation completed with a successful Visual Studio build and the `MICARE_VALIDATE=1` deterministic content-validation mode.
+Validation completed with a successful Visual Studio Debug x64 solution build, both standalone test executables, `COS-PP1.exe --validate`, and an actual keyboard-driven console playthrough. Captured results are in [the conversion report](../dev/validation/course-conversion.md).

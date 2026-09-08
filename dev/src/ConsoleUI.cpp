@@ -1,308 +1,230 @@
 #include "ConsoleUI.h"
 #include "Area.h"
 #include "CombatManager.h"
-#include "Enemy.h"
-#include "GameplayTypes.h"
-#include "Inventory.h"
+#include "EnemyCatalog.h"
 #include "Item.h"
+#include "MapManager.h"
 #include "Player.h"
 #include "ProgressionManager.h"
 #include "ShimmerSkill.h"
-#include <cstdlib>
+#include <algorithm>
+#include <chrono>
 #include <iostream>
-#include <string>
+#include <sstream>
+#include <thread>
 
 namespace {
-const char* Reset() { return "\x1b[0m"; }
-const char* Brass() { return "\x1b[38;5;179m"; }
-const char* Verdigris() { return "\x1b[38;5;115m"; }
-const char* Shimmer() { return "\x1b[38;5;159m"; }
-const char* Muted() { return "\x1b[38;5;245m"; }
-
-std::string RarityName(Rarity rarity) {
-	switch (rarity) {
-	case Rarity::Common: return "Common";
-	case Rarity::Uncommon: return "Uncommon";
-	case Rarity::Rare: return "Rare";
-	case Rarity::Epic: return "Epic";
-	case Rarity::Legendary: return "Legendary";
-	case Rarity::Artifact: return "Artifact";
-	}
-	return "Unknown";
+bool fastPresentation = false;
+const char* SlotName(EquipSlot slot) {
+    static const char* names[] = {"Head", "Torso", "Boots", "Hand", "Accessory", "None"};
+    return names[static_cast<int>(slot)];
 }
-
-std::string SlotName(EquipSlot slot) {
-	switch (slot) {
-	case EquipSlot::Head: return "Head";
-	case EquipSlot::Torso: return "Torso";
-	case EquipSlot::Boots: return "Boots";
-	case EquipSlot::Hand: return "Hand";
-	case EquipSlot::Accessory: return "Accessory";
-	case EquipSlot::None: return "None";
-	}
-	return "None";
-}
-
-bool HasEnvironmentValue(const char* name, const char* expected = nullptr) {
-	char* value = nullptr;
-	std::size_t length = 0;
-	if (_dupenv_s(&value, &length, name) != 0 || value == nullptr) return false;
-	const bool matches = expected == nullptr || std::string(value) == expected;
-	std::free(value);
-	return matches;
+const char* RarityName(Rarity rarity) {
+    static const char* names[] = {"Common", "Uncommon", "Rare", "Epic", "Legendary", "Artifact"};
+    return names[static_cast<int>(rarity)];
 }
 }
 
-ConsoleUI::ConsoleUI()
-	: colorEnabled_(!HasEnvironmentValue("MICARE_NO_COLOR")) {}
+void ConsoleUI::SetFast(bool fast) { fastPresentation = fast; }
+bool ConsoleUI::IsFast() { return fastPresentation; }
 
-void ConsoleUI::Clear() const {
-	std::cout << "\x1b[2J\x1b[H";
-}
-
-void ConsoleUI::PrintTitle(const std::string& title) const {
-	if (colorEnabled_) std::cout << Brass();
-	std::cout << "+----------------------------------------------------------------------+\n"
-			  << "| " << title << "\n"
-			  << "+----------------------------------------------------------------------+\n";
-	if (colorEnabled_) std::cout << Reset();
-}
-
-void ConsoleUI::PrintRule() const {
-	if (colorEnabled_) std::cout << Muted();
-	std::cout << "------------------------------------------------------------------------\n";
-	if (colorEnabled_) std::cout << Reset();
+void ConsoleUI::PrintPlayerPanel(const Player& player, const ProgressionManager& progression) const {
+    std::cout << player.getName() << " | Level " << progression.GetLevel()
+              << " | HP " << player.getHP() << '/' << player.getMaxHP()
+              << " | ATK " << player.getAttack() << " DEF " << player.getDefense()
+              << " SPD " << player.getSpeed() << " | XP " << progression.GetXP()
+              << '/' << progression.GetXPToNextLevel() << '\n';
 }
 
 void ConsoleUI::RenderDashboard(const Player& player, const ProgressionManager& progression,
-								const std::vector<Area>& rooms,
-								const std::string& context) const {
-	Clear();
-	PrintTitle("MICARE  //  THE CATHEDRAL OF SHIMMER");
-	PrintPlayerPanel(player, progression);
-	PrintRule();
-	if (colorEnabled_) std::cout << Shimmer();
-	std::cout << "[ " << context << " ]\n";
-	if (colorEnabled_) std::cout << Reset();
-	std::cout << "Rooms on Floor I:\n";
-	for (std::size_t index = 0; index < rooms.size(); ++index) {
-		std::cout << "  " << index + 1 << ". " << rooms[index].getName();
-		if (!rooms[index].IsUnlocked()) std::cout << "  [LOCKED]";
-		if (rooms[index].hasEnemies()) std::cout << "  [HOSTILE]";
-		std::cout << "\n";
-	}
-	const int panelBase = static_cast<int>(rooms.size()) + 1;
-	std::cout << "  " << panelBase << ". Open inventory\n"
-			  << "  " << panelBase + 1 << ". Shimmer skill bar\n"
-			  << "  " << panelBase + 2 << ". View floor map\n";
-	if (IsDeveloperMode()) std::cout << "  " << panelBase + 3 << ". Developer mode\n";
-	std::cout << "  0. Leave the cathedral\n";
+                                const std::vector<Area>& rooms, const std::string& context) const {
+    std::cout << "\n=== MICARE: CATHEDRAL OF LIES ===\n";
+    PrintPlayerPanel(player, progression);
+    std::cout << context << '\n';
+    for (std::size_t index = 0; index < rooms.size(); ++index) {
+        std::cout << index + 1 << ". " << rooms[index].getName();
+        if (!rooms[index].IsUnlocked()) std::cout << " [LOCKED]";
+        else if (rooms[index].HasBossBeenDefeated()) std::cout << " [CLEARED - farming available]";
+        std::cout << '\n';
+    }
+    std::cout << "6. Inventory\n7. Shimmer skills\n8. Floor map\n9. Last encounter log\n0. Quit\n";
 }
 
-void ConsoleUI::PrintPlayerPanel(const Player& player, const ProgressionManager& progression) const {
-	if (colorEnabled_) std::cout << Verdigris();
-	std::cout << "+- ADELAIDE // PLAYER PANEL -------------------------------------------+\n"
-			  << "|        .-.       " << player.getName() << "  |  Level " << progression.GetLevel() << "\n"
-			  << "|       (o o)      HP  " << player.getHP() << "/" << player.getMaxHP()
-			  << "  DEF " << player.getDefense() << "  SPD " << player.getSpeed() << "\n"
-				<< "|        |=|       ATK " << player.getAttack() << "  ACC " << player.getDisplayedAccuracy()
-			  << "%  RES " << player.getResistance() << "%\n"
-				<< "|       /| |\\      CRIT " << player.getCritRate() << "% / "
-			  << player.getCritDamage() << "%  XP " << progression.GetXP() << "\n"
-				<< "+----------------------------------------------------------------------+\n";
-	if (colorEnabled_) std::cout << Reset();
-	PrintStatusEffects(player);
-	PrintEquipment(player);
-}
-
-void ConsoleUI::PrintStatusEffects(const Player& player) const {
-	std::cout << "Statuses: ";
-	if (player.GetStatuses().empty()) {
-		std::cout << "no statuses active\n";
-	} else {
-		for (const auto& status : player.GetStatuses()) {
-			const bool negative = status.type == StatusType::Stun || status.type == StatusType::Bleed || status.type == StatusType::Burn ||
-				status.type == StatusType::Poison || status.type == StatusType::Slow || status.type == StatusType::VerdigrisMark ||
-				status.type == StatusType::AttackDown || status.type == StatusType::DefenseDown || status.type == StatusType::AccuracyDown ||
-				status.type == StatusType::HealResistance || status.type == StatusType::DotReduction;
-			if (colorEnabled_) std::cout << (negative ? "\x1b[31m" : "\x1b[34m");
-			std::cout << StatusName(static_cast<int>(status.type)) << " (" << status.turns << ")  ";
-			if (colorEnabled_) std::cout << Reset();
-		}
-		std::cout << "\n";
-	}
-	for (const auto& setName : player.GetActiveSets())
-		std::cout << "  Active set: " << setName << "\n";
-}
-
-void ConsoleUI::PrintEquipment(const Player& player) const {
-	std::cout << "Equipment: ";
-	for (EquipSlot slot : {EquipSlot::Head, EquipSlot::Torso, EquipSlot::Boots, EquipSlot::Hand, EquipSlot::Accessory}) {
-		const Item* item = player.GetEquipped(slot);
-		std::cout << SlotName(slot) << "=" << (item == nullptr ? "--" : item->getName()) << "  ";
-	}
-	std::cout << "\n";
-}
-
-void ConsoleUI::RenderRoom(const Area& area, const Player& player,
-						   const ProgressionManager& progression) const {
-	Clear();
-	PrintTitle("EXPLORATION  //  " + area.getName());
-	PrintPlayerPanel(player, progression);
-	PrintRule();
-	std::cout << "+- ROOM VIEW -----------------------------------------------------------+\n"
-			  << "| The cathedral holds its breath. Objects below may reveal clues.       |\n"
-			  << "+----------------------------------------------------------------------+\n"
-			  << "Objects and points of interest:\n";
-	for (std::size_t index = 0; index < area.GetVisibleInteractables().size(); ++index) {
-		std::cout << "  " << index + 1 << ". " << area.GetVisibleInteractables()[index] << "\n";
-	}
-	std::cout << "\nActions:\n  1. Inspect environment\n  2. Search room\n"
-			  << "  3. Open inventory\n  4. View map\n  0. Leave room\n";
-	if (area.getName() == "Fountain" && area.IsHealingUnlocked())
-		std::cout << "  5. Fountain\n";
+void ConsoleUI::RenderRoom(const Area& area, const Player& player, const ProgressionManager& progression) const {
+    std::cout << "\n=== ROOM: " << area.getName() << " ===\n";
+    PrintPlayerPanel(player, progression);
+    for (const auto& object : area.GetVisibleInteractables()) std::cout << "  Discovered: " << object << '\n';
+    if (area.HasBossBeenDefeated()) std::cout << "First clear complete. Repeat rewards and farming encounters are available.\n";
+    else if (area.HasAllClues() && area.AreAllRequiredInteractablesRevealed() && !area.IsHealingRoom()) {
+        for (const auto& room : MapManager::GetFloor1Definitions()) if (room.id == area.getName())
+            std::cout << "Guardian eligible: " << room.bossId << " | fixed level " << room.firstClearBossLevel
+                      << " | suggested readiness " << room.intendedProgressionLevel << ".\n";
+    }
+    std::cout << "1. Investigate\n2. Search room\n3. Inventory\n4. Floor map\n5. Shimmer skills\n6. Last encounter log\n";
+    if (area.IsHealingRoom() && area.IsHealingUnlocked()) std::cout << "7. Heal at the Fountain\n";
+    std::cout << "0. Leave room\n";
 }
 
 void ConsoleUI::RenderCombat(const Player& player, const ProgressionManager& progression,
-							 const Enemy& enemy, const CombatManager& combat) const {
-	Clear();
-	PrintTitle("COMBAT  //  HOSTILE PRESENCE DETECTED");
-	PrintPlayerPanel(player, progression);
-	PrintRule();
-	if (colorEnabled_) std::cout << Brass();
-	std::cout << "ENEMY: " << enemy.getName() << "\n";
-	if (colorEnabled_) std::cout << Reset();
-	std::cout << "  HP " << enemy.getHP() << "/" << enemy.getMaxHP()
-			  << "  ATK " << enemy.getAtk() << "  DEF " << enemy.getDefense()
-			  << "  SPD " << enemy.getSpeed() << "\n"
-			  << "Turn order: Adelaide (SPD " << player.getSpeed() << ")  >  "
-			  << enemy.getName() << " (SPD " << enemy.getSpeed() << ")\n"
-			  << "\nActions:\n"
-			  << "  1. Attack       2. Item         3. Shimmer\n"
-			  << "  4. Flee\n";
-	if (const ShimmerSkill* skill = combat.GetDefaultSkill()) {
-		std::cout << "\nSkill ready state: " << skill->getName() << " ["
-				  << (skill->IsReady() ? "READY" : "COOLDOWN " + std::to_string(skill->getRemainingCooldown()))
-				  << "]\n";
-	}
-	std::cout << "\nBattle event log:\n";
-	const auto& events = combat.GetEvents();
-	const std::size_t firstEvent = events.size() > 12 ? events.size() - 12 : 0;
-	for (std::size_t index = firstEvent; index < events.size(); ++index)
-		std::cout << "  " << events[index].message << "\n";
+                             const Enemy& enemy, const CombatManager& combat) const {
+    PrintPlayerPanel(player, progression);
+    std::cout << "Enemy: " << enemy.getName() << " | Level " << enemy.getLevel() << ' ' << EnemyTierName(enemy.getTier())
+              << " | HP " << enemy.getHP() << '/' << enemy.getMaxHP() << " DEF " << enemy.getDefense()
+              << " SPD " << enemy.getSpeed() << '\n';
+    std::cout << "Acting: " << (combat.IsPlayerTurn() ? player.getName() : enemy.getName()) << '\n';
+    if (combat.IsPlayerTurn())
+        std::cout << "1. Attack\n2. Consumable\n3. Shimmer\n4. Flee\n5. Full encounter log\n6. Toggle fast presentation\n";
 }
 
-void ConsoleUI::ShowInventory(const Player& player) const {
-	Clear();
-	PrintTitle("INVENTORY  //  EQUIPMENT AND EVIDENCE");
-	std::cout << "Items:\n";
-	if (player.GetInventory().GetItems().empty()) std::cout << "  -- empty --\n";
-	for (const auto& entry : player.GetInventory().GetItems()) {
-		if (!entry.item) continue;
-		const Item& item = *entry.item;
-		if (colorEnabled_) std::cout << (item.getRarity() == Rarity::Artifact ? Shimmer() : "");
-		std::cout << "  " << item.getName() << "  [" << RarityName(item.getRarity()) << "]";
-		if (item.isEquippable()) std::cout << "  slot=" << SlotName(item.getSlot());
-		if (!item.getUniqueEffect().empty()) std::cout << "  * " << item.getUniqueEffect();
-		std::cout << "\n";
-		if (colorEnabled_) std::cout << Reset();
-	}
-	std::cout << "\nClues and crux items:\n";
-	for (const auto& clue : player.GetInventory().GetClues()) std::cout << "  * " << clue.description << "\n";
-	std::cout << "\nPress 0 to return.\n";
+void ConsoleUI::PresentEvents(const CombatManager& combat) const {
+    for (const auto& event : combat.GetEvents()) {
+        if (event.sequenceId <= lastEventSequence_) continue;
+        std::cout << '[' << event.sequenceId << "] " << event.message << '\n' << std::flush;
+        lastEventSequence_ = event.sequenceId;
+        // Console presentation alone waits; the resolver never uses wall-clock time.
+        if (!fastPresentation && (event.kind == CombatManager::CombatEvent::Kind::Attack ||
+            event.kind == CombatManager::CombatEvent::Kind::Skill || event.kind == CombatManager::CombatEvent::Kind::Shimmer))
+            std::this_thread::sleep_for(std::chrono::milliseconds(300));
+    }
+}
+
+void ConsoleUI::ShowBattleHistory(const CombatManager& combat) const {
+    std::cout << "\n=== FULL ENCOUNTER LOG ===\n";
+    if (combat.GetEvents().empty()) std::cout << "No encounter recorded.\n";
+    for (const auto& event : combat.GetEvents()) std::cout << '[' << event.sequenceId << "] " << event.message << '\n';
+    std::cout << "=== END ENCOUNTER LOG ===\n";
+}
+
+void ConsoleUI::ShowDefeat(const Player& player, const CombatManager& combat) const {
+    PresentEvents(combat);
+    std::cout << "\n=== DEFEAT: " << player.getName() << " ===\n";
+    const auto& events = combat.GetEvents();
+    for (auto event = events.rbegin(); event != events.rend(); ++event) {
+        if (event->target == player.getName() && event->remainingHP == 0 && event->hpDamage > 0) {
+            std::cout << "Final cause: " << event->actor << " / " << event->skill << ". " << event->message << '\n';
+            break;
+        }
+    }
+    for (std::size_t index = events.size() > 8 ? events.size() - 8 : 0; index < events.size(); ++index)
+        std::cout << '[' << events[index].sequenceId << "] " << events[index].message << '\n';
+    while (std::cin) {
+        const int choice = Prompt("Defeat review: 1 full log, 0 acknowledge and return to the Fountain.", 0, 1);
+        if (choice == 0) break;
+        ShowBattleHistory(combat);
+    }
+}
+
+void ConsoleUI::ManageInventory(Player& player) const {
+    std::size_t page = 0;
+    InventorySort sort = InventorySort::RecentlyObtained;
+    while (std::cin) {
+        auto items = player.GetInventory().GetSortedItems(sort);
+        if (items.empty()) { ShowMessage("Inventory is empty."); return; }
+        page = (std::min)(page, (items.size() - 1) / 12);
+        const std::size_t first = page * 12;
+        const std::size_t count = (std::min)(std::size_t{12}, items.size() - first);
+        std::cout << "\n=== INVENTORY page " << page + 1 << '/' << (items.size() + 11) / 12 << " ===\n";
+        for (std::size_t index = 0; index < count; ++index) {
+            const Item& item = *items[first + index];
+            std::cout << index + 1 << ". " << item.getName() << " [" << RarityName(item.getRarity()) << "]";
+            if (item.isEquippable()) {
+                std::cout << " " << SlotName(item.getSlot()) << " " << item.getMainStat() << "+"
+                          << (item.getMainStatPercent() ? item.getMainStatPercent() : item.getMainStatValue())
+                          << (item.getMainStatPercent() ? "%" : "") << " instance=" << item.getInstanceId();
+                if (player.GetEquipped(item.getSlot()) == &item) std::cout << " [EQUIPPED]";
+            } else std::cout << " x" << player.GetInventory().GetQuantity(item.getName());
+            if (player.GetInventory().IsLocked(item.getName())) std::cout << " [LOCKED]";
+            std::cout << '\n';
+        }
+        const int choice = Prompt("Inventory: select item; 13 next, 14 previous, 15 sort (newest/rarity/name), 0 return.", 0, 15);
+        if (choice == 0) return;
+        if (choice == 13) { if (first + count < items.size()) ++page; continue; }
+        if (choice == 14) { if (page) --page; continue; }
+        if (choice == 15) {
+            sort = sort == InventorySort::RecentlyObtained ? InventorySort::RarityDescending :
+                sort == InventorySort::RarityDescending ? InventorySort::AlphabeticalAscending : InventorySort::RecentlyObtained;
+            page = 0; continue;
+        }
+        if (choice > static_cast<int>(count)) { ShowMessage("That item is not on this page."); continue; }
+        Item& item = *items[first + choice - 1];
+        ShowMessage(item.getName() + ": " + item.getDescription());
+        const auto& stats = item.getStats();
+        std::cout << "Stats: ATK+" << stats.atk << " HP+" << stats.hp << " DEF+" << stats.def << " SPD+" << stats.spd
+                  << " ATK%+" << stats.atkPercent << " HP%+" << stats.hpPercent << " DEF%+" << stats.defPercent
+                  << " CRIT+" << stats.critRate << " ACC+" << stats.acc << '\n';
+        if (!item.getPassive().empty()) ShowMessage(item.getPassive());
+        if (!item.getSetPassive().empty()) ShowMessage(item.getSetName() + ": " + item.getSetPassive());
+        const int action = Prompt("Item action: 1 equip/unequip or use, 2 lock/unlock name, 3 discard instance, 0 cancel.", 0, 3);
+        const std::string name = item.getName();
+        if (action == 1) {
+            if (item.isEquippable()) ShowMessage(player.ToggleEquip(item) ? "Equipment updated: " + name : "Cannot equip this item.");
+            else if (item.getCategory() == ItemCategory::Consumable) ShowMessage(player.UseConsumable(name) ? "Used " + name : "This item needs a combat target.");
+            else ShowMessage(item.getDescription());
+        } else if (action == 2) {
+            player.GetInventory().SetLocked(name, !player.GetInventory().IsLocked(name));
+        } else if (action == 3) {
+            ShowMessage(player.GetInventory().DiscardItem(item.getInstanceId()) ? "Discarded " + name : "Equipped or locked items cannot be discarded.");
+        }
+    }
+}
+
+void ConsoleUI::ManageShimmerSkills(ProgressionManager& progression) const {
+    PresentLevelUpRewards(progression);
+    while (std::cin) {
+        const auto unlocked = progression.GetUnlockedShimmerSkills();
+        const auto equipped = progression.GetEquippedShimmerSkills();
+        std::cout << "\n=== SHIMMER SKILLS | free points " << progression.GetShimmerPoints() << "/12 ===\n";
+        for (std::size_t index = 0; index < unlocked.size(); ++index) {
+            const auto skill = ShimmerSkill::Create(unlocked[index]);
+            if (!skill) continue;
+            std::cout << index + 1 << ". " << skill->getName() << " cost " << skill->getCost() << " cooldown " << skill->getCooldown();
+            if (std::find(equipped.begin(), equipped.end(), unlocked[index]) != equipped.end()) std::cout << " [EQUIPPED]";
+            std::cout << "\n   " << skill->getDescription() << '\n';
+        }
+        const int choice = Prompt("Shimmer loadout: select skill to equip/unequip, 0 return.", 0, static_cast<int>(unlocked.size()));
+        if (choice == 0) return;
+        const auto& name = unlocked[choice - 1];
+        const auto skill = ShimmerSkill::Create(name);
+        if (!skill) continue;
+        const bool worn = std::find(equipped.begin(), equipped.end(), name) != equipped.end();
+        const bool changed = worn ? progression.UnequipShimmerSkill(name, skill->getCost()) : progression.EquipShimmerSkill(name, skill->getCost());
+        ShowMessage(changed ? "Shimmer loadout updated." : "Not enough free Shimmer points.");
+    }
 }
 
 void ConsoleUI::ShowMap(const std::vector<Area>& rooms) const {
-	Clear();
-	PrintTitle("FLOOR I MAP  //  CATHEDRAL LOWER LEVELS");
-	auto roomName = [&](std::size_t index, const std::string& fallback) -> std::string {
-		return index < rooms.size() ? rooms[index].getName() : fallback;
-	};
-	std::cout << "                    [" << roomName(3, "CHAPEL") << "]\n"
-			  << "                           |\n"
-			  << "[" << roomName(0, "FOUNTAIN") << "] ---- [" << roomName(1, "ENTRANCE HALL")
-			  << "] ---- [" << roomName(2, "ARCHIVE") << "] ---- [" << roomName(4, "STORAGE") << "]\n\n"
-			  << "Room status:\n";
-	for (const auto& room : rooms) {
-		std::cout << "  " << (room.hasEnemies() ? "[!]" : "[ ]") << " " << room.getName();
-		if (!room.GetInteractables().empty()) std::cout << "  [inspect]";
-		std::cout << "\n";
-	}
-	std::cout << "\nPress 0 to return.\n";
+    std::cout << "\n=== FLOOR I MAP ===\nFountain -> Entrance Hall -> Archive Room -> Chapel -> Storage Room\n";
+    for (const auto& room : rooms) std::cout << room.getName() << (room.IsUnlocked() ? " [OPEN]" : " [LOCKED]")
+        << (room.HasBossBeenDefeated() ? " [CLEARED]" : "") << '\n';
 }
 
-void ConsoleUI::ShowShimmerSkills(const CombatManager& combat) const {
-	Clear();
-	PrintTitle("SHIMMER SKILL BAR  //  LATIN RESONANCE");
-	const std::string skillNames[] = {"Phragmós Phōtós", "Ray of Mercy", "Prism Step", "Gleam Needle",
-		"Therapeía Anakláseōs", "Anástasis Phōtós", "Phthorá Phōtós"};
-	for (const auto& skillName : skillNames) {
-		const auto skill = ShimmerSkill::Create(skillName);
-		if (skill != nullptr) std::cout << "  " << skillName << "  " << skill->getPowerPercent()
-			<< "% power  CD " << skill->getCooldown() << "\n";
-	}
-	if (const ShimmerSkill* skill = combat.GetDefaultSkill()) {
-		std::cout << "\nEquipped: " << skill->getName() << "  //  "
-				  << (skill->IsReady() ? "READY" : "COOLDOWN") << "\n";
-	}
-	std::cout << "\nPress 0 to return.\n";
-}
+void ConsoleUI::ShowMessage(const std::string& message) const { std::cout << message << '\n'; }
 
-void ConsoleUI::ShowDeveloperPanel() const {
-	Clear();
-	PrintTitle("DEVELOPER MODE  //  HIDDEN PANEL");
-	std::cout << "  1. Spawn item\n  2. Spawn enemy\n  3. Teleport\n"
-			  << "  4. Reveal map\n  5. Add shimmer skill\n  6. Toggle invincibility\n"
-			  << "  7. Print debug log\n  0. Return\n";
-}
-
-void ConsoleUI::ShowMessage(const std::string& message) const {
-	std::cout << "\n  " << message << "\n";
+void ConsoleUI::PresentLevelUpRewards(ProgressionManager& progression) const {
+    for (const auto& message : progression.ConsumeLevelUpMessages()) ShowMessage(message);
+    while (std::cin && progression.HasPendingShimmerChoice()) if (!ChoosePendingShimmerSkill(progression)) break;
+    for (const auto& message : progression.ConsumeLevelUpMessages()) ShowMessage(message);
 }
 
 bool ConsoleUI::ChoosePendingShimmerSkill(ProgressionManager& progression) const {
-	if (!progression.HasPendingShimmerChoice()) return true;
-	const auto& choices = progression.GetPendingShimmerChoices();
-	if (choices.empty()) {
-		ShowMessage("All available Shimmer skills unlocked. This level-up reward is complete.");
-		return progression.ResolvePendingShimmerChoice();
-	}
-	std::cout << "\nLevel-up Shimmer skills:\n";
-	for (std::size_t index = 0; index < choices.size(); ++index)
-		std::cout << "  " << index + 1 << ". " << choices[index] << "\n";
-	const int choice = Prompt("Choose a skill, or 0 to decide later.", 0, static_cast<int>(choices.size()));
-	if (choice == 0) return false;
-	return progression.SelectPendingShimmerSkill(choices[static_cast<std::size_t>(choice - 1)]);
+    if (!progression.HasPendingShimmerChoice()) return true;
+    const auto choices = progression.GetPendingShimmerChoices();
+    if (choices.empty()) return progression.ResolvePendingShimmerChoice();
+    std::cout << "\nLevel-up Shimmer reward:\n";
+    for (std::size_t index = 0; index < choices.size(); ++index) std::cout << index + 1 << ". " << choices[index] << '\n';
+    const int choice = Prompt("Choose a level-up skill, or 0 to decide later.", 0, static_cast<int>(choices.size()));
+    return choice != 0 && progression.SelectPendingShimmerSkill(choices[choice - 1]);
 }
 
 int ConsoleUI::Prompt(const std::string& prompt, int minimum, int maximum) const {
-	std::cout << "\n" << prompt << "\n> ";
-	int choice = 0;
-	if (!(std::cin >> choice)) {
-		if (std::cin.eof()) return 0;
-		std::cin.clear();
-		std::cin.ignore(10000, '\n');
-		return minimum - 1;
-	}
-	if (choice < minimum || choice > maximum) return minimum - 1;
-	return choice;
-}
-
-bool ConsoleUI::IsDeveloperMode() const {
-	return HasEnvironmentValue("MICARE_DEVELOPER_MODE", "1");
-}
-
-std::string ConsoleUI::StatusName(int statusType) const {
-	switch (static_cast<StatusType>(statusType)) {
-	case StatusType::Stun: return "Stun";
-	case StatusType::Bleed: return "Bleed";
-	case StatusType::Burn: return "Burn";
-	case StatusType::Poison: return "Poison";
-	case StatusType::HealOverTime: return "Healing";
-	case StatusType::Slow: return "Slow";
-	case StatusType::VerdigrisMark: return "Verdigris";
-	case StatusType::DamageReduction: return "Damage Reduction";
-	case StatusType::Barrier: return "Barrier";
-	}
-	return "Unknown";
+    for (;;) {
+        std::cout << '\n' << prompt << "\n> " << std::flush;
+        std::string line;
+        if (!std::getline(std::cin, line)) return 0;
+        std::istringstream input(line);
+        int choice;
+        char extra;
+        if (input >> choice && !(input >> extra) && choice >= minimum && choice <= maximum) return choice;
+        std::cout << "Enter a whole number from " << minimum << " to " << maximum << ".\n";
+    }
 }

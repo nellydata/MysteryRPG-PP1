@@ -1,0 +1,1608 @@
+Actual keyboard-driven console smoke test, 2026-09-08.
+Executable: dev/bin/x64/Debug/COS-PP1.exe --fast
+Captured from Windows pseudoterminal; terminal controls removed. Long lines retain terminal wrapping.
+
+Adelaide
+
+=== MICARE: CATHEDRAL OF LIES ===
+Adelaide | Level 1 | HP 105/105 | ATK 20 DEF 10 SPD 100 | XP 0/100
+Investigate, improve your equipment, and challenge each room's guardian.
+1. Fountain
+2. Entrance Hall [LOCKED]
+3. Archive Room [LOCKED]
+4. Chapel [LOCKED]
+5. Storage Room [LOCKED]
+6. Inventory
+7. Shimmer skills
+8. Floor map
+9. Last encounter log
+0. QuitDestination or panel:
+> 1=== ROOM: Fountain ===
+Adelaide | Level 1 | HP 105/105 | ATK 20 DEF 10 SPD 100 | XP 0/100
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+0. Leave room
+
+Room action:
+> 1
+A weak guardian rises from the sealed Fountain. Defeat it to purify the sanctuar
+ry.
+[1] Encounter begins: Devotee Acolyte (level 1, Basic).
+[2] Adelaide (level 1, HP 105) faces Devotee Acolyte.
+[3] Adelaide's action begins (gauge 1000).
+[4] Waiting for Adelaide to choose an action.
+Adelaide | Level 1 | HP 105/105 | ATK 20 DEF 10 SPD 100 | XP 0/100
+Enemy: Devotee Acolyte | Level 1 Basic | HP 54/54 DEF 6 SPD 89
+Acting: Adelaide
+1. Attack
+2. Consumable
+3. Shimmer
+4. Flee
+5. Full encounter log
+6. Toggle fast presentation
+
+Combat action:
+> 1
+[5] Adelaide uses Attack on Devotee Acolyte.
+[6] Adelaide hits Devotee Acolyte.
+[7] Adelaide -> Devotee Acolyte: 20 requested damage; barrier absorbs 0; 20 actu
+ual HP damage. HP: 34.
+Adelaide | Level 1 | HP 105/105 | ATK 20 DEF 10 SPD 100 | XP 0/100
+Enemy: Devotee Acolyte | Level 1 Basic | HP 34/54 DEF 6 SPD 89
+Acting: Devotee Acolyte
+[8] Devotee Acolyte's action begins (gauge 1068).
+[9] Devotee Acolyte uses Attack on Adelaide.
+[10] Devotee Acolyte hits Adelaide.
+[11] Devotee Acolyte -> Adelaide: 8 requested damage; barrier absorbs 0; 8 actua
+al HP damage. HP: 97.
+[12] Adelaide's action begins (gauge 1000).
+Adelaide | Level 1 | HP 97/105 | ATK 20 DEF 10 SPD 100 | XP 0/100
+Enemy: Devotee Acolyte | Level 1 Basic | HP 34/54 DEF 6 SPD 89
+Acting: Adelaide
+1. Attack
+2. Consumable
+3. Shimmer
+4. Flee
+5. Full encounter log
+6. Toggle fast presentation
+
+Combat action:
+> 2
+1. cellar_rations x1
+2. purification_salts x1
+
+Choose consumable, 0 cancel:
+>
+1
+[13] Adelaide uses cellar_rations.
+[14] Adelaide heals 8 HP.
+Adelaide | Level 1 | HP 105/105 | ATK 20 DEF 10 SPD 100 | XP 0/100
+Enemy: Devotee Acolyte | Level 1 Basic | HP 34/54 DEF 6 SPD 89
+Acting: Devotee Acolyte
+[15] Devotee Acolyte's action begins (gauge 1047).
+[16] Devotee Acolyte uses Attack on Adelaide.
+[17] Devotee Acolyte hits Adelaide.
+[18] Devotee Acolyte -> Adelaide: 8 requested damage; barrier absorbs 0; 8 actua
+al HP damage. HP: 97.
+[19] Adelaide's action begins (gauge 1000).
+Adelaide | Level 1 | HP 97/105 | ATK 20 DEF 10 SPD 100 | XP 0/100
+Enemy: Devotee Acolyte | Level 1 Basic | HP 34/54 DEF 6 SPD 89
+Acting: Adelaide
+1. Attack
+2. Consumable
+3. Shimmer
+4. Flee
+5. Full encounter log
+6. Toggle fast presentation
+
+Combat action:
+> 1
+[20] Adelaide uses Attack on Devotee Acolyte.
+[21] Adelaide hits Devotee Acolyte.
+[22] Adelaide -> Devotee Acolyte: 20 requested damage; barrier absorbs 0; 20 act
+tual HP damage. HP: 14.
+Adelaide | Level 1 | HP 97/105 | ATK 20 DEF 10 SPD 100 | XP 0/100
+Enemy: Devotee Acolyte | Level 1 Basic | HP 14/54 DEF 6 SPD 89
+Acting: Devotee Acolyte
+[23] Devotee Acolyte's action begins (gauge 1026).
+[24] Devotee Acolyte uses Weak Prayer on Devotee Acolyte.
+[25] Devotee Acolyte heals 8 HP.
+[26] Adelaide's action begins (gauge 1000).
+Adelaide | Level 1 | HP 97/105 | ATK 20 DEF 10 SPD 100 | XP 0/100
+Enemy: Devotee Acolyte | Level 1 Basic | HP 22/54 DEF 6 SPD 89
+Acting: Adelaide
+1. Attack
+2. Consumable
+3. Shimmer
+4. Flee
+5. Full encounter log
+6. Toggle fast presentation
+
+Combat action:
+> 1
+[27] Adelaide uses Attack on Devotee Acolyte.
+[28] Adelaide hits Devotee Acolyte.
+[29] Adelaide -> Devotee Acolyte: 20 requested damage; barrier absorbs 0; 20 act
+tual HP damage. HP: 2.
+Adelaide | Level 1 | HP 97/105 | ATK 20 DEF 10 SPD 100 | XP 0/100
+Enemy: Devotee Acolyte | Level 1 Basic | HP 2/54 DEF 6 SPD 89
+Acting: Devotee Acolyte
+[30] Devotee Acolyte's action begins (gauge 1005).
+[31] Devotee Acolyte uses Attack on Adelaide.
+[32] Devotee Acolyte hits Adelaide.
+[33] Devotee Acolyte -> Adelaide: 8 requested damage; barrier absorbs 0; 8 actua
+al HP damage. HP: 89.
+[34] Adelaide's action begins (gauge 1000).
+Adelaide | Level 1 | HP 89/105 | ATK 20 DEF 10 SPD 100 | XP 0/100
+Enemy: Devotee Acolyte | Level 1 Basic | HP 2/54 DEF 6 SPD 89
+Acting: Adelaide
+1. Attack
+2. Consumable
+3. Shimmer
+4. Flee
+5. Full encounter log
+6. Toggle fast presentation
+
+Combat action:
+> 1
+[35] Adelaide uses Attack on Devotee Acolyte.
+[36] Adelaide hits Devotee Acolyte.
+[37] Adelaide -> Devotee Acolyte: 20 requested damage; barrier absorbs 0; 2 actu
+ual HP damage. HP: 0.
+[38] Devotee Acolyte has been defeated.
+[39] XP gained: +10.
+[40] The Fountain is purified. Full healing is now available.
+[41] Entrance Hall is now unlocked.
+[42] Found: dusty_prayer_book.
+[43] Found: choir_incense.
+[44] Encounter complete: victory.
+
+=== ROOM: Fountain ===
+Adelaide | Level 1 | HP 89/105 | ATK 20 DEF 10 SPD 100 | XP 10/100
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+7. Heal at the Fountain
+0. Leave room
+
+Room action:
+> 7
+The Fountain restores you to full health.
+
+=== ROOM: Fountain ===
+Adelaide | Level 1 | HP 105/105 | ATK 20 DEF 10 SPD 100 | XP 10/100
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+7. Heal at the Fountain
+0. Leave room
+
+Room action:
+> 0
+
+=== MICARE: CATHEDRAL OF LIES ===
+Adelaide | Level 1 | HP 105/105 | ATK 20 DEF 10 SPD 100 | XP 10/100
+Investigate, improve your equipment, and challenge each room's guardian.        
+1. Fountain
+2. Entrance Hall
+3. Archive Room [LOCKED]
+4. Chapel [LOCKED]
+5. Storage Room [LOCKED]
+6. Inventory
+7. Shimmer skills
+8. Floor map
+9. Last encounter log
+0. Quit
+
+Destination or panel:
+> 2
+
+=== ROOM: Entrance Hall ===
+Adelaide | Level 1 | HP 105/105 | ATK 20 DEF 10 SPD 100 | XP 10/100
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+0. Leave room
+
+Room action:
+> 1
+You discover supplies hidden in the room.
+Found: cellar_rations.
+
+=== ROOM: Entrance Hall ===
+Adelaide | Level 1 | HP 105/105 | ATK 20 DEF 10 SPD 100 | XP 10/100
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+0. Leave room
+
+Room action:
+>
+3
+
+=== INVENTORY page 1/1 ===
+1. cellar_rations [Common] x1
+2. choir_incense [Uncommon] x1
+3. dusty_prayer_book [Common] Hand atk+81 instance=7
+4. first_nuns_diary [Legendary] x1
+5. storage_key [Common] x1
+6. purification_salts [Uncommon] x1
+7. plain_rosary [Common] Accessory hp+5% instance=2 [EQUIPPED]
+8. linen_veil [Common] Head hp+5% instance=1
+
+Inventory: select item; 13 next, 14 previous, 15 sort (newest/rarity/name), 0 re
+eturn.
+>
+3
+dusty_prayer_book: Micare atk equipment.
+Stats: ATK+0 HP+0 DEF+0 SPD+0 ATK%+0 HP%+0 DEF%+0 CRIT+0 ACC+0
+
+Item action: 1 equip/unequip or use, 2 lock/unlock name, 3 discard instance, 0 c
+cancel.
+> 1
+Equipment updated: dusty_prayer_book
+
+=== INVENTORY page 1/1 ===
+1. cellar_rations [Common] x1
+2. choir_incense [Uncommon] x1
+3. dusty_prayer_book [Common] Hand atk+81 instance=7 [EQUIPPED]
+4. first_nuns_diary [Legendary] x1
+5. storage_key [Common] x1
+6. purification_salts [Uncommon] x1
+7. plain_rosary [Common] Accessory hp+5% instance=2 [EQUIPPED]
+8. linen_veil [Common] Head hp+5% instance=1
+
+Inventory: select item; 13 next, 14 previous, 15 sort (newest/rarity/name), 0 re
+eturn.
+> 8
+linen_veil: Micare hp equipment.
+Stats: ATK+0 HP+0 DEF+0 SPD+0 ATK%+0 HP%+0 DEF%+0 CRIT+0 ACC+0
+
+Item action: 1 equip/unequip or use, 2 lock/unlock name, 3 discard instance, 0 c
+cancel.
+> 1
+Equipment updated: linen_veil
+
+=== INVENTORY page 1/1 ===
+1. cellar_rations [Common] x1
+2. choir_incense [Uncommon] x1
+3. dusty_prayer_book [Common] Hand atk+81 instance=7 [EQUIPPED]
+4. first_nuns_diary [Legendary] x1
+5. storage_key [Common] x1
+6. purification_salts [Uncommon] x1
+7. plain_rosary [Common] Accessory hp+5% instance=2 [EQUIPPED]
+8. linen_veil [Common] Head hp+5% instance=1 [EQUIPPED]
+
+Inventory: select item; 13 next, 14 previous, 15 sort (newest/rarity/name), 0 re
+eturn.
+> 0
+
+=== ROOM: Entrance Hall ===
+Adelaide | Level 1 | HP 105/110 | ATK 101 DEF 10 SPD 100 | XP 10/100
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+0. Leave room
+
+Room action:
+> 1
+You piece together a useful detail about the cathedral.
+Investigation gained 12 XP.
+
+=== ROOM: Entrance Hall ===
+Adelaide | Level 1 | HP 105/110 | ATK 101 DEF 10 SPD 100 | XP 22/100
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+0. Leave room
+
+Room action:
+> 1
+Falling masonry catches you by surprise.
+Investigation damage: 5 HP.
+
+=== ROOM: Entrance Hall ===
+Adelaide | Level 1 | HP 100/110 | ATK 101 DEF 10 SPD 100 | XP 22/100
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+0. Leave room
+
+Room action:
+> 1
+A hostile presence emerges: Devotee Acolyte (Basic, level 1).
+[45] Encounter begins: Devotee Acolyte (level 1, Basic).
+[46] Adelaide (level 1, HP 100) faces Devotee Acolyte.
+[47] Adelaide's action begins (gauge 1000).
+[48] Waiting for Adelaide to choose an action.
+Adelaide | Level 1 | HP 100/110 | ATK 101 DEF 10 SPD 100 | XP 22/100
+Enemy: Devotee Acolyte | Level 1 Basic | HP 54/54 DEF 6 SPD 89
+Acting: Adelaide
+1. Attack
+2. Consumable
+3. Shimmer
+4. Flee
+5. Full encounter log
+6. Toggle fast presentation
+
+Combat action:
+> 1
+[49] Adelaide uses Attack on Devotee Acolyte.
+[50] Adelaide hits Devotee Acolyte.
+[51] Adelaide -> Devotee Acolyte: 100 requested damage; barrier absorbs 0; 54 ac
+ctual HP damage. HP: 0.
+[52] Devotee Acolyte has been defeated.
+[53] XP gained: +10.
+[54] Found: faded_sanctum_boots.
+[55] Found: blessed_bandages.
+[56] Encounter complete: victory.
+
+=== ROOM: Entrance Hall ===
+Adelaide | Level 1 | HP 100/110 | ATK 101 DEF 10 SPD 100 | XP 32/100
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+0. Leave room
+
+Room action:
+>
+1
+You recover a meaningful fragment from the room.
+Investigation gained 6 XP.
+
+=== ROOM: Entrance Hall ===
+Adelaide | Level 1 | HP 100/110 | ATK 101 DEF 10 SPD 100 | XP 38/100
+  Discovered: Broken statue
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+0. Leave room
+
+Room action:
+> 1
+You discover supplies hidden in the room.
+Found: cellar_rations.
+
+=== ROOM: Entrance Hall ===
+Adelaide | Level 1 | HP 100/110 | ATK 101 DEF 10 SPD 100 | XP 38/100
+  Discovered: Broken statue
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+0. Leave room
+
+Room action:
+> 1
+You discover supplies hidden in the room.
+Found: basic_choir_dress.
+
+=== ROOM: Entrance Hall ===
+Adelaide | Level 1 | HP 100/110 | ATK 101 DEF 10 SPD 100 | XP 38/100
+  Discovered: Broken statue
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+0. Leave room
+
+Room action:
+> 1
+You discover supplies hidden in the room.
+Found: cellar_rations.
+
+=== ROOM: Entrance Hall ===
+Adelaide | Level 1 | HP 100/110 | ATK 101 DEF 10 SPD 100 | XP 38/100
+  Discovered: Broken statue
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+0. Leave room
+
+Room action:
+> 1
+You discover supplies hidden in the room.
+Found: cellar_rations.
+
+=== ROOM: Entrance Hall ===
+Adelaide | Level 1 | HP 100/110 | ATK 101 DEF 10 SPD 100 | XP 38/100
+  Discovered: Broken statue
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+0. Leave room
+
+Room action:
+>
+1
+You recover a meaningful fragment from the room. The room's required discoveries
+s are complete; its guardian may now appear.
+Investigation gained 26 XP.
+
+=== ROOM: Entrance Hall ===
+Adelaide | Level 1 | HP 100/110 | ATK 101 DEF 10 SPD 100 | XP 64/100
+  Discovered: Broken statue
+  Discovered: Old banner
+Guardian eligible: Matron of the Catacombs | fixed level 8 | suggested readiness
+s 8.
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+0. Leave room
+
+Room action:
+> 1
+You discover supplies hidden in the room.
+Found: cellar_rations.
+
+=== ROOM: Entrance Hall ===
+Adelaide | Level 1 | HP 100/110 | ATK 101 DEF 10 SPD 100 | XP 64/100
+  Discovered: Broken statue
+  Discovered: Old banner
+Guardian eligible: Matron of the Catacombs | fixed level 8 | suggested readiness
+s 8.
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+0. Leave room
+
+Room action:
+> 1
+You discover supplies hidden in the room.
+Found: dusty_prayer_shawl.
+
+=== ROOM: Entrance Hall ===
+Adelaide | Level 1 | HP 100/110 | ATK 101 DEF 10 SPD 100 | XP 64/100
+  Discovered: Broken statue
+  Discovered: Old banner
+Guardian eligible: Matron of the Catacombs | fixed level 8 | suggested readiness
+s 8.
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+0. Leave room
+
+Room action:
+>
+1
+A major presence emerges: Matron of the Catacombs. Fixed level 8; prepare around
+d level 8. You can withdraw and continue investigating.
+[57] Encounter begins: Matron of the Catacombs (level 8, Boss).
+[58] Adelaide (level 1, HP 100) faces Matron of the Catacombs.
+[59] Adelaide's action begins (gauge 1000).
+[60] Waiting for Adelaide to choose an action.
+Adelaide | Level 1 | HP 100/110 | ATK 101 DEF 10 SPD 100 | XP 64/100
+Enemy: Matron of the Catacombs | Level 8 Boss | HP 524/524 DEF 37 SPD 94        
+Acting: Adelaide
+1. Attack
+2. Consumable
+3. Shimmer
+4. Flee
+5. Full encounter log
+6. Toggle fast presentation
+
+Combat action:
+> 1
+[61] Adelaide uses Attack on Matron of the Catacombs.
+[62] Adelaide hits Matron of the Catacombs.
+[63] Adelaide -> Matron of the Catacombs: 97 requested damage; barrier absorbs 0
+0; 97 actual HP damage. HP: 427.
+Adelaide | Level 1 | HP 100/110 | ATK 101 DEF 10 SPD 100 | XP 64/100
+Enemy: Matron of the Catacombs | Level 8 Boss | HP 427/524 DEF 37 SPD 94        
+Acting: Matron of the Catacombs
+[64] Matron of the Catacombs's action begins (gauge 1034).
+[65] Matron of the Catacombs uses Sanctified Barrier on Matron of the Catacombs.
+[66] Matron of the Catacombs gains 104 barrier.
+[67] Adelaide's action begins (gauge 1000).
+Adelaide | Level 1 | HP 100/110 | ATK 101 DEF 10 SPD 100 | XP 64/100
+Enemy: Matron of the Catacombs | Level 8 Boss | HP 427/524 DEF 37 SPD 94        
+Acting: Adelaide
+1. Attack
+2. Consumable
+3. Shimmer
+4. Flee
+5. Full encounter log
+6. Toggle fast presentation
+
+Combat action:
+> 1
+[68] Adelaide uses Attack on Matron of the Catacombs.
+[69] Adelaide hits Matron of the Catacombs.
+[70] Adelaide -> Matron of the Catacombs: 97 requested damage; barrier absorbs 9
+97; 0 actual HP damage. HP: 427.
+Adelaide | Level 1 | HP 100/110 | ATK 101 DEF 10 SPD 100 | XP 64/100
+Enemy: Matron of the Catacombs | Level 8 Boss | HP 427/524 DEF 37 SPD 94        
+Acting: Matron of the Catacombs
+[71] Matron of the Catacombs's action begins (gauge 1068).
+[72] Matron of the Catacombs uses Catacomb Judgment on Adelaide.
+[73] Matron of the Catacombs hits Adelaide.
+[74] Matron of the Catacombs -> Adelaide: 35 requested damage; barrier absorbs 0
+0; 35 actual HP damage. HP: 65.
+[75] Adelaide receives Defense Down (2 turns, potency 20) from Catacomb Judgment
+t.
+[76] Adelaide's action begins (gauge 1000).
+Adelaide | Level 1 | HP 65/110 | ATK 101 DEF 8 SPD 100 | XP 64/100
+Enemy: Matron of the Catacombs | Level 8 Boss | HP 427/524 DEF 37 SPD 94        
+Acting: Adelaide
+1. Attack
+2. Consumable
+3. Shimmer
+4. Flee
+5. Full encounter log
+6. Toggle fast presentation
+
+Combat action:
+>
+1
+[77] Adelaide uses Attack on Matron of the Catacombs.
+[78] Adelaide hits Matron of the Catacombs.
+[79] Adelaide -> Matron of the Catacombs: 97 requested damage; barrier absorbs 7
+7; 90 actual HP damage. HP: 337.
+[80] Matron of the Catacombs's barrier breaks.
+[81] Boss enters Phase 2.
+Adelaide | Level 1 | HP 65/110 | ATK 101 DEF 8 SPD 100 | XP 64/100
+Enemy: Matron of the Catacombs | Level 8 Boss | HP 337/524 DEF 44 SPD 112       
+Acting: Matron of the Catacombs
+[82] Matron of the Catacombs's action begins (gauge 1044).
+[83] Matron of the Catacombs uses Choir's Wrath on Adelaide.
+[84] Adelaide receives Burn (2 turns, potency 20) from Choir's Wrath.
+[85] Adelaide receives Bleed (2 turns, potency 20) from Choir's Wrath.
+[86] Adelaide's action begins (gauge 1000).
+[87] Burn -> Adelaide: 18 requested damage; barrier absorbs 0; 18 actual HP dama
+age. HP: 47.
+[88] Bleed -> Adelaide: 9 requested damage; barrier absorbs 0; 9 actual HP damag
+ge. HP: 38.
+Adelaide | Level 1 | HP 38/110 | ATK 101 DEF 10 SPD 100 | XP 64/100
+Enemy: Matron of the Catacombs | Level 8 Boss | HP 337/524 DEF 44 SPD 112       
+Acting: Adelaide
+1. Attack
+2. Consumable
+3. Shimmer
+4. Flee
+5. Full encounter log
+6. Toggle fast presentation
+
+Combat action:
+> 1
+[89] Adelaide uses Attack on Matron of the Catacombs.
+[90] Adelaide hits Matron of the Catacombs.
+[91] Adelaide -> Matron of the Catacombs: 97 requested damage; barrier absorbs 0
+0; 97 actual HP damage. HP: 240.
+Adelaide | Level 1 | HP 38/110 | ATK 101 DEF 10 SPD 100 | XP 64/100
+Enemy: Matron of the Catacombs | Level 8 Boss | HP 240/524 DEF 44 SPD 112       
+Acting: Matron of the Catacombs
+[92] Matron of the Catacombs's action begins (gauge 1052).
+[93] Matron of the Catacombs uses Attack on Adelaide.
+[94] Matron of the Catacombs hits Adelaide.
+[95] Matron of the Catacombs -> Adelaide: 30 requested damage; barrier absorbs 0
+0; 30 actual HP damage. HP: 8.
+[96] Adelaide's action begins (gauge 1000).
+[97] Burn -> Adelaide: 18 requested damage; barrier absorbs 0; 8 actual HP damag
+ge. HP: 0.
+[98] Bleed -> Adelaide: 9 requested damage; barrier absorbs 0; 0 actual HP damag
+ge. HP: 0.
+[99] Adelaide has fallen.
+[100] Encounter complete: defeat.
+
+=== DEFEAT: Adelaide ===
+Final cause: Burn / Burn. Burn -> Adelaide: 18 requested damage; barrier absorbs
+s 0; 8 actual HP damage. HP: 0.
+[93] Matron of the Catacombs uses Attack on Adelaide.
+[94] Matron of the Catacombs hits Adelaide.
+[95] Matron of the Catacombs -> Adelaide: 30 requested damage; barrier absorbs 0
+0; 30 actual HP damage. HP: 8.
+[96] Adelaide's action begins (gauge 1000).
+[97] Burn -> Adelaide: 18 requested damage; barrier absorbs 0; 8 actual HP damag
+ge. HP: 0.
+[98] Bleed -> Adelaide: 9 requested damage; barrier absorbs 0; 0 actual HP damag
+ge. HP: 0.
+[99] Adelaide has fallen.
+[100] Encounter complete: defeat.
+
+Defeat review: 1 full log, 0 acknowledge and return to the Fountain.
+>
+1
+
+=== FULL ENCOUNTER LOG ===
+[57] Encounter begins: Matron of the Catacombs (level 8, Boss).
+[58] Adelaide (level 1, HP 100) faces Matron of the Catacombs.
+[59] Adelaide's action begins (gauge 1000).
+[60] Waiting for Adelaide to choose an action.
+[61] Adelaide uses Attack on Matron of the Catacombs.
+[62] Adelaide hits Matron of the Catacombs.
+[63] Adelaide -> Matron of the Catacombs: 97 requested damage; barrier absorbs 0
+0; 97 actual HP damage. HP: 427.
+[64] Matron of the Catacombs's action begins (gauge 1034).
+[65] Matron of the Catacombs uses Sanctified Barrier on Matron of the Catacombs.
+[66] Matron of the Catacombs gains 104 barrier.
+[67] Adelaide's action begins (gauge 1000).
+[68] Adelaide uses Attack on Matron of the Catacombs.
+[69] Adelaide hits Matron of the Catacombs.
+[70] Adelaide -> Matron of the Catacombs: 97 requested damage; barrier absorbs 9
+97; 0 actual HP damage. HP: 427.
+[71] Matron of the Catacombs's action begins (gauge 1068).
+[72] Matron of the Catacombs uses Catacomb Judgment on Adelaide.
+[73] Matron of the Catacombs hits Adelaide.
+[74] Matron of the Catacombs -> Adelaide: 35 requested damage; barrier absorbs 0
+0; 35 actual HP damage. HP: 65.
+[75] Adelaide receives Defense Down (2 turns, potency 20) from Catacomb Judgment
+t.
+[76] Adelaide's action begins (gauge 1000).
+[77] Adelaide uses Attack on Matron of the Catacombs.
+[78] Adelaide hits Matron of the Catacombs.
+[79] Adelaide -> Matron of the Catacombs: 97 requested damage; barrier absorbs 7
+7; 90 actual HP damage. HP: 337.
+[80] Matron of the Catacombs's barrier breaks.
+[81] Boss enters Phase 2.
+[82] Matron of the Catacombs's action begins (gauge 1044).
+[83] Matron of the Catacombs uses Choir's Wrath on Adelaide.
+[84] Adelaide receives Burn (2 turns, potency 20) from Choir's Wrath.
+[85] Adelaide receives Bleed (2 turns, potency 20) from Choir's Wrath.
+[86] Adelaide's action begins (gauge 1000).
+[87] Burn -> Adelaide: 18 requested damage; barrier absorbs 0; 18 actual HP dama
+age. HP: 47.
+[88] Bleed -> Adelaide: 9 requested damage; barrier absorbs 0; 9 actual HP damag
+ge. HP: 38.
+[89] Adelaide uses Attack on Matron of the Catacombs.
+[90] Adelaide hits Matron of the Catacombs.
+[91] Adelaide -> Matron of the Catacombs: 97 requested damage; barrier absorbs 0
+0; 97 actual HP damage. HP: 240.
+[92] Matron of the Catacombs's action begins (gauge 1052).
+[93] Matron of the Catacombs uses Attack on Adelaide.
+[94] Matron of the Catacombs hits Adelaide.
+[95] Matron of the Catacombs -> Adelaide: 30 requested damage; barrier absorbs 0
+0; 30 actual HP damage. HP: 8.
+[96] Adelaide's action begins (gauge 1000).
+[97] Burn -> Adelaide: 18 requested damage; barrier absorbs 0; 8 actual HP damag
+ge. HP: 0.
+[98] Bleed -> Adelaide: 9 requested damage; barrier absorbs 0; 0 actual HP damag
+ge. HP: 0.
+[99] Adelaide has fallen.
+[100] Encounter complete: defeat.
+=== END ENCOUNTER LOG ===
+
+Defeat review: 1 full log, 0 acknowledge and return to the Fountain.
+> 0
+You return to the Fountain at full health.
+
+=== ROOM: Fountain ===
+Adelaide | Level 1 | HP 110/110 | ATK 101 DEF 10 SPD 100 | XP 64/100
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+7. Heal at the Fountain
+0. Leave room
+
+Room action:
+> 0
+
+=== MICARE: CATHEDRAL OF LIES ===
+Adelaide | Level 1 | HP 110/110 | ATK 101 DEF 10 SPD 100 | XP 64/100
+Investigate, improve your equipment, and challenge each room's guardian.        
+1. Fountain
+2. Entrance Hall
+3. Archive Room [LOCKED]
+4. Chapel [LOCKED]
+5. Storage Room [LOCKED]
+6. Inventory
+7. Shimmer skills
+8. Floor map
+9. Last encounter log
+0. Quit
+
+Destination or panel:
+> 2
+
+=== ROOM: Entrance Hall ===
+Adelaide | Level 1 | HP 110/110 | ATK 101 DEF 10 SPD 100 | XP 64/100
+  Discovered: Broken statue
+  Discovered: Old banner
+Guardian eligible: Matron of the Catacombs | fixed level 8 | suggested readiness
+s 8.
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+0. Leave room
+
+Room action:
+> 1
+A major presence emerges: Matron of the Catacombs. Fixed level 8; prepare around
+d level 8. You can withdraw and continue investigating.
+[101] Encounter begins: Matron of the Catacombs (level 8, Boss).
+[102] Adelaide (level 1, HP 110) faces Matron of the Catacombs.
+[103] Adelaide's action begins (gauge 1000).
+[104] Waiting for Adelaide to choose an action.
+Adelaide | Level 1 | HP 110/110 | ATK 101 DEF 10 SPD 100 | XP 64/100
+Enemy: Matron of the Catacombs | Level 8 Boss | HP 524/524 DEF 37 SPD 94        
+Acting: Adelaide
+1. Attack
+2. Consumable
+3. Shimmer
+4. Flee
+5. Full encounter log
+6. Toggle fast presentation
+
+Combat action:
+>
+4
+[105] Adelaide retreats from the encounter.
+[106] Encounter complete: fled.
+
+=== ROOM: Entrance Hall ===
+Adelaide | Level 1 | HP 110/110 | ATK 101 DEF 10 SPD 100 | XP 64/100
+  Discovered: Broken statue
+  Discovered: Old banner
+Guardian eligible: Matron of the Catacombs | fixed level 8 | suggested readiness
+s 8.
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+0. Leave room
+
+Room action:
+> 1
+A major presence emerges: Matron of the Catacombs. Fixed level 8; prepare around
+d level 8. You can withdraw and continue investigating.
+[107] Encounter begins: Matron of the Catacombs (level 8, Boss).
+[108] Adelaide (level 1, HP 110) faces Matron of the Catacombs.
+[109] Adelaide's action begins (gauge 1000).
+[110] Waiting for Adelaide to choose an action.
+Adelaide | Level 1 | HP 110/110 | ATK 101 DEF 10 SPD 100 | XP 64/100
+Enemy: Matron of the Catacombs | Level 8 Boss | HP 524/524 DEF 37 SPD 94        
+Acting: Adelaide
+1. Attack
+2. Consumable
+3. Shimmer
+4. Flee
+5. Full encounter log
+6. Toggle fast presentation
+
+Combat action:
+> 4
+[111] Adelaide retreats from the encounter.
+[112] Encounter complete: fled.
+
+=== ROOM: Entrance Hall ===
+Adelaide | Level 1 | HP 110/110 | ATK 101 DEF 10 SPD 100 | XP 64/100
+  Discovered: Broken statue
+  Discovered: Old banner
+Guardian eligible: Matron of the Catacombs | fixed level 8 | suggested readiness
+s 8.
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+0. Leave room
+
+Room action:
+> 1
+A major presence emerges: Matron of the Catacombs. Fixed level 8; prepare around
+d level 8. You can withdraw and continue investigating.
+[113] Encounter begins: Matron of the Catacombs (level 8, Boss).
+[114] Adelaide (level 1, HP 110) faces Matron of the Catacombs.
+[115] Adelaide's action begins (gauge 1000).
+[116] Waiting for Adelaide to choose an action.
+Adelaide | Level 1 | HP 110/110 | ATK 101 DEF 10 SPD 100 | XP 64/100
+Enemy: Matron of the Catacombs | Level 8 Boss | HP 524/524 DEF 37 SPD 94        
+Acting: Adelaide
+1. Attack
+2. Consumable
+3. Shimmer
+4. Flee
+5. Full encounter log
+6. Toggle fast presentation
+
+Combat action:
+>
+4
+[117] Adelaide retreats from the encounter.
+[118] Encounter complete: fled.
+
+=== ROOM: Entrance Hall ===
+Adelaide | Level 1 | HP 110/110 | ATK 101 DEF 10 SPD 100 | XP 64/100
+  Discovered: Broken statue
+  Discovered: Old banner
+Guardian eligible: Matron of the Catacombs | fixed level 8 | suggested readiness
+s 8.
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+0. Leave room
+
+Room action:
+> 1
+A major presence emerges: Matron of the Catacombs. Fixed level 8; prepare around
+d level 8. You can withdraw and continue investigating.
+[119] Encounter begins: Matron of the Catacombs (level 8, Boss).
+[120] Adelaide (level 1, HP 110) faces Matron of the Catacombs.
+[121] Adelaide's action begins (gauge 1000).
+[122] Waiting for Adelaide to choose an action.
+Adelaide | Level 1 | HP 110/110 | ATK 101 DEF 10 SPD 100 | XP 64/100
+Enemy: Matron of the Catacombs | Level 8 Boss | HP 524/524 DEF 37 SPD 94        
+Acting: Adelaide
+1. Attack
+2. Consumable
+3. Shimmer
+4. Flee
+5. Full encounter log
+6. Toggle fast presentation
+
+Combat action:
+>
+4
+[123] Adelaide retreats from the encounter.
+[124] Encounter complete: fled.
+
+=== ROOM: Entrance Hall ===
+Adelaide | Level 1 | HP 110/110 | ATK 101 DEF 10 SPD 100 | XP 64/100
+  Discovered: Broken statue
+  Discovered: Old banner
+Guardian eligible: Matron of the Catacombs | fixed level 8 | suggested readiness
+s 8.
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+0. Leave room
+
+Room action:
+> 1
+A major presence emerges: Matron of the Catacombs. Fixed level 8; prepare around
+d level 8. You can withdraw and continue investigating.
+[125] Encounter begins: Matron of the Catacombs (level 8, Boss).
+[126] Adelaide (level 1, HP 110) faces Matron of the Catacombs.
+[127] Adelaide's action begins (gauge 1000).
+[128] Waiting for Adelaide to choose an action.
+Adelaide | Level 1 | HP 110/110 | ATK 101 DEF 10 SPD 100 | XP 64/100
+Enemy: Matron of the Catacombs | Level 8 Boss | HP 524/524 DEF 37 SPD 94        
+Acting: Adelaide
+1. Attack
+2. Consumable
+3. Shimmer
+4. Flee
+5. Full encounter log
+6. Toggle fast presentation
+
+Combat action:
+>
+4
+[129] Adelaide retreats from the encounter.
+[130] Encounter complete: fled.
+
+=== ROOM: Entrance Hall ===
+Adelaide | Level 1 | HP 110/110 | ATK 101 DEF 10 SPD 100 | XP 64/100
+  Discovered: Broken statue
+  Discovered: Old banner
+Guardian eligible: Matron of the Catacombs | fixed level 8 | suggested readiness
+s 8.
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+0. Leave room
+
+Room action:
+> 1
+A hostile presence emerges: Devotee Acolyte (Basic, level 1).
+[131] Encounter begins: Devotee Acolyte (level 1, Basic).
+[132] Adelaide (level 1, HP 110) faces Devotee Acolyte.
+[133] Adelaide's action begins (gauge 1000).
+[134] Waiting for Adelaide to choose an action.
+Adelaide | Level 1 | HP 110/110 | ATK 101 DEF 10 SPD 100 | XP 64/100
+Enemy: Devotee Acolyte | Level 1 Basic | HP 54/54 DEF 6 SPD 89
+Acting: Adelaide
+1. Attack
+2. Consumable
+3. Shimmer
+4. Flee
+5. Full encounter log
+6. Toggle fast presentation
+
+Combat action:
+>
+1
+[135] Adelaide uses Attack on Devotee Acolyte.
+[136] Adelaide hits Devotee Acolyte.
+[137] Adelaide -> Devotee Acolyte: 100 requested damage; barrier absorbs 0; 54 a
+actual HP damage. HP: 0.
+[138] Devotee Acolyte has been defeated.
+[139] XP gained: +10.
+[140] Found: brass_prayer_token.
+[141] Found: ritual_powder.
+[142] Encounter complete: victory.
+
+=== ROOM: Entrance Hall ===
+Adelaide | Level 1 | HP 110/110 | ATK 101 DEF 10 SPD 100 | XP 74/100
+  Discovered: Broken statue
+  Discovered: Old banner
+Guardian eligible: Matron of the Catacombs | fixed level 8 | suggested readiness
+s 8.
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+0. Leave room
+
+Room action:
+> 1
+A major presence emerges: Matron of the Catacombs. Fixed level 8; prepare around
+d level 8. You can withdraw and continue investigating.
+[143] Encounter begins: Matron of the Catacombs (level 8, Boss).
+[144] Adelaide (level 1, HP 110) faces Matron of the Catacombs.
+[145] Adelaide's action begins (gauge 1000).
+[146] Waiting for Adelaide to choose an action.
+Adelaide | Level 1 | HP 110/110 | ATK 101 DEF 10 SPD 100 | XP 74/100
+Enemy: Matron of the Catacombs | Level 8 Boss | HP 524/524 DEF 37 SPD 94        
+Acting: Adelaide
+1. Attack
+2. Consumable
+3. Shimmer
+4. Flee
+5. Full encounter log
+6. Toggle fast presentation
+
+Combat action:
+>
+4
+[147] Adelaide retreats from the encounter.
+[148] Encounter complete: fled.
+
+=== ROOM: Entrance Hall ===
+Adelaide | Level 1 | HP 110/110 | ATK 101 DEF 10 SPD 100 | XP 74/100
+  Discovered: Broken statue
+  Discovered: Old banner
+Guardian eligible: Matron of the Catacombs | fixed level 8 | suggested readiness
+s 8.
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+0. Leave room
+
+Room action:
+> 1
+A hostile presence emerges: Devotee Acolyte (Basic, level 1).
+[149] Encounter begins: Devotee Acolyte (level 1, Basic).
+[150] Adelaide (level 1, HP 110) faces Devotee Acolyte.
+[151] Adelaide's action begins (gauge 1000).
+[152] Waiting for Adelaide to choose an action.
+Adelaide | Level 1 | HP 110/110 | ATK 101 DEF 10 SPD 100 | XP 74/100
+Enemy: Devotee Acolyte | Level 1 Basic | HP 54/54 DEF 6 SPD 89
+Acting: Adelaide
+1. Attack
+2. Consumable
+3. Shimmer
+4. Flee
+5. Full encounter log
+6. Toggle fast presentation
+
+Combat action:
+>
+1
+[153] Adelaide uses Attack on Devotee Acolyte.
+[154] Adelaide hits Devotee Acolyte.
+[155] Adelaide -> Devotee Acolyte: 100 requested damage; barrier absorbs 0; 54 a
+actual HP damage. HP: 0.
+[156] Devotee Acolyte has been defeated.
+[157] XP gained: +10.
+[158] Found: simple_habit_shoes.
+[159] Encounter complete: victory.
+
+=== ROOM: Entrance Hall ===
+Adelaide | Level 1 | HP 110/110 | ATK 101 DEF 10 SPD 100 | XP 84/100
+  Discovered: Broken statue
+  Discovered: Old banner
+Guardian eligible: Matron of the Catacombs | fixed level 8 | suggested readiness
+s 8.
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+0. Leave room
+
+Room action:
+> 1
+You discover supplies hidden in the room.
+Found: cellar_rations.
+
+=== ROOM: Entrance Hall ===
+Adelaide | Level 1 | HP 110/110 | ATK 101 DEF 10 SPD 100 | XP 84/100
+  Discovered: Broken statue
+  Discovered: Old banner
+Guardian eligible: Matron of the Catacombs | fixed level 8 | suggested readiness
+s 8.
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+0. Leave room
+
+Room action:
+>
+1
+A major presence emerges: Matron of the Catacombs. Fixed level 8; prepare around
+d level 8. You can withdraw and continue investigating.
+[160] Encounter begins: Matron of the Catacombs (level 8, Boss).
+[161] Adelaide (level 1, HP 110) faces Matron of the Catacombs.
+[162] Adelaide's action begins (gauge 1000).
+[163] Waiting for Adelaide to choose an action.
+Adelaide | Level 1 | HP 110/110 | ATK 101 DEF 10 SPD 100 | XP 84/100
+Enemy: Matron of the Catacombs | Level 8 Boss | HP 524/524 DEF 37 SPD 94        
+Acting: Adelaide
+1. Attack
+2. Consumable
+3. Shimmer
+4. Flee
+5. Full encounter log
+6. Toggle fast presentation
+
+Combat action:
+>
+4
+[164] Adelaide retreats from the encounter.
+[165] Encounter complete: fled.
+
+=== ROOM: Entrance Hall ===
+Adelaide | Level 1 | HP 110/110 | ATK 101 DEF 10 SPD 100 | XP 84/100
+  Discovered: Broken statue
+  Discovered: Old banner
+Guardian eligible: Matron of the Catacombs | fixed level 8 | suggested readiness
+s 8.
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+0. Leave room
+
+Room action:
+> 1
+You piece together a useful detail about the cathedral.
+Investigation gained 11 XP.
+
+=== ROOM: Entrance Hall ===
+Adelaide | Level 1 | HP 110/110 | ATK 101 DEF 10 SPD 100 | XP 95/100
+  Discovered: Broken statue
+  Discovered: Old banner
+Guardian eligible: Matron of the Catacombs | fixed level 8 | suggested readiness
+s 8.
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+0. Leave room
+
+Room action:
+>
+1
+A major presence emerges: Matron of the Catacombs. Fixed level 8; prepare around
+d level 8. You can withdraw and continue investigating.
+[166] Encounter begins: Matron of the Catacombs (level 8, Boss).
+[167] Adelaide (level 1, HP 110) faces Matron of the Catacombs.
+[168] Adelaide's action begins (gauge 1000).
+[169] Waiting for Adelaide to choose an action.
+Adelaide | Level 1 | HP 110/110 | ATK 101 DEF 10 SPD 100 | XP 95/100
+Enemy: Matron of the Catacombs | Level 8 Boss | HP 524/524 DEF 37 SPD 94        
+Acting: Adelaide
+1. Attack
+2. Consumable
+3. Shimmer
+4. Flee
+5. Full encounter log
+6. Toggle fast presentation
+
+Combat action:
+>
+4
+[170] Adelaide retreats from the encounter.
+[171] Encounter complete: fled.
+
+=== ROOM: Entrance Hall ===
+Adelaide | Level 1 | HP 110/110 | ATK 101 DEF 10 SPD 100 | XP 95/100
+  Discovered: Broken statue
+  Discovered: Old banner
+Guardian eligible: Matron of the Catacombs | fixed level 8 | suggested readiness
+s 8.
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+0. Leave room
+
+Room action:
+>
+1
+A major presence emerges: Matron of the Catacombs. Fixed level 8; prepare around
+d level 8. You can withdraw and continue investigating.
+[172] Encounter begins: Matron of the Catacombs (level 8, Boss).
+[173] Adelaide (level 1, HP 110) faces Matron of the Catacombs.
+[174] Adelaide's action begins (gauge 1000).
+[175] Waiting for Adelaide to choose an action.
+Adelaide | Level 1 | HP 110/110 | ATK 101 DEF 10 SPD 100 | XP 95/100
+Enemy: Matron of the Catacombs | Level 8 Boss | HP 524/524 DEF 37 SPD 94        
+Acting: Adelaide
+1. Attack
+2. Consumable
+3. Shimmer
+4. Flee
+5. Full encounter log
+6. Toggle fast presentation
+
+Combat action:
+>
+4
+[176] Adelaide retreats from the encounter.
+[177] Encounter complete: fled.
+
+=== ROOM: Entrance Hall ===
+Adelaide | Level 1 | HP 110/110 | ATK 101 DEF 10 SPD 100 | XP 95/100
+  Discovered: Broken statue
+  Discovered: Old banner
+Guardian eligible: Matron of the Catacombs | fixed level 8 | suggested readiness
+s 8.
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+0. Leave room
+
+Room action:
+>
+1
+You discover supplies hidden in the room.
+Found: cellar_rations.
+
+=== ROOM: Entrance Hall ===
+Adelaide | Level 1 | HP 110/110 | ATK 101 DEF 10 SPD 100 | XP 95/100
+  Discovered: Broken statue
+  Discovered: Old banner
+Guardian eligible: Matron of the Catacombs | fixed level 8 | suggested readiness
+s 8.
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+0. Leave room
+
+Room action:
+>
+1
+You piece together a useful detail about the cathedral.
+Investigation gained 11 XP.
+Level up! Adelaide is now level 2. Five equipment rewards were added.
+
+Level-up Shimmer reward:
+1. Prism Step
+2. Gleam Needle
+3. Phōteinòs Thṓrax
+
+Choose a level-up skill, or 0 to decide later.
+>
+2
+Shimmer skill unlocked: Gleam Needle.
+
+=== ROOM: Entrance Hall ===
+Adelaide | Level 2 | HP 138/138 | ATK 116 DEF 20 SPD 100 | XP 6/110
+  Discovered: Broken statue
+  Discovered: Old banner
+Guardian eligible: Matron of the Catacombs | fixed level 8 | suggested readiness
+s 8.
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+0. Leave room
+
+Room action:
+> 5
+
+=== SHIMMER SKILLS | free points 10/12 ===
+1. Gleam Needle cost 1 cooldown 3
+   Deal 500% ATK as a precise Shimmer strike.
+2. Pulsus Luminis cost 2 cooldown 5 [EQUIPPED]
+   Deal 900% ATK as a focused Shimmer strike.
+
+Shimmer loadout: select skill to equip/unequip, 0 return.
+> 1
+Shimmer loadout updated.
+
+=== SHIMMER SKILLS | free points 9/12 ===
+1. Gleam Needle cost 1 cooldown 3 [EQUIPPED]
+   Deal 500% ATK as a precise Shimmer strike.
+2. Pulsus Luminis cost 2 cooldown 5 [EQUIPPED]
+   Deal 900% ATK as a focused Shimmer strike.
+
+Shimmer loadout: select skill to equip/unequip, 0 return.
+> 0
+
+=== ROOM: Entrance Hall ===
+Adelaide | Level 2 | HP 138/138 | ATK 116 DEF 20 SPD 100 | XP 6/110
+  Discovered: Broken statue
+  Discovered: Old banner
+Guardian eligible: Matron of the Catacombs | fixed level 8 | suggested readiness
+s 8.
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+0. Leave room
+
+Room action:
+> 1
+A hostile presence emerges: Devotee Acolyte (Basic, level 2).
+[178] Encounter begins: Devotee Acolyte (level 2, Basic).
+[179] Adelaide (level 2, HP 138) faces Devotee Acolyte.
+[180] Adelaide's action begins (gauge 1000).
+[181] Waiting for Adelaide to choose an action.
+Adelaide | Level 2 | HP 138/138 | ATK 116 DEF 20 SPD 100 | XP 6/110
+Enemy: Devotee Acolyte | Level 2 Basic | HP 82/82 DEF 9 SPD 89
+Acting: Adelaide
+1. Attack
+2. Consumable
+3. Shimmer
+4. Flee
+5. Full encounter log
+6. Toggle fast presentation
+
+Combat action:
+>
+6
+Normal presentation enabled.
+Adelaide | Level 2 | HP 138/138 | ATK 116 DEF 20 SPD 100 | XP 6/110
+Enemy: Devotee Acolyte | Level 2 Basic | HP 82/82 DEF 9 SPD 89
+Acting: Adelaide
+1. Attack
+2. Consumable
+3. Shimmer
+4. Flee
+5. Full encounter log
+6. Toggle fast presentation
+
+Combat action:
+> 3
+1. Gleam Needle cooldown 0
+2. Pulsus Luminis cooldown 0
+
+Choose combat Shimmer, 0 cancel:
+> 1
+[182] Adelaide uses Shimmer skill Gleam Needle on Devotee Acolyte.
+[183] Gleam Needle hits Devotee Acolyte.
+[184] Adelaide -> Devotee Acolyte: 580 requested damage; barrier absorbs 0; 82 a
+actual HP damage. HP: 0.
+[185] Devotee Acolyte has been defeated.
+[186] XP gained: +11.
+[187] Found: plain_leather_shoes.
+[188] Found: blessed_bandages.
+[189] Encounter complete: victory.
+
+=== ROOM: Entrance Hall ===
+Adelaide | Level 2 | HP 138/138 | ATK 116 DEF 20 SPD 100 | XP 17/110
+  Discovered: Broken statue
+  Discovered: Old banner
+Guardian eligible: Matron of the Catacombs | fixed level 8 | suggested readiness
+s 8.
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+0. Leave room
+
+Room action:
+> 1
+Falling masonry catches you by surprise.
+Investigation damage: 6 HP.
+
+=== ROOM: Entrance Hall ===
+Adelaide | Level 2 | HP 132/138 | ATK 116 DEF 20 SPD 100 | XP 17/110
+  Discovered: Broken statue
+  Discovered: Old banner
+Guardian eligible: Matron of the Catacombs | fixed level 8 | suggested readiness
+s 8.
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+0. Leave room
+
+Room action:
+>
+1
+A major presence emerges: Matron of the Catacombs. Fixed level 8; prepare around
+d level 8. You can withdraw and continue investigating.
+[190] Encounter begins: Matron of the Catacombs (level 8, Boss).
+[191] Adelaide (level 2, HP 132) faces Matron of the Catacombs.
+[192] Adelaide's action begins (gauge 1000).
+[193] Waiting for Adelaide to choose an action.
+Adelaide | Level 2 | HP 132/138 | ATK 116 DEF 20 SPD 100 | XP 17/110
+Enemy: Matron of the Catacombs | Level 8 Boss | HP 524/524 DEF 37 SPD 94        
+Acting: Adelaide
+1. Attack
+2. Consumable
+3. Shimmer
+4. Flee
+5. Full encounter log
+6. Toggle fast presentation
+
+Combat action:
+>
+3
+1. Gleam Needle cooldown 0
+2. Pulsus Luminis cooldown 0
+
+Choose combat Shimmer, 0 cancel:
+> 1
+[194] Adelaide uses Shimmer skill Gleam Needle on Matron of the Catacombs.      
+[195] Gleam Needle hits Matron of the Catacombs.
+[196] Adelaide -> Matron of the Catacombs: 580 requested damage; barrier absorbs
+s 0; 524 actual HP damage. HP: 0.
+[197] Matron of the Catacombs has been defeated.
+[198] XP gained: +200.
+[199] Shimmer skill unlocked from Matron of the Catacombs.
+[200] First clear: Matron of the Catacombs.
+[201] Archive Room is now unlocked.
+[202] Found: gilded_sanctum_dress.
+[203] Found: hollow_choir_headwrap.
+[204] Found: verdigris_trimmed_boots.
+[205] Found: gilded_prayer_shawl.
+[206] Found: choir_incense.
+[207] Encounter complete: victory.
+Level up! Adelaide is now level 3. Five equipment rewards were added.
+
+Level-up Shimmer reward:
+1. Siphon Lux
+2. Velum Radiāns
+
+Choose a level-up skill, or 0 to decide later.
+>
+1
+Shimmer skill unlocked: Siphon Lux.
+
+=== ROOM: Entrance Hall ===
+Adelaide | Level 3 | HP 165/165 | ATK 131 DEF 30 SPD 100 | XP 107/121
+  Discovered: Broken statue
+  Discovered: Old banner
+First clear complete. Repeat rewards and farming encounters are available.      
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+0. Leave room
+
+Room action:
+> 0
+
+=== MICARE: CATHEDRAL OF LIES ===
+Adelaide | Level 3 | HP 165/165 | ATK 131 DEF 30 SPD 100 | XP 107/121
+Investigate, improve your equipment, and challenge each room's guardian.        
+1. Fountain
+2. Entrance Hall [CLEARED - farming available]
+3. Archive Room
+4. Chapel [LOCKED]
+5. Storage Room [LOCKED]
+6. Inventory
+7. Shimmer skills
+8. Floor map
+9. Last encounter log
+0. Quit
+
+Destination or panel:
+> 3
+
+=== ROOM: Archive Room ===
+Adelaide | Level 3 | HP 165/165 | ATK 131 DEF 30 SPD 100 | XP 107/121
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+0. Leave room
+
+Room action:
+> 4
+
+=== FLOOR I MAP ===
+Fountain -> Entrance Hall -> Archive Room -> Chapel -> Storage Room
+Fountain [OPEN]
+Entrance Hall [OPEN] [CLEARED]
+Archive Room [OPEN]
+Chapel [LOCKED]
+Storage Room [LOCKED]
+
+=== ROOM: Archive Room ===
+Adelaide | Level 3 | HP 165/165 | ATK 131 DEF 30 SPD 100 | XP 107/121
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+0. Leave room
+
+Room action:
+> 0
+
+=== MICARE: CATHEDRAL OF LIES ===
+Adelaide | Level 3 | HP 165/165 | ATK 131 DEF 30 SPD 100 | XP 107/121
+Investigate, improve your equipment, and challenge each room's guardian.        
+1. Fountain
+2. Entrance Hall [CLEARED - farming available]
+3. Archive Room
+4. Chapel [LOCKED]
+5. Storage Room [LOCKED]
+6. Inventory
+7. Shimmer skills
+8. Floor map
+9. Last encounter log
+0. Quit
+
+Destination or panel:
+> 2
+
+=== ROOM: Entrance Hall ===
+Adelaide | Level 3 | HP 165/165 | ATK 131 DEF 30 SPD 100 | XP 107/121
+  Discovered: Broken statue
+  Discovered: Old banner
+First clear complete. Repeat rewards and farming encounters are available.      
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+0. Leave room
+
+Room action:
+> 6
+
+=== FULL ENCOUNTER LOG ===
+[190] Encounter begins: Matron of the Catacombs (level 8, Boss).
+[191] Adelaide (level 2, HP 132) faces Matron of the Catacombs.
+[192] Adelaide's action begins (gauge 1000).
+[193] Waiting for Adelaide to choose an action.
+[194] Adelaide uses Shimmer skill Gleam Needle on Matron of the Catacombs.      
+[195] Gleam Needle hits Matron of the Catacombs.
+[196] Adelaide -> Matron of the Catacombs: 580 requested damage; barrier absorbs
+s 0; 524 actual HP damage. HP: 0.
+[197] Matron of the Catacombs has been defeated.
+[198] XP gained: +200.
+[199] Shimmer skill unlocked from Matron of the Catacombs.
+[200] First clear: Matron of the Catacombs.
+[201] Archive Room is now unlocked.
+[202] Found: gilded_sanctum_dress.
+[203] Found: hollow_choir_headwrap.
+[204] Found: verdigris_trimmed_boots.
+[205] Found: gilded_prayer_shawl.
+[206] Found: choir_incense.
+[207] Encounter complete: victory.
+=== END ENCOUNTER LOG ===
+
+=== ROOM: Entrance Hall ===
+Adelaide | Level 3 | HP 165/165 | ATK 131 DEF 30 SPD 100 | XP 107/121
+  Discovered: Broken statue
+  Discovered: Old banner
+First clear complete. Repeat rewards and farming encounters are available.      
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+0. Leave room
+
+Room action:
+> 0
+
+=== MICARE: CATHEDRAL OF LIES ===
+Adelaide | Level 3 | HP 165/165 | ATK 131 DEF 30 SPD 100 | XP 107/121
+Investigate, improve your equipment, and challenge each room's guardian.        
+1. Fountain
+2. Entrance Hall [CLEARED - farming available]
+3. Archive Room
+4. Chapel [LOCKED]
+5. Storage Room [LOCKED]
+6. Inventory
+7. Shimmer skills
+8. Floor map
+9. Last encounter log
+0. Quit
+
+Destination or panel:
+> 0
+Session complete.
+

@@ -377,6 +377,10 @@ inline void SimulateFreshProgression() {
             ++counts.investigations;
             counts.itemEvents += result.type == InvestigationEventType::ItemDiscovery;
             counts.xpEvents += result.xpAwarded > 0;
+            if (loopGuard <= 10)
+                std::cout << "DEBUG run=" << run << " inv=" << counts.investigations << " type=" << static_cast<int>(result.type)
+                          << " xp=" << result.xpAwarded << " enemy=" << (result.spawnedEnemy ? result.spawnedEnemy->getName() : "none")
+                          << " level=" << progression.GetLevel() << " xpTotal=" << progression.GetXP() << "/" << progression.GetXPToNextLevel() << '\n';
             if (result.spawnedEnemy) {
                 if (result.spawnedEnemy->IsFirstClearBoss()) {
                     // Follow the actual flee action, including any faster boss opening.

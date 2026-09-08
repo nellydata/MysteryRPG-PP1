@@ -80,6 +80,14 @@ void CombatManager::AdvanceTurn(Player& player, Enemy& enemy) {
     if (playerTurn_ && !groupEnemyTurn_) StartPlayerTurn(player);
 }
 
+void CombatManager::ResolveDefeatReward(Player& player, Enemy& enemy, ProgressionManager* progression) {
+    if (progression != nullptr && !enemy.isAlive() && enemy.ClaimXPReward()) {
+        progression->GrantXP(enemy.getXPReward());
+        progression->CheckLevelUp(player);
+        AddEvent(CombatEvent::Kind::Info, "XP gained: +" + std::to_string(enemy.getXPReward()) + ".");
+    }
+}
+
 void CombatManager::StartPlayerTurn(Player& player) {
     if (!player.isAlive()) return;
     consumableUsedThisTurn_ = false;
@@ -225,8 +233,7 @@ bool CombatManager::resolve(CombatAction action, Player& player, Enemy& enemy,
         AddEvent(CombatEvent::Kind::Info, player.getName() + " attacks " + enemy.getName()
                   + " for " + std::to_string(damage) + (critical ? " [CRITICAL]" : "") + " damage.");
         if (!enemy.isAlive() && progression != nullptr) {
-            progression->GrantXP(enemy.getXPReward());
-            progression->CheckLevelUp(player);
+            ResolveDefeatReward(player, enemy, progression);
         }
         playerGauge_ -= 1000;
         playerTurn_ = false;
@@ -267,8 +274,7 @@ bool CombatManager::resolve(CombatAction action, Player& player, Enemy& enemy,
         }
         shimmerCooldowns_[skill->getName()] = skill->getCooldown() + 1;
         if (!enemy.isAlive() && progression != nullptr) {
-            progression->GrantXP(enemy.getXPReward());
-            progression->CheckLevelUp(player);
+            ResolveDefeatReward(player, enemy, progression);
         }
         playerGauge_ -= 1000;
         playerTurn_ = false;
@@ -291,7 +297,7 @@ bool CombatManager::resolve(CombatAction action, Player& player, Enemy& enemy,
     return false;
 }
 
-bool CombatManager::UseConsumable(const std::string& itemName, Player& player, Enemy& enemy) {
+bool CombatManager::UseConsumable(const std::string& itemName, Player& player, Enemy& enemy, ProgressionManager* progression) {
     if (!playerTurn_ || consumableUsedThisTurn_) {
         AddEvent(CombatEvent::Kind::Info, "Only one consumable can be used per turn.");
         return false;
@@ -308,14 +314,18 @@ bool CombatManager::UseConsumable(const std::string& itemName, Player& player, E
     const int damage = enemyHealthBefore - enemy.getHP();
     if (healing > 0) AddEvent(CombatEvent::Kind::Heal, player.getName() + " heals " + std::to_string(healing) + " HP.", healing);
     if (damage > 0) AddEvent(CombatEvent::Kind::Damage, player.getName() + " deals " + std::to_string(damage) + " damage to " + enemy.getName() + ".", damage);
+    ResolveDefeatReward(player, enemy, progression);
     playerGauge_ -= 1000;
     playerTurn_ = false;
     AdvanceTurn(player, enemy);
     return true;
 }
 
-void CombatManager::enemyTurn(Player& player, Enemy& enemy) {
-    if (!enemy.isAlive()) return;
+void CombatManager::enemyTurn(Player& player, Enemy& enemy, ProgressionManager* progression) {
+    if (!enemy.isAlive()) {
+        ResolveDefeatReward(player, enemy, progression);
+        return;
+    }
     enemy.TickSkillCooldowns();
 
     if (enemyGauge_ < 1000) {
@@ -454,7 +464,7 @@ void CombatManager::enemyTurn(Player& player, Enemy& enemy) {
     AdvanceTurn(player, enemy);
 }
 
-void CombatManager::enemyTurn(Player& player, Enemy& enemy, const std::vector<Enemy*>& enemies) {
+void CombatManager::enemyTurn(Player& player, Enemy& enemy, const std::vector<Enemy*>& enemies, ProgressionManager* progression) {
     std::vector<Enemy*> order;
     for (Enemy* candidate : enemies) if (candidate != nullptr && candidate->isAlive()) order.push_back(candidate);
     std::sort(order.begin(), order.end(), [](const Enemy* left, const Enemy* right) {
@@ -466,7 +476,7 @@ void CombatManager::enemyTurn(Player& player, Enemy& enemy, const std::vector<En
     for (Enemy* candidate : order) {
         if (!player.isAlive()) break;
         enemyGauge_ = 1000;
-        enemyTurn(player, *candidate);
+        enemyTurn(player, *candidate, progression);
         playerTurn_ = false;
     }
     groupEnemyTurn_ = false;
@@ -494,6 +504,10 @@ bool CombatManager::interrogate(Player& player, Enemy& enemy,
         return true;
     }
 
+    if (!enemy.ClaimInvestigationReward()) {
+        AddEvent(CombatEvent::Kind::Info, enemy.getName() + " has no new lore to reveal.");
+        return true;
+    }
     AddEvent(CombatEvent::Kind::Info, enemy.getName() + " reveals a fragment of cathedral lore.");
     if (progression != nullptr) {
         progression->GrantXP(10);

@@ -152,7 +152,7 @@ bool EncounterManager::Explore(Area& area, Player& player,
                 const int itemChoice = ui.Prompt("Choose a consumable, or 0 to cancel.", 0,
                                                  static_cast<int>(consumables.size()));
                 if (itemChoice == 0) continue;
-                if (!combat.UseConsumable(consumables[static_cast<std::size_t>(itemChoice - 1)], player, *enemy))
+                if (!combat.UseConsumable(consumables[static_cast<std::size_t>(itemChoice - 1)], player, *enemy, &progression))
                     ui.ShowMessage("That consumable cannot be used right now.");
                 continue;
             }
@@ -190,13 +190,15 @@ bool EncounterManager::Explore(Area& area, Player& player,
             } else {
                 while (!combat.IsPlayerTurn() && player.isAlive() && enemy->isAlive())
                 {
-                    combat.enemyTurn(player, *enemy);
+                    combat.enemyTurn(player, *enemy, &progression);
                     ui.RenderCombat(player, progression, *enemy, combat);
                     if (!player.isAlive()) break;
                 }
             }
             for (const auto& message : progression.ConsumeLevelUpMessages()) ui.ShowMessage(message);
-            ui.ChoosePendingShimmerSkill(progression);
+            while (progression.HasPendingShimmerChoice()) {
+                if (!ui.ChoosePendingShimmerSkill(progression)) break;
+            }
             continue;
         }
 

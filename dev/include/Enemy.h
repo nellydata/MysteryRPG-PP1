@@ -2,6 +2,7 @@
 
 #include <string>
 #include <vector>
+#include <cstdint>
 #include "GameplayTypes.h"
 
 class Enemy {
@@ -16,7 +17,9 @@ public:
     int getHP() const;
     int getMaxHP() const;
     int getAtk() const;
-    int getXPReward() const;
+    std::int64_t getXPReward() const;
+    bool ClaimXPReward();
+    bool ClaimInvestigationReward();
     int getDefense() const;
     int getSpeed() const;
     int getLevel() const;
@@ -46,7 +49,7 @@ protected:
     int hp_;
     int maxHp_;
     int atk_;
-    int xpReward_;
+    std::int64_t xpReward_;
     int defense_;
     int speed_;
     int level_;
@@ -61,6 +64,8 @@ protected:
     std::vector<EnemySkillDefinition> skills_;
     std::vector<int> skillCooldowns_;
     int phase_;
+    bool xpRewardClaimed_;
+    bool investigationRewardClaimed_;
 
 private:
     static std::vector<std::pair<StatusType, int>>& EmptyDamageEvents();

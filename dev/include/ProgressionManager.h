@@ -3,20 +3,25 @@
 #include <set>
 #include <string>
 #include <vector>
+#include <cstdint>
+#include <deque>
 
 class Player;
+
+std::int64_t XPRequirementForLevel(int level);
+std::int64_t CalculateEnemyXP(int enemyLevel, int enemyTier);
 
 class ProgressionManager {
 public:
     ProgressionManager();
 
-    void GrantXP(int amount);
+    void GrantXP(std::int64_t amount);
     void GrantClueXP();
     bool CheckLevelUp(Player& player);
     int GetLevel() const;
     void SetMaxLevel(Player& player);
-    int GetXP() const;
-    int GetXPToNextLevel() const;
+    std::int64_t GetXP() const;
+    std::int64_t GetXPToNextLevel() const;
     bool UnlockCrux(const std::string& itemName);
     bool HasCrux(const std::string& itemName) const;
     bool UnlockShimmerSkill(const std::string& skillName);
@@ -31,17 +36,22 @@ public:
     bool HasPendingShimmerChoice() const;
     const std::vector<std::string>& GetPendingShimmerChoices() const;
     bool SelectPendingShimmerSkill(const std::string& skillName);
+    bool ResolvePendingShimmerChoice();
     std::vector<std::string> ConsumeLevelUpMessages();
 
 private:
     int level_;
-    int xp_;
-    int xpToNextLevel_;
+    std::int64_t xp_;
+    std::int64_t xpToNextLevel_;
     std::set<std::string> cruxItems_;
     std::set<std::string> shimmerSkills_;
     std::set<std::string> equippedShimmerSkills_;
     int shimmerPointsUsed_;
-    std::vector<std::string> pendingShimmerChoices_;
+    struct LevelUpReward {
+        int levelReached = 1;
+        std::vector<std::string> shimmerChoices;
+    };
+    std::deque<LevelUpReward> pendingLevelUpRewards_;
     std::vector<std::string> levelUpMessages_;
 
     void QueueLevelUpChoice();

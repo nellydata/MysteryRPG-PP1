@@ -73,6 +73,7 @@ private:
 	void ResetCombatSelection();
 	std::string CompactConsumableSummary(const Item& item) const;
 	void AddLog(const std::string& message);
+	void AddLootLog(const Item& item);
 	void SyncCombatEvents();
  void SyncProgressionRewards();
 	void InitializePlayer();
@@ -110,6 +111,7 @@ private:
 	ProgressionManager progression_;
 	Enemy* activeEnemy_;
 	std::vector<std::string> log_;
+	std::vector<Rarity> logRarities_;
 	std::string statusMessage_;
 	std::string inventorySearchQuery_;
 	InventorySort inventorySort_ = InventorySort::RecentlyObtained;

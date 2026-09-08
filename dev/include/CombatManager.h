@@ -40,9 +40,11 @@ public:
     bool resolve(CombatAction action, Player& player, Enemy& enemy,
                  ShimmerSkill* skill = nullptr,
                  ProgressionManager* progression = nullptr);
-    bool UseConsumable(const std::string& itemName, Player& player, Enemy& enemy);
-    void enemyTurn(Player& player, Enemy& enemy);
-    void enemyTurn(Player& player, Enemy& enemy, const std::vector<Enemy*>& enemies);
+    bool UseConsumable(const std::string& itemName, Player& player, Enemy& enemy,
+                       ProgressionManager* progression = nullptr);
+    void enemyTurn(Player& player, Enemy& enemy, ProgressionManager* progression = nullptr);
+    void enemyTurn(Player& player, Enemy& enemy, const std::vector<Enemy*>& enemies,
+                   ProgressionManager* progression = nullptr);
     const ShimmerSkill* GetDefaultSkill() const;
     bool IsPlayerTurn() const;
     bool HasUsedConsumableThisTurn() const;
@@ -74,4 +76,5 @@ private:
     void AddEvent(CombatEvent::Kind kind, const std::string& message, int value = 0);
     void StartPlayerTurn(Player& player);
     void AdvanceTurn(Player& player, Enemy& enemy);
+    void ResolveDefeatReward(Player& player, Enemy& enemy, ProgressionManager* progression);
 };

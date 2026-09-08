@@ -187,12 +187,13 @@ void ConsoleUI::ShowInventory(const Player& player) const {
 	PrintTitle("INVENTORY  //  EQUIPMENT AND EVIDENCE");
 	std::cout << "Items:\n";
 	if (player.GetInventory().GetItems().empty()) std::cout << "  -- empty --\n";
-	for (const auto& item : player.GetInventory().GetItems()) {
-		if (colorEnabled_) std::cout << (item->getRarity() == Rarity::Artifact ? Shimmer() : "");
-		std::cout << "  " << item->getName() << "  [" << RarityName(item->getRarity()) << "]";
-		if (item->isEquippable()) std::cout << "  id=" << item->getInstanceId();
-		if (item->isEquippable()) std::cout << "  slot=" << SlotName(item->getSlot());
-		if (!item->getUniqueEffect().empty()) std::cout << "  * " << item->getUniqueEffect();
+	for (const auto& entry : player.GetInventory().GetItems()) {
+		if (!entry.item) continue;
+		const Item& item = *entry.item;
+		if (colorEnabled_) std::cout << (item.getRarity() == Rarity::Artifact ? Shimmer() : "");
+		std::cout << "  " << item.getName() << "  [" << RarityName(item.getRarity()) << "]";
+		if (item.isEquippable()) std::cout << "  slot=" << SlotName(item.getSlot());
+		if (!item.getUniqueEffect().empty()) std::cout << "  * " << item.getUniqueEffect();
 		std::cout << "\n";
 		if (colorEnabled_) std::cout << Reset();
 	}
@@ -251,6 +252,10 @@ void ConsoleUI::ShowMessage(const std::string& message) const {
 bool ConsoleUI::ChoosePendingShimmerSkill(ProgressionManager& progression) const {
 	if (!progression.HasPendingShimmerChoice()) return true;
 	const auto& choices = progression.GetPendingShimmerChoices();
+	if (choices.empty()) {
+		ShowMessage("All available Shimmer skills unlocked. This level-up reward is complete.");
+		return progression.ResolvePendingShimmerChoice();
+	}
 	std::cout << "\nLevel-up Shimmer skills:\n";
 	for (std::size_t index = 0; index < choices.size(); ++index)
 		std::cout << "  " << index + 1 << ". " << choices[index] << "\n";

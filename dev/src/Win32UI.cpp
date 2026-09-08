@@ -8,6 +8,7 @@
 #include <cstdio>
 #include <array>
 #include <cctype>
+#include <cstdint>
 #include <tuple>
 #include <memory>
 
@@ -384,10 +385,7 @@ void Win32UI::RefreshControls() {
 			const int entry = firstEntry + button;
 			if (entry < static_cast<int>(inventoryEntryItems_.size())) {
 				const Item* item = inventoryEntryItems_[entry];
-			const std::string label = item == nullptr ? "Clue" : item->getName() +
-					(player_.GetInventory().GetQuantity(item->getName()) > 1
-					? " x" + std::to_string(player_.GetInventory().GetQuantity(item->getName())) : "") +
-				(item->isEquippable() ? " #" + std::to_string(item->getInstanceId()) : "");
+			const std::string label = item == nullptr ? "Clue" : item->getName();
 				SetWindowTextW(controls_[8 + button], FormatDisplayText(label).c_str());
 				ShowWindow(controls_[8 + button], SW_SHOW);
 			}
@@ -726,7 +724,7 @@ void Win32UI::ShowCombatItems() {
 	DestroyMenu(menu);
 
 	if (command < 700 || command >= 700 + static_cast<UINT>(consumables.size())) return;
-	if (combat_.UseConsumable(consumables[command - 700], player_, *activeEnemy_)) {
+ if (combat_.UseConsumable(consumables[command - 700], player_, *activeEnemy_, &progression_)) {
 		statusMessage_ = "Consumable used without ending the turn.";
 		AddLog("Combat: consumable used.");
 	} else {
@@ -815,7 +813,7 @@ void Win32UI::HandleCommand(int controlId) {
 		if (view_ == View::Combat && combatItemSelection_ && combat_.IsPlayerTurn()) {
 			const int index = controlId - InventoryButtonBase;
 			if (index < static_cast<int>(combatItemNames_.size())) {
-				if (combat_.UseConsumable(combatItemNames_[index], player_, *activeEnemy_))
+				if (combat_.UseConsumable(combatItemNames_[index], player_, *activeEnemy_, &progression_))
 					statusMessage_ = "Consumable used without ending the turn.";
 				else statusMessage_ = "That consumable is unavailable.";
 				combatItemSelection_ = false;
@@ -908,15 +906,26 @@ void Win32UI::HandleCommand(int controlId) {
 	} else if (controlId == ButtonMap) {
 		if (view_ != View::Combat && player_.isAlive() && !combatDefeatRecovery_) ChangeView(View::Map);
 	} else if (controlId == ButtonInventory) {
-		if (view_ != View::Combat && player_.isAlive() && !combatDefeatRecovery_) ChangeView(View::Inventory);
+		if (view_ != View::Combat && player_.isAlive() && !combatDefeatRecovery_) {
+			inventorySort_ = InventorySort::RecentlyObtained;
+			inventoryFocusStat_ = ItemStat::ATK;
+			inventoryFilter_ = -1;
+			equipFilter_ = -1;
+			inventorySearchQuery_.clear();
+			inventoryPage_ = 0;
+			selectedInventoryIndex_ = -1;
+			SetWindowTextW(controls_[25], L"");
+			ChangeView(View::Inventory);
+		}
 	} else if (controlId == ButtonSort) {
 		if (view_ == View::Skills) ShowSkillMenu();
 		else ShowInventoryMenu();
 	} else if (controlId == ButtonDiscard) {
 		if (selectedInventoryIndex_ >= 0 && selectedInventoryIndex_ < static_cast<int>(inventoryEntryItems_.size()) &&
 			inventoryEntryItems_[selectedInventoryIndex_] != nullptr) {
-			const std::string name = inventoryEntryItems_[selectedInventoryIndex_]->getName();
-			if (player_.GetInventory().DiscardItem(name)) AddLog("Discarded " + name + ".");
+			Item* selectedItem = inventoryEntryItems_[selectedInventoryIndex_];
+			const std::string name = selectedItem->getName();
+			if (player_.GetInventory().DiscardItem(selectedItem->getInstanceId())) AddLog("Discarded " + name + ".");
 			selectedInventoryIndex_ = -1;
 		}
 	} else if (controlId == ButtonEquip) {
@@ -1065,6 +1074,11 @@ void Win32UI::SyncCombatEvents() {
 void Win32UI::SyncProgressionRewards() {
 	for (const auto& message : progression_.ConsumeLevelUpMessages()) AddLog(message);
 	if (!progression_.HasPendingShimmerChoice()) return;
+	if (progression_.GetPendingShimmerChoices().empty()) {
+		AddLog("All available Shimmer skills unlocked. Level-up reward complete.");
+		progression_.ResolvePendingShimmerChoice();
+		return;
+	}
 	AddLog("Choose one pending Shimmer skill from the Skills view:");
 	for (const auto& choice : progression_.GetPendingShimmerChoices()) AddLog("  " + choice);
 }
@@ -1278,12 +1292,11 @@ void Win32UI::PerformCombatAction(CombatAction action) {
 		return;
 	}
 	statusMessage_ = action == CombatAction::Shimmer ? "Shimmer effect resolved." : player_.getName() + "'s action resolved.";
-	SyncProgressionRewards();
 	if (!activeEnemy_->isAlive()) {
 		Area& area = mapManager_.GetRooms()[selectedRoom_];
 		const std::string defeatedName = activeEnemy_->getName();
 		const int defeatedLevel = activeEnemy_->getLevel();
-		const int xpReward = activeEnemy_->getXPReward();
+		const std::int64_t xpReward = activeEnemy_->getXPReward();
 		const EnemyTier defeatedTier = activeEnemy_->getTier();
 		const bool wasBoss = defeatedTier == EnemyTier::Boss;
 		const bool firstBossClear = wasBoss && !area.HasBossBeenDefeated();
@@ -1317,8 +1330,8 @@ void Win32UI::PerformCombatAction(CombatAction action) {
 		loot.bossFirstClear = firstBossClear;
 		for (const auto& item : GenerateLoot(loot, RoomSeed(defeatedName) + static_cast<unsigned>(defeatedLevel * 17 + area.GetSearchCount()))) {
 			player_.AddItem(std::make_unique<Item>(item));
-			AddLog("Drop: " + item.name + ".");
-			statusMessage_ += " Item dropped: " + item.name + ".";
+			Item droppedItem(item);
+			AddLootLog(droppedItem);
 		}
 		if (allEnemiesDefeated) {
 			if (roomDefinition != nullptr && roomDefinition->nextRoomId.empty() && area.HasBossBeenDefeated()) {
@@ -1338,6 +1351,7 @@ void Win32UI::PerformCombatAction(CombatAction action) {
 					if (!combat_.IsPlayerTurn()) ScheduleEnemyTurn();
 		}
 		SyncCombatEvents();
+		SyncProgressionRewards();
 		if (!refreshPosted_) {
 			refreshPosted_ = true;
 			PostMessageW(window_, RefreshControlsMessage, 0, 0);
@@ -1353,7 +1367,16 @@ void Win32UI::PerformCombatAction(CombatAction action) {
 
 void Win32UI::AddLog(const std::string& message) {
 	log_.push_back(message);
+	logRarities_.push_back(Rarity::Common);
 	if (log_.size() > 12) log_.erase(log_.begin());
+	if (logRarities_.size() > 12) logRarities_.erase(logRarities_.begin());
+}
+
+void Win32UI::AddLootLog(const Item& item) {
+	log_.push_back("Item dropped: " + item.getName() + ".");
+	logRarities_.push_back(item.getRarity());
+	if (log_.size() > 12) log_.erase(log_.begin());
+	if (logRarities_.size() > 12) logRarities_.erase(logRarities_.begin());
 }
 
 void Win32UI::InitializePlayer() {
@@ -1484,7 +1507,7 @@ LRESULT Win32UI::HandleMessage(UINT message, WPARAM wParam, LPARAM lParam) {
 				std::vector<Enemy*> enemies;
 				Area& area = mapManager_.GetRooms()[selectedRoom_];
 				for (const auto& enemy : area.GetEnemies()) if (enemy != nullptr && enemy->isAlive()) enemies.push_back(enemy.get());
-				combat_.enemyTurn(player_, *activeEnemy_, enemies);
+				combat_.enemyTurn(player_, *activeEnemy_, enemies, &progression_);
 				SyncCombatEvents();
 				RefreshControls();
 				UpdateWindow(window_);
@@ -1728,8 +1751,7 @@ void Win32UI::Paint(HDC deviceContext) {
 		DrawTextLine(deviceContext, 425, contentY + 42, L"The cathedral holds its breath. Investigate an object below.", Muted);
 		contentY += 100;
 		if (!statusMessage_.empty()) {
-			DrawTextLine(deviceContext, 425, contentY, ToWide(statusMessage_), Shimmer, 16);
-			contentY += 32;
+			contentY += DrawTextLine(deviceContext, 425, contentY, FormatDisplayText(statusMessage_), Shimmer, 16, false, client.right - 449) + 14;
 		}
 		for (const auto& object : room.GetVisibleInteractables()) {
 			DrawTextLine(deviceContext, 440, contentY, L"[ ]  " + ToWide(object), Text, 18);
@@ -1796,10 +1818,11 @@ void Win32UI::Paint(HDC deviceContext) {
 	if (view_ == View::Floor) {
 		DrawPanel(deviceContext, {395, eventTop, client.right - 20, client.bottom - 20}, L"EVENT LOG");
 		int logY = eventTop + 38;
-		const int start = (std::max)(0, static_cast<int>(log_.size()) - 3);
+		const int start = (std::max)(0, static_cast<int>(log_.size()) - 10);
 		for (int i = start; i < static_cast<int>(log_.size()); ++i) {
-			DrawTextLine(deviceContext, 420, logY, ToWide(log_[i]), Muted, 14);
-			logY += 22;
+			const COLORREF color = i < static_cast<int>(logRarities_.size()) && log_[i].find("Item dropped: ") == 0
+				? RarityColor(logRarities_[i]) : Muted;
+			logY += DrawTextLine(deviceContext, 420, logY, FormatDisplayText(log_[i]), color, 14, false, client.right - 445) + 6;
 		}
 	}
 }

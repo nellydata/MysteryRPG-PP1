@@ -1,5 +1,6 @@
 #include "Enemy.h"
 #include "CombatMath.h"
+#include "ProgressionManager.h"
 #include <algorithm>
 #include <cmath>
 #include <string>
@@ -42,12 +43,12 @@ Enemy::Enemy(const EnemyDefinition& definition, int level)
 	  hp_(ScaleStat(definition.hpBase, definition.tier == EnemyTier::Boss ? 1.45 : definition.tier == EnemyTier::Elite ? 1.35 : 1.25, level, 250000)),
 	  maxHp_(hp_),
 	  atk_(ScaleStat(definition.atkBase, definition.tier == EnemyTier::Boss ? 1.22 : definition.tier == EnemyTier::Elite ? 1.18 : 1.14, level, 5000)),
-	  xpReward_(definition.xpReward * (std::max)(1, level)),
+	  xpReward_(static_cast<int>((std::min)(std::int64_t{2147483647}, CalculateEnemyXP(level, static_cast<int>(definition.tier))))),
 	  defense_(ScaleStat(definition.defBase, definition.tier == EnemyTier::Boss ? 1.22 : definition.tier == EnemyTier::Elite ? 1.18 : 1.14, level, 5000)),
 	  speed_(NormalizeSpeed(definition.speed, definition.faction)), level_(level), resistance_(0), evasion_(0),
 	  critRate_(5), critDamage_(150), accuracy_(100),
 	  faction_(definition.faction), tier_(definition.tier), skills_(definition.skills),
-		phase_(1) {
+		phase_(1), xpRewardClaimed_(false), investigationRewardClaimed_(false) {
 	skillCooldowns_.assign(skills_.size(), 0);
 }
 
@@ -92,7 +93,17 @@ int Enemy::SumStatusBonus(StatusType type) const {
 	return bonus;
 }
 int Enemy::getAtk() const { return atk_ * (100 + SumStatusBonus(StatusType::AttackUp)) / 100; }
-int Enemy::getXPReward() const { return xpReward_; }
+std::int64_t Enemy::getXPReward() const { return xpReward_; }
+bool Enemy::ClaimXPReward() {
+	if (xpRewardClaimed_) return false;
+	xpRewardClaimed_ = true;
+	return true;
+}
+bool Enemy::ClaimInvestigationReward() {
+	if (investigationRewardClaimed_) return false;
+	investigationRewardClaimed_ = true;
+	return true;
+}
 int Enemy::getDefense() const { return defense_; }
 int Enemy::getSpeed() const {
 	const int slow = SumStatusBonus(StatusType::Slow);

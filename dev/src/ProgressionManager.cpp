@@ -4,16 +4,35 @@
 #include "ShimmerSkill.h"
 #include <algorithm>
 #include <random>
+#include <cmath>
+
+std::int64_t XPRequirementForLevel(int level) {
+    if (level <= 1) return 100;
+    std::int64_t requirement = 100;
+    for (int current = 1; current < level; ++current)
+        requirement = static_cast<std::int64_t>(std::llround(static_cast<double>(requirement) * 1.10));
+    return requirement;
+}
+
+std::int64_t CalculateEnemyXP(int enemyLevel, int enemyTier) {
+    const int level = (std::max)(1, (std::min)(100, enemyLevel));
+    const double progress = static_cast<double>(level - 1) / 99.0;
+    const double baseShare = 0.08 - 0.03 * progress;
+    static const double tierMultipliers[] = {1.0, 1.4, 1.9, 2.7, 4.0};
+    const int tier = (std::max)(0, (std::min)(4, enemyTier));
+    return (std::max)(std::int64_t{1}, static_cast<std::int64_t>(std::llround(
+        static_cast<double>(XPRequirementForLevel(level)) * baseShare * tierMultipliers[tier])));
+}
 
 ProgressionManager::ProgressionManager()
     : level_(1), xp_(0), xpToNextLevel_(100), shimmerPointsUsed_(0) {}
 
-void ProgressionManager::GrantXP(int amount) {
-    if (amount > 0) xp_ += amount;
+void ProgressionManager::GrantXP(std::int64_t amount) {
+    if (amount > 0 && level_ < 100) xp_ += amount;
 }
 
 void ProgressionManager::GrantClueXP() {
-    GrantXP((std::max)(1, xpToNextLevel_ / 4));
+    GrantXP((std::max)(std::int64_t{1}, xpToNextLevel_ / 8));
 }
 
 bool ProgressionManager::UnequipShimmerSkill(const std::string& skillName, int cost) {
@@ -30,7 +49,7 @@ bool ProgressionManager::CheckLevelUp(Player& player) {
         ++level_;
         player.SetLevelStats(level_);
         player.RestoreHealth(player.getMaxHP());
-        xpToNextLevel_ = static_cast<int>(xpToNextLevel_ * 1.10f + 0.5f);
+        xpToNextLevel_ = XPRequirementForLevel(level_);
         QueueLevelUpChoice();
         AddLevelUpEquipmentRewards(player);
         levelUpMessages_.push_back("Level up! " + player.getName() + " is now level " + std::to_string(level_) + ". Five equipment rewards were added.");
@@ -41,20 +60,28 @@ bool ProgressionManager::CheckLevelUp(Player& player) {
 }
 
 bool ProgressionManager::HasPendingShimmerChoice() const {
-    return !pendingShimmerChoices_.empty();
+    return !pendingLevelUpRewards_.empty();
 }
 
 const std::vector<std::string>& ProgressionManager::GetPendingShimmerChoices() const {
-    return pendingShimmerChoices_;
+    static const std::vector<std::string> empty;
+    return pendingLevelUpRewards_.empty() ? empty : pendingLevelUpRewards_.front().shimmerChoices;
 }
 
 bool ProgressionManager::SelectPendingShimmerSkill(const std::string& skillName) {
     if (!HasPendingShimmerChoice() ||
-        std::find(pendingShimmerChoices_.begin(), pendingShimmerChoices_.end(), skillName) == pendingShimmerChoices_.end() ||
+        std::find(GetPendingShimmerChoices().begin(), GetPendingShimmerChoices().end(), skillName) == GetPendingShimmerChoices().end() ||
         HasShimmerSkill(skillName)) return false;
     UnlockShimmerSkill(skillName);
-    pendingShimmerChoices_.clear();
+    pendingLevelUpRewards_.pop_front();
     levelUpMessages_.push_back("Shimmer skill unlocked: " + skillName + ".");
+    return true;
+}
+
+bool ProgressionManager::ResolvePendingShimmerChoice() {
+    if (!HasPendingShimmerChoice() || !GetPendingShimmerChoices().empty()) return false;
+    pendingLevelUpRewards_.pop_front();
+    levelUpMessages_.push_back("All available Shimmer skills are unlocked.");
     return true;
 }
 
@@ -65,7 +92,6 @@ std::vector<std::string> ProgressionManager::ConsumeLevelUpMessages() {
 }
 
 void ProgressionManager::QueueLevelUpChoice() {
-    pendingShimmerChoices_.clear();
     static const std::vector<std::string> names = {
         "Ray of Mercy", "Prism Step", "Gleam Needle", "Phragmós Phōtós", "Therapeía Anakláseōs", "Anástasis Phōtós", "Phthorá Phōtós",
         "Phōteinḕ Kátharsis", "Phōteinòs Thṓrax", "Refractio Ultima", "Lumen Spiculum", "Lux Vortex", "Siphon Lux", "Lux Aegis",
@@ -78,7 +104,10 @@ void ProgressionManager::QueueLevelUpChoice() {
     static std::mt19937 generator(0x4D494341u);
     std::shuffle(candidates.begin(), candidates.end(), generator);
     const std::size_t count = (std::min)(static_cast<std::size_t>(3), candidates.size());
-    pendingShimmerChoices_.assign(candidates.begin(), candidates.begin() + static_cast<std::ptrdiff_t>(count));
+    LevelUpReward reward;
+    reward.levelReached = level_;
+    reward.shimmerChoices.assign(candidates.begin(), candidates.begin() + static_cast<std::ptrdiff_t>(count));
+    pendingLevelUpRewards_.push_back(std::move(reward));
 }
 
 void ProgressionManager::AddLevelUpEquipmentRewards(Player& player) {
@@ -133,8 +162,8 @@ std::string ProgressionManager::RollShimmerSkill() {
 }
 
 int ProgressionManager::GetLevel() const { return level_; }
-int ProgressionManager::GetXP() const { return xp_; }
-int ProgressionManager::GetXPToNextLevel() const { return xpToNextLevel_; }
+std::int64_t ProgressionManager::GetXP() const { return xp_; }
+std::int64_t ProgressionManager::GetXPToNextLevel() const { return xpToNextLevel_; }
 void ProgressionManager::SetMaxLevel(Player& player) {
     level_ = 100;
     xp_ = 0;

@@ -1,6 +1,8 @@
 #include "ContentCatalog.h"
 #include "Item.h"
+#include "Player.h"
 #include <cassert>
+#include <memory>
 #include <set>
 
 int main() {
@@ -27,6 +29,17 @@ int main() {
 	}
 	assert(equipmentCount > 0);
 	assert(instanceIds.size() == static_cast<std::size_t>(equipmentCount * 2));
+
+	ItemDefinition boots;
+	boots.name = "canonical_boots";
+	boots.category = ItemCategory::Equippable;
+	boots.slot = EquipSlot::Boots;
+	boots.mainStat = "spd";
+	boots.mainStatValue = 50;
+	Item bootsItem(boots);
+	Player player("Equipment test", 100, 10);
+	player.Equip(bootsItem);
+	assert(player.getSpeed() == 150);
 
 	LootContext context;
 	context.playerLevel = 25;

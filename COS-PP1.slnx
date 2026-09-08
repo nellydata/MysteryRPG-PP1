@@ -4,4 +4,6 @@
     <Platform Name="x86" />
   </Configurations>
   <Project Path="COS-PP1.vcxproj" Id="7d8df32c-72dd-4528-89e7-7ca2f0727a7f" />
+  <Project Path="InvestigationHarness.vcxproj" Id="d8c4f4d0-1f6b-4c2c-ac43-5a7e6d6d6b01" />
+  <Project Path="EquipmentV2Tests.vcxproj" Id="b5f6c1c0-3e3b-4b8e-9e6a-8a7f1c9e1d42" />
 </Solution>

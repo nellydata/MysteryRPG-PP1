@@ -105,6 +105,14 @@ int Player::AddBarrier(int amount, int duration) {
 int Player::AbsorbDamage(int amount) {
     if (amount <= 0) return 0;
     const int absorbed = (std::min)(barrier_, amount);
+    int remainingAbsorbed = absorbed;
+    for (auto& status : statuses_) {
+        if (remainingAbsorbed <= 0) break;
+        if (status.type != StatusType::Barrier) continue;
+        const int fromStatus = (std::min)(status.potency, remainingAbsorbed);
+        status.potency -= fromStatus;
+        remainingAbsorbed -= fromStatus;
+    }
     barrier_ -= absorbed;
     return amount - absorbed;
 }
@@ -314,7 +322,8 @@ int Player::CleanseNegativeStatuses() {
     statuses_.erase(std::remove_if(statuses_.begin(), statuses_.end(), [](const StatusEffect& status) {
         return status.type == StatusType::Stun || status.type == StatusType::Bleed || status.type == StatusType::Burn ||
             status.type == StatusType::Poison || status.type == StatusType::Slow || status.type == StatusType::VerdigrisMark ||
-            status.type == StatusType::AttackDown || status.type == StatusType::DefenseDown || status.type == StatusType::AccuracyDown;
+            status.type == StatusType::AttackDown || status.type == StatusType::DefenseDown || status.type == StatusType::AccuracyDown ||
+            status.type == StatusType::HealResistance || status.type == StatusType::DotReduction;
     }), statuses_.end());
     return static_cast<int>(oldSize - statuses_.size());
 }
@@ -377,8 +386,12 @@ void Player::ProcessStatuses(std::vector<std::pair<StatusType, int>>& damageEven
         const int dotReduction = (std::min)(75, SumStatusBonus(StatusType::DotReduction));
         const int dotUp = SumStatusBonus(StatusType::DotUp);
         int damage = 0;
-        if (status.type == StatusType::Bleed || status.type == StatusType::Burn) {
+        if (status.type == StatusType::Bleed) {
             damage = status.sourceAttack * 30 / 100;
+            damage = damage * (100 + status.dotPotency + dotUp) / 100;
+            damage = damage * (100 - dotReduction) / 100;
+        } else if (status.type == StatusType::Burn) {
+            damage = status.sourceAttack * 60 / 100;
             damage = damage * (100 + status.dotPotency + dotUp) / 100;
             damage = damage * (100 - dotReduction) / 100;
         } else if (status.type == StatusType::Poison) {
@@ -387,7 +400,6 @@ void Player::ProcessStatuses(std::vector<std::pair<StatusType, int>>& damageEven
             damage = damage * (100 - dotReduction) / 100;
         }
         if (status.type == StatusType::HealOverTime) healing += status.potency;
-        damage = (std::max)(1, damage);
         if (damage > 0) {
             ApplyDamageOverTime(damage);
             damageEvents.emplace_back(status.type, damage);
@@ -398,7 +410,7 @@ void Player::ProcessStatuses(std::vector<std::pair<StatusType, int>>& damageEven
     statuses_.erase(std::remove_if(statuses_.begin(), statuses_.end(), [](const StatusEffect& status) {
         return status.turns <= 0;
     }), statuses_.end());
-    if (expiredBarrier > 0) ReduceBarrier(expiredBarrier);
+    if (expiredBarrier > 0) barrier_ = (std::max)(0, barrier_ - expiredBarrier);
     if (healing > 0) heal(healing);
 }
 

@@ -351,13 +351,14 @@ void CombatManager::enemyTurn(Player& player, Enemy& enemy, ProgressionManager* 
     }
 
     AddEvent(CombatEvent::Kind::Turn, enemy.getName() + "'s turn.");
+    const bool stunned = enemy.HasStatus(StatusType::Stun);
     std::vector<std::pair<StatusType, int>> enemyDamageEvents;
     int enemyHealing = 0;
     enemy.ProcessStatuses(enemyDamageEvents, enemyHealing);
     for (const auto& tick : enemyDamageEvents) AddEvent(CombatEvent::Kind::DotTick, StatusDisplayName(tick.first) + std::string(" deals ") + std::to_string(tick.second) + " damage to " + enemy.getName() + ".", tick.second);
     if (enemyHealing > 0) AddEvent(CombatEvent::Kind::Heal, enemy.getName() + " heals " + std::to_string(enemyHealing) + " HP from HoT.", enemyHealing);
     if (!enemy.isAlive()) return;
-    if (enemy.HasStatus(StatusType::Stun)) {
+    if (stunned) {
         AddEvent(CombatEvent::Kind::Info, enemy.getName() + " loses its turn to Stun.");
         enemyGauge_ -= 1000;
         return;
@@ -417,11 +418,11 @@ void CombatManager::enemyTurn(Player& player, Enemy& enemy, ProgressionManager* 
             enemy.heal(amount);
             AddEvent(CombatEvent::Kind::Heal, enemy.getName() + " healed for " + std::to_string(enemy.getHP() - before) + ".", enemy.getHP() - before);
             if (skill.effect == "heal_cleanse") {
-                enemy.ClearStatuses();
+                enemy.CleanseNegativeStatuses();
                 AddEvent(CombatEvent::Kind::Cleanse, enemy.getName() + " cleanses its negative statuses.");
             }
         } else if (skill.effect == "cleanse_self") {
-            enemy.ClearStatuses();
+            enemy.CleanseNegativeStatuses();
             AddEvent(CombatEvent::Kind::Cleanse, enemy.getName() + " cleanses its negative statuses.");
         } else if (skill.effect == "barrier") {
             enemy.ApplyStatus({StatusType::Barrier, skill.duration > 0 ? skill.duration : 2, enemy.getMaxHP() / 5});

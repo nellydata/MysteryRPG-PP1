@@ -170,7 +170,6 @@ void AddEquippables(std::vector<ItemDefinition>& result, EquipSlot slot, const c
 			: MainStatValue(rarity, value);
 		if (slot == EquipSlot::Boots) {
 			item.mainStatValue = mainStatValue;
-			item.stats.spd = mainStatValue;
 		}
 
 		else if (resolvedMainStat == "acc" || resolvedMainStat == "res") item.mainStatPercent = PercentMainStatValue(rarity);
@@ -210,7 +209,7 @@ std::vector<ItemDefinition> GenerateInvestigationLoot(ConsumableProfile profile,
 		if (!consumable.name.empty()) result.push_back(consumable);
 		return result;
 	}
-	if (roll >= 88) {
+	if (roll >= 70) {
 		const int rarityRoll = static_cast<int>((seed / 7) % 100);
 		Rarity rarity = level >= 5 ? Rarity::Uncommon : Rarity::Common;
 		if (level >= 20 && rarityRoll < 20) rarity = Rarity::Epic;
@@ -326,9 +325,9 @@ ItemDefinition RollLootInstance(ItemDefinition item, unsigned seed) {
 	if (item.mainStat == "hp") item.mainStatPercent = mainRoll;
 	else if (item.mainStat == "acc") item.mainStatPercent = mainRoll;
 	else if (item.mainStat == "res") item.mainStatPercent = mainRoll;
-	else if (item.mainStat == "def") { item.mainStatValue = mainRoll; item.stats.def = mainRoll; }
-	else if (item.mainStat == "spd") { item.mainStatValue = mainRoll; item.stats.spd = mainRoll; }
-	else { item.mainStatValue = mainRoll; item.stats.atk = mainRoll; }
+	else if (item.mainStat == "def") item.mainStatValue = mainRoll;
+	else if (item.mainStat == "spd") item.mainStatValue = mainRoll;
+	else item.mainStatValue = mainRoll;
 	item.substats.clear();
 	std::vector<ItemStat> selected;
 	for (std::size_t index = 0; index < item.allowedSubstats.size() && index < static_cast<std::size_t>(SubstatCount(item.rarity)); ++index) {
@@ -446,12 +445,7 @@ std::vector<ItemDefinition> BuildEquippableCatalog() {
 			: artifactMainStat == "def" ? MainDEFValue(Rarity::Artifact)
 			: artifactMainStat == "hp" ? PercentMainStatValue(Rarity::Artifact) : MainStatValue(Rarity::Artifact, 0);
 		if (artifactMainStat == "hp") item.mainStatPercent = artifactMain;
-		else {
-			item.mainStatValue = artifactMain;
-			if (artifactMainStat == "def") item.stats.def = artifactMain;
-			else if (artifactMainStat == "spd") item.stats.spd = artifactMain;
-			else item.stats.atk = artifactMain;
-		}
+		else item.mainStatValue = artifactMain;
 		for (int roll = 0; roll < SubstatCount(Rarity::Artifact); ++roll) {
 			if (!item.allowedSubstats.empty()) {
 				const ItemStat stat = item.allowedSubstats[static_cast<std::size_t>(roll % item.allowedSubstats.size())];

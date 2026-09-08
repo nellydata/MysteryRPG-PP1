@@ -42,6 +42,7 @@ public:
     bool ApplyStatus(const StatusEffect& status, int accuracy = 100);
     void ProcessStatuses(std::vector<std::pair<StatusType, int>>& damageEvents = EmptyDamageEvents(),
                          int& healing = EmptyHealing());
+    int CleanseNegativeStatuses();
     void ClearStatuses();
 
 protected:
@@ -52,6 +53,9 @@ protected:
     std::int64_t xpReward_;
     int defense_;
     int speed_;
+    int phaseBaseAtk_;
+    int phaseBaseDefense_;
+    int phaseBaseSpeed_;
     int level_;
     int resistance_;
     int critRate_;

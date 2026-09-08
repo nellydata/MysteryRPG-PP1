@@ -1,5 +1,6 @@
 #include "Enemy.h"
 #include "Player.h"
+#include "CombatManager.h"
 #include "EnemyCatalog.h"
 #include "ContentCatalog.h"
 #include "ProgressionManager.h"
@@ -56,6 +57,17 @@ int main() {
 
 	{
 		Player player("Test", 100, 10);
+		player.AddBarrier(100);
+		player.AddBarrier(50, 1);
+		player.takeDamage(25);
+		assert(player.GetBarrier() == 125);
+		player.ProcessStatuses();
+		assert(player.GetBarrier() == 100);
+		assert(player.getHP() == player.getMaxHP());
+	}
+
+	{
+		Player player("Test", 100, 10);
 		player.ApplyStatus({StatusType::Bleed, 2, 0, 10});
 		player.ProcessStatuses();
 		assert(player.getHP() < 100);
@@ -77,6 +89,16 @@ int main() {
 	}
 
 	{
+		Player player("Test", 100, 10);
+		player.ApplyStatus({StatusType::AttackUp, 1, 50});
+		std::vector<std::pair<StatusType, int>> damageEvents;
+		int healing = 0;
+		player.ProcessStatuses(damageEvents, healing);
+		assert(player.getHP() == player.getMaxHP());
+		assert(damageEvents.empty());
+	}
+
+	{
 		Enemy enemy(TestEnemyDefinition(), 1);
 		enemy.ApplyStatus({StatusType::Barrier, 2, 20});
 		const int before = enemy.getHP();
@@ -88,10 +110,71 @@ int main() {
 	{
 		Enemy enemy(TestEnemyDefinition(), 1);
 		const int before = enemy.getHP();
-		enemy.ApplyStatus({StatusType::Burn, 1, 0, 100});
-		enemy.ProcessStatuses();
-		assert(enemy.getHP() < before);
+		enemy.ApplyStatus({StatusType::Burn, 1, 0, 10});
+		std::vector<std::pair<StatusType, int>> damageEvents;
+		int healing = 0;
+		enemy.ProcessStatuses(damageEvents, healing);
+		assert(enemy.getHP() == before - 6);
+		assert(damageEvents.size() == 1);
+		assert(damageEvents.front().second == 6);
 		assert(!enemy.HasStatus(StatusType::Burn));
+	}
+
+	{
+		Enemy enemy(TestEnemyDefinition(), 1);
+		enemy.ApplyStatus({StatusType::AttackUp, 1, 50});
+		const int before = enemy.getHP();
+		std::vector<std::pair<StatusType, int>> damageEvents;
+		int healing = 0;
+		enemy.ProcessStatuses(damageEvents, healing);
+		assert(enemy.getHP() == before);
+		assert(damageEvents.empty());
+	}
+
+	{
+		Enemy enemy(TestEnemyDefinition(), 1);
+		enemy.ApplyStatus({StatusType::AttackUp, 2, 25});
+		enemy.ApplyStatus({StatusType::Barrier, 2, 20});
+		enemy.ApplyStatus({StatusType::Burn, 2, 0, 10});
+		enemy.ApplyStatus({StatusType::HealResistance, 2, 25});
+		assert(enemy.CleanseNegativeStatuses() == 2);
+		assert(enemy.HasStatus(StatusType::AttackUp));
+		assert(enemy.HasStatus(StatusType::Barrier));
+		assert(!enemy.HasStatus(StatusType::Burn));
+		assert(!enemy.HasStatus(StatusType::HealResistance));
+	}
+
+	{
+		EnemyDefinition bossDefinition = TestEnemyDefinition();
+		bossDefinition.tier = EnemyTier::Boss;
+		Enemy boss(bossDefinition, 1);
+		const int baseAttack = boss.getAtk();
+		boss.takeDamage(boss.getMaxHP() * 71 / 100);
+		assert(boss.UpdatePhase());
+		assert(boss.GetPhase() == 2);
+		assert(boss.getAtk() == baseAttack * 120 / 100);
+		boss.takeDamage(boss.getHP() - boss.getMaxHP() * 29 / 100);
+		assert(boss.UpdatePhase());
+		assert(boss.GetPhase() == 3);
+		assert(boss.getAtk() == baseAttack * 140 / 100);
+	}
+
+	{
+		Enemy enemy(TestEnemyDefinition(), 1);
+		Player player("Test", 100, 10);
+		CombatManager combat;
+		combat.BeginEncounter(enemy);
+		combat.PrepareTurn(player, enemy);
+		assert(combat.IsPlayerTurn());
+		assert(combat.resolve(CombatAction::Attack, player, enemy));
+		enemy.ApplyStatus({StatusType::Stun, 1, 0});
+		const int playerHealth = player.getHP();
+		combat.enemyTurn(player, enemy);
+		assert(player.getHP() == playerHealth);
+		bool sawStunLoss = false;
+		for (const auto& event : combat.GetEvents())
+			if (event.message.find("loses its turn to Stun") != std::string::npos) sawStunLoss = true;
+		assert(sawStunLoss);
 	}
 
 	{
@@ -131,6 +214,12 @@ int main() {
 		}
 		assert(bandages > rations);
 		assert(CalculateInvestigationXP(10, 3) > CalculateInvestigationXP(1, 1));
+	}
+
+	{
+		const auto loot = GenerateInvestigationLoot(ConsumableProfile::SupplyCache, 1, "Storage Room", 70);
+		assert(loot.size() == 1);
+		assert(loot.front().category == ItemCategory::Equippable);
 	}
 
 	{
@@ -199,6 +288,16 @@ int main() {
 		const int before = enemy.getHP();
 		high->apply(player, enemy);
 		assert(before - enemy.getHP() >= 1);
+	}
+
+	{
+		Enemy enemy(TestEnemyDefinition(), 1);
+		Player player("Test", 100, 100);
+		player.takeDamage(50);
+		auto siphon = ShimmerSkill::Create("Siphon Lux");
+		assert(siphon != nullptr);
+		siphon->apply(player, enemy);
+		assert(player.getHP() == 58);
 	}
 
 	return 0;

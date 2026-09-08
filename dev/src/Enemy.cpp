@@ -45,7 +45,9 @@ Enemy::Enemy(const EnemyDefinition& definition, int level)
 	  atk_(ScaleStat(definition.atkBase, definition.tier == EnemyTier::Boss ? 1.22 : definition.tier == EnemyTier::Elite ? 1.18 : 1.14, level, 5000)),
 	  xpReward_(static_cast<int>((std::min)(std::int64_t{2147483647}, CalculateEnemyXP(level, static_cast<int>(definition.tier))))),
 	  defense_(ScaleStat(definition.defBase, definition.tier == EnemyTier::Boss ? 1.22 : definition.tier == EnemyTier::Elite ? 1.18 : 1.14, level, 5000)),
-	  speed_(NormalizeSpeed(definition.speed, definition.faction)), level_(level), resistance_(0), evasion_(0),
+	  speed_(NormalizeSpeed(definition.speed, definition.faction)),
+	  phaseBaseAtk_(atk_), phaseBaseDefense_(defense_), phaseBaseSpeed_(speed_),
+	  level_(level), resistance_(0), evasion_(0),
 	  critRate_(5), critDamage_(150), accuracy_(100),
 	  faction_(definition.faction), tier_(definition.tier), skills_(definition.skills),
 		phase_(1), xpRewardClaimed_(false), investigationRewardClaimed_(false) {
@@ -76,12 +78,18 @@ void Enemy::takeDamage(int amount) {
 
 void Enemy::ProcessStatuses(std::vector<std::pair<StatusType, int>>& damageEvents, int& healing) {
 	healing = 0;
+	damageEvents.clear();
+	std::vector<std::pair<StatusType, int>> pendingDamage;
 	for (auto& status : statuses_) {
 		int damage = 0;
 		const int dotReduction = (std::min)(75, SumStatusBonus(StatusType::DotReduction));
 		const int dotUp = SumStatusBonus(StatusType::DotUp);
-		if (status.type == StatusType::Bleed || status.type == StatusType::Burn) {
+		if (status.type == StatusType::Bleed) {
 			damage = status.sourceAttack * 30 / 100;
+			damage = damage * (100 + status.dotPotency + dotUp) / 100;
+			damage = damage * (100 - dotReduction) / 100;
+		} else if (status.type == StatusType::Burn) {
+			damage = status.sourceAttack * 60 / 100;
 			damage = damage * (100 + status.dotPotency + dotUp) / 100;
 			damage = damage * (100 - dotReduction) / 100;
 		} else if (status.type == StatusType::Poison) {
@@ -90,16 +98,16 @@ void Enemy::ProcessStatuses(std::vector<std::pair<StatusType, int>>& damageEvent
 			damage = damage * (100 - dotReduction) / 100;
 		}
 		if (status.type == StatusType::HealOverTime) healing += status.potency;
-		damage = (std::max)(1, damage);
-		if (damage > 0) {
-			takeDamage(damage);
-			damageEvents.emplace_back(status.type, damage);
-		}
+		if (damage > 0) pendingDamage.emplace_back(status.type, damage);
 		--status.turns;
 	}
 	statuses_.erase(std::remove_if(statuses_.begin(), statuses_.end(), [](const StatusEffect& status) {
 		return status.turns <= 0;
 	}), statuses_.end());
+	for (const auto& tick : pendingDamage) {
+		takeDamage(tick.second);
+		damageEvents.push_back(tick);
+	}
 	if (healing > 0) heal(healing);
 }
 
@@ -158,15 +166,10 @@ bool Enemy::UpdatePhase() {
 	const int newPhase = healthPercent <= 30 ? 3 : healthPercent <= 70 ? 2 : 1;
 	if (newPhase <= phase_) return false;
 	phase_ = newPhase;
-	if (phase_ == 2) {
-		atk_ = atk_ * 120 / 100;
-		defense_ = defense_ * 120 / 100;
-		speed_ = speed_ * 120 / 100;
-	} else {
-		atk_ = atk_ * 140 / 100;
-		defense_ = defense_ * 125 / 100;
-		speed_ = speed_ * 125 / 100;
-	}
+	const int multiplier = phase_ == 2 ? 120 : 140;
+	atk_ = phaseBaseAtk_ * multiplier / 100;
+	defense_ = phaseBaseDefense_ * multiplier / 100;
+	speed_ = phaseBaseSpeed_ * multiplier / 100;
 	return true;
 }
 
@@ -192,6 +195,17 @@ bool Enemy::ApplyStatus(const StatusEffect& status, int accuracy) {
 	}
 	statuses_.push_back(status);
 	return true;
+}
+
+int Enemy::CleanseNegativeStatuses() {
+	const auto oldSize = statuses_.size();
+	statuses_.erase(std::remove_if(statuses_.begin(), statuses_.end(), [](const StatusEffect& status) {
+		return status.type == StatusType::Stun || status.type == StatusType::Bleed || status.type == StatusType::Burn ||
+			status.type == StatusType::Poison || status.type == StatusType::Slow || status.type == StatusType::VerdigrisMark ||
+			status.type == StatusType::AttackDown || status.type == StatusType::DefenseDown || status.type == StatusType::AccuracyDown ||
+			status.type == StatusType::HealResistance || status.type == StatusType::DotReduction;
+	}), statuses_.end());
+	return static_cast<int>(oldSize - statuses_.size());
 }
 
 void Enemy::ClearStatuses() { statuses_.clear(); }

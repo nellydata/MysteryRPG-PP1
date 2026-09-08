@@ -24,7 +24,7 @@ public:
 			player.AddBarrier(player.getMaxHP() * powerPercent_ / 100, duration_);
 			player.ApplyStatus({StatusType::DamageReduction, duration_, (std::max)(20, powerPercent_ / 100), 0});
 		} else if (effect_ == "damage_ignore") {
-			enemy.takeDamage((std::max)(1, player.getAttack() * powerPercent_ / 100));
+			enemy.takeDamage((std::max)(1, player.getAttack() * powerPercent_ * player.GetShimmerDamageMultiplierPercent() / 10000));
 		} else if (effect_ == "damage_burn") {
 			enemy.takeDamage(CombatMath::Mitigate((std::max)(1, player.getAttack() * powerPercent_ * player.GetShimmerDamageMultiplierPercent() / 10000), enemy.getDefense()));
 				enemy.ApplyStatus({StatusType::Burn, duration_, 0, player.getAttack(), 50, player.getDefense()}, player.getAccuracy());
@@ -37,8 +37,9 @@ public:
 				enemy.ApplyStatus({type, duration_, 0, player.getAttack(), 40, player.getDefense()}, player.getAccuracy());
 		} else if (effect_ == "damage_lifesteal") {
 			const int damage = CombatMath::Mitigate((std::max)(1, player.getAttack() * powerPercent_ * player.GetShimmerDamageMultiplierPercent() / 10000), enemy.getDefense());
+			const int healthBefore = enemy.getHP();
 			enemy.takeDamage(damage);
-			player.heal(damage * 25 / 100);
+			player.heal((healthBefore - enemy.getHP()) * 25 / 100);
 		} else if (effect_ == "damage_defdown") {
 			enemy.takeDamage(CombatMath::Mitigate((std::max)(1, player.getAttack() * powerPercent_ * player.GetShimmerDamageMultiplierPercent() / 10000), enemy.getDefense()));
 			enemy.ApplyStatus({StatusType::DefenseDown, duration_, (std::max)(20, powerPercent_ / 10), player.getAttack()}, player.getAccuracy());

@@ -10,6 +10,8 @@ class Player;
 
 std::int64_t XPRequirementForLevel(int level);
 std::int64_t CalculateEnemyXP(int enemyLevel, int enemyTier);
+std::int64_t CalculateInvestigationXP(int playerLevel, int areaDepth);
+int InvestigationAreaDepth(const std::string& areaName);
 
 class ProgressionManager {
 public:
@@ -17,6 +19,7 @@ public:
 
     void GrantXP(std::int64_t amount);
     void GrantClueXP();
+    void GrantInvestigationXP(const std::string& areaName);
     bool CheckLevelUp(Player& player);
     int GetLevel() const;
     void SetMaxLevel(Player& player);

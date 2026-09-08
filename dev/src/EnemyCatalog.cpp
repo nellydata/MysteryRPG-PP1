@@ -5,11 +5,19 @@
 
 namespace {
 EnemySkillDefinition Skill(const char* name, const char* effect, int multiplier, int cooldown, int duration = 0) {
-	const int scaledMultiplier = multiplier > 0 ? multiplier * 3 / 2 : multiplier;
-	return {name, effect, scaledMultiplier, cooldown, duration};
+	return {name, effect, multiplier, cooldown, duration};
 }
 
-namespace {
+bool IsKnownEffect(const std::string& effect) {
+	static const std::vector<std::string> effects = {
+		"cleanse_self", "heal_self", "bleed", "attack_up", "def_down", "accuracy_down", "burn",
+		"heal_resistance", "dot_reduction", "accuracy_up", "extra_turn", "crit_up", "accuracy_floor",
+		"crit_damage_up", "barrier", "poison", "dot_up", "tri_dot", "accuracy_crit_up", "guaranteed_crit",
+		"barrier_accuracy", "heal_cleanse", "burn_bleed"
+	};
+	return std::find(effects.begin(), effects.end(), effect) != effects.end();
+}
+
 const WeightedEnemyEntry* SelectPoolEntry(const std::vector<WeightedEnemyEntry>& pool, unsigned seed) {
 	int total = 0;
 	for (const auto& entry : pool) total += (std::max)(0, entry.weight);
@@ -28,23 +36,23 @@ std::vector<EnemyDefinition> BuildCatalogue() {
 		{"Devotee Acolyte", EnemyFaction::Devotee, EnemyTier::Basic, 800, 24, 40, 50, 35,
 			{Skill("Purify Lash", "cleanse_self", 100, 2), Skill("Weak Prayer", "heal_self", 0, 3)}, "Sanctity Logic", 75, 20, 0},
 		{"Devotee Penitent", EnemyFaction::Devotee, EnemyTier::Rare, 1200, 90, 60, 75, 55,
-			{Skill("Blood Offering", "bleed", 140, 3, 2), Skill("Pain Conversion", "attack_up", 0, 4, 2)}, "Sanctity Logic", 20, 60, 10},
+			{Skill("Blood Offering", "bleed", 210, 3, 2), Skill("Pain Conversion", "attack_up", 0, 4, 2)}, "Sanctity Logic", 20, 60, 10},
 		{"Devotee Flagellant", EnemyFaction::Devotee, EnemyTier::Rare, 1300, 85, 70, 80, 58,
-			{Skill("Flagellation", "def_down", 120, 3, 2), Skill("Purity Chant", "cleanse_self", 0, 4)}, "Sanctity Logic", 20, 60, 10},
+			{Skill("Flagellation", "def_down", 180, 3, 2), Skill("Purity Chant", "cleanse_self", 0, 4)}, "Sanctity Logic", 20, 60, 10},
 		{"Choir Ascetic", EnemyFaction::Devotee, EnemyTier::Epic, 1800, 120, 100, 110, 85,
-			{Skill("Ascetic Strike", "accuracy_down", 180, 3, 2), Skill("Choir Mend", "heal_resistance", 0, 5, 2)}, "Sanctity Logic", 10, 70, 20},
+			{Skill("Ascetic Strike", "accuracy_down", 270, 3, 2), Skill("Choir Mend", "heal_resistance", 0, 5, 2)}, "Sanctity Logic", 10, 70, 20},
 		{"Benediction Sister", EnemyFaction::Devotee, EnemyTier::Epic, 2000, 110, 120, 115, 90,
 			{Skill("Blessed Flame", "burn", 0, 4, 2), Skill("Benediction", "dot_reduction", 0, 5, 2)}, "Sanctity Logic", 10, 70, 20},
 		{"Automata Unit-01", EnemyFaction::Automata, EnemyTier::Basic, 900, 28, 50, 60, 40,
-			{Skill("Precision Shot", "accuracy_up", 110, 2, 2), Skill("Recalibrate", "extra_turn", 0, 3)}, "Precision Logic", 75, 20, 0},
+			{Skill("Precision Shot", "accuracy_up", 165, 2, 2), Skill("Recalibrate", "extra_turn", 0, 3)}, "Precision Logic", 75, 20, 0},
 		{"Automata Sharpsight", EnemyFaction::Automata, EnemyTier::Rare, 1400, 110, 70, 85, 60,
-			{Skill("Sharpsight Beam", "crit_up", 150, 3, 2), Skill("Target Lock", "accuracy_floor", 0, 4, 2)}, "Precision Logic", 20, 60, 10},
+			{Skill("Sharpsight Beam", "crit_up", 225, 3, 2), Skill("Target Lock", "accuracy_floor", 0, 4, 2)}, "Precision Logic", 20, 60, 10},
 		{"Automata Striker", EnemyFaction::Automata, EnemyTier::Rare, 1500, 120, 80, 90, 65,
-			{Skill("Strikeframe", "extra_turn", 130, 3), Skill("Overclock", "attack_up", 0, 4, 2)}, "Precision Logic", 20, 60, 10},
+			{Skill("Strikeframe", "extra_turn", 195, 3), Skill("Overclock", "attack_up", 0, 4, 2)}, "Precision Logic", 20, 60, 10},
 		{"Automata Vanguard", EnemyFaction::Automata, EnemyTier::Epic, 2200, 150, 120, 110, 95,
-			{Skill("Vanguard Slash", "crit_damage_up", 200, 4, 2), Skill("Reinforce", "barrier", 0, 5)}, "Precision Logic", 10, 70, 20},
+			{Skill("Vanguard Slash", "crit_damage_up", 300, 4, 2), Skill("Reinforce", "barrier", 0, 5)}, "Precision Logic", 10, 70, 20},
 		{"Automata Oracle Unit", EnemyFaction::Automata, EnemyTier::Epic, 2400, 160, 130, 120, 105,
-			{Skill("Oracle Strike", "guaranteed_crit", 260, 5), Skill("Predictive Matrix", "accuracy_floor", 0, 6, 2)}, "Precision Logic", 10, 70, 20},
+			{Skill("Oracle Strike", "guaranteed_crit", 390, 5), Skill("Predictive Matrix", "accuracy_floor", 0, 6, 2)}, "Precision Logic", 10, 70, 20},
 		{"Verdigris Thrall", EnemyFaction::Verdigris, EnemyTier::Basic, 850, 26, 45, 40, 35,
 			{Skill("Toxic Swipe", "poison", 0, 2, 1), Skill("Rotting Chant", "dot_up", 0, 3, 2)}, "Corruption Logic", 75, 20, 0},
 		{"Verdigris Rotbearer", EnemyFaction::Verdigris, EnemyTier::Rare, 1300, 100, 70, 70, 55,
@@ -56,30 +64,28 @@ std::vector<EnemyDefinition> BuildCatalogue() {
 		{"Verdigris Matron's Hand", EnemyFaction::Verdigris, EnemyTier::Epic, 2300, 160, 120, 115, 100,
 			{Skill("Tri-Corrupt", "tri_dot", 0, 5, 2), Skill("Toxic Benediction", "dot_up", 0, 6, 2)}, "Corruption Logic", 10, 70, 20},
 		{"Choir Warden", EnemyFaction::Devotee, EnemyTier::Elite, 3000, 180, 150, 130, 150,
-			{Skill("Warden's Verdict", "def_down", 300, 4, 3), Skill("Choir Shield", "barrier", 0, 5), Skill("Sanctified Pulse", "heal_cleanse", 0, 4)}, "Holy Retaliation", 60, 30, 10},
+			{Skill("Warden's Verdict", "def_down", 450, 4, 3), Skill("Choir Shield", "barrier", 0, 5), Skill("Sanctified Pulse", "heal_cleanse", 0, 4)}, "Holy Retaliation", 60, 30, 10},
 		{"Ascetic Purifier", EnemyFaction::Devotee, EnemyTier::Elite, 3200, 170, 160, 125, 155,
-			{Skill("Purifier's Flame", "burn", 0, 4, 3), Skill("Ascetic Chant", "heal_resistance", 0, 5, 3), Skill("Judgment Beam", "accuracy_down", 280, 4, 2)}, "DOT Cleanse", 60, 30, 10},
+			{Skill("Purifier's Flame", "burn", 0, 4, 3), Skill("Ascetic Chant", "heal_resistance", 0, 5, 3), Skill("Judgment Beam", "accuracy_down", 420, 4, 2)}, "DOT Cleanse", 60, 30, 10},
 		{"Strikeframe-X", EnemyFaction::Automata, EnemyTier::Elite, 3500, 200, 160, 140, 170,
-			{Skill("Strikeframe Overdrive", "extra_turn", 320, 4), Skill("Precision Matrix", "accuracy_crit_up", 0, 5, 3), Skill("Core Burst", "crit_damage_up", 260, 4, 2)}, "Overclock Surge", 60, 30, 10},
+			{Skill("Strikeframe Overdrive", "extra_turn", 480, 4), Skill("Precision Matrix", "accuracy_crit_up", 0, 5, 3), Skill("Core Burst", "crit_damage_up", 390, 4, 2)}, "Overclock Surge", 60, 30, 10},
 		{"Oracle-VII", EnemyFaction::Automata, EnemyTier::Elite, 3600, 210, 170, 145, 180,
-			{Skill("Oracle Beam", "guaranteed_crit", 350, 5), Skill("Predictive Shield", "barrier_accuracy", 0, 5, 3), Skill("Refraction Scan", "accuracy_down", 0, 4, 2)}, "Future Sight", 60, 30, 10},
+			{Skill("Oracle Beam", "guaranteed_crit", 525, 5), Skill("Predictive Shield", "barrier_accuracy", 0, 5, 3), Skill("Refraction Scan", "accuracy_down", 0, 4, 2)}, "Future Sight", 60, 30, 10},
 		{"Rot Herald", EnemyFaction::Verdigris, EnemyTier::Elite, 3400, 190, 150, 135, 165,
 			{Skill("Rot Nova", "poison", 0, 4, 3), Skill("Hemorrhage Lash", "bleed", 0, 4, 3), Skill("Corrupted Blessing", "dot_up", 0, 5, 2)}, "Toxic Aura", 60, 30, 10},
 		{"Pyre Matron", EnemyFaction::Verdigris, EnemyTier::Elite, 3600, 200, 160, 140, 175,
 			{Skill("Pyre Collapse", "burn", 0, 4, 3), Skill("Tri-Corrupt Burst", "tri_dot", 0, 5, 2), Skill("Verdigris Chant", "dot_up", 0, 6, 2)}, "Corruption Spread", 60, 30, 10},
 		{"Matron of the Catacombs", EnemyFaction::Devotee, EnemyTier::Boss, 5000, 200, 180, 140, 300,
-			{Skill("Catacomb Judgment", "def_down", 350, 4, 3), Skill("Sanctified Barrier", "barrier", 0, 5), Skill("Choir's Wrath", "burn_bleed", 0, 6, 3)}, "Boss Phases", 20, 70, 10},
+			{Skill("Catacomb Judgment", "def_down", 525, 4, 3), Skill("Sanctified Barrier", "barrier", 0, 5), Skill("Choir's Wrath", "burn_bleed", 0, 6, 3)}, "Boss Phases", 20, 70, 10},
 		{"Overlord-Prime", EnemyFaction::Automata, EnemyTier::Boss, 6000, 250, 200, 160, 350,
-			{Skill("Prime Execution", "crit_damage_up", 450, 5, 3), Skill("Overclock Core", "extra_turn", 0, 4), Skill("Prime Directive", "accuracy_up", 0, 6, 3)}, "Boss Phases", 20, 70, 10},
+			{Skill("Prime Execution", "crit_damage_up", 675, 5, 3), Skill("Overclock Core", "extra_turn", 0, 4), Skill("Prime Directive", "accuracy_up", 0, 6, 3)}, "Boss Phases", 20, 70, 10},
 		{"Matron of Rot", EnemyFaction::Verdigris, EnemyTier::Boss, 6500, 260, 210, 150, 375,
 			{Skill("Rot Nova", "poison", 0, 5, 4), Skill("Hemorrhage Wave", "bleed", 0, 5, 4), Skill("Pyre Collapse", "burn", 0, 5, 4), Skill("Toxic Benediction", "dot_up", 0, 6, 2)}, "Boss Phases", 20, 70, 10},
 		{"Sister Caligo, Keeper of the Font", EnemyFaction::Devotee, EnemyTier::Boss, 4200, 175, 170, 145, 260,
-			{Skill("Caligo's Benediction", "heal_cleanse", 0, 4), Skill("Font's Judgment", "def_down", 300, 4, 3), Skill("Drowning Litany", "burn_bleed", 0, 6, 3)}, "Sanctuary Phases", 20, 70, 10},
+			{Skill("Caligo's Benediction", "heal_cleanse", 0, 4), Skill("Font's Judgment", "def_down", 450, 4, 3), Skill("Drowning Litany", "burn_bleed", 0, 6, 3)}, "Sanctuary Phases", 20, 70, 10},
 		{"The Reliquary Engine", EnemyFaction::Automata, EnemyTier::Boss, 5600, 240, 220, 125, 340,
-			{Skill("Vault Protocol", "barrier", 0, 5), Skill("Reliquary Beam", "guaranteed_crit", 360, 5), Skill("Overload Cascade", "extra_turn", 0, 4)}, "Vault Phases", 20, 70, 10}
+			{Skill("Vault Protocol", "barrier", 0, 5), Skill("Reliquary Beam", "guaranteed_crit", 540, 5), Skill("Overload Cascade", "extra_turn", 0, 4)}, "Vault Phases", 20, 70, 10}
 	};
-}
-
 }
 
 const std::vector<EnemyDefinition>& GetEnemyCatalogue() {
@@ -103,6 +109,12 @@ bool ValidateEnemyCatalogue(std::string* error) {
 		if (definition.name.empty() || definition.hpBase <= 0 || definition.atkBase <= 0) {
 			if (error) *error = "Invalid enemy definition: " + definition.name;
 			return false;
+		}
+		for (const auto& skill : definition.skills) {
+			if (!IsKnownEffect(skill.effect)) {
+				if (error) *error = "Unknown enemy effect '" + skill.effect + "' in " + definition.name;
+				return false;
+			}
 		}
 	}
 	return true;

@@ -48,6 +48,8 @@ void Player::takeDamage(int amount) {
     }
     amount = amount * (100 - (std::min)(CombatMath::Balance::MaximumDamageReduction, damageReduction)) / 100;
     if (amount <= 0) return;
+    amount = AbsorbDamage(amount);
+    if (amount <= 0) return;
     const auto activeSets = GetActiveSets();
     const bool verdigrisSet = std::find(activeSets.begin(), activeSets.end(), "Verdigris Matron") != activeSets.end();
     const int healthBefore = hp_;
@@ -71,7 +73,18 @@ bool Player::ToggleEquip(Item& item) {
 
 void Player::heal(int amount) {
     if (amount <= 0) return;
-    amount = amount * (100 + (std::min)(CombatMath::Balance::MaximumHealingPotency, totalStats_.healingReceived)) / 100;
+    int healResistance = 0;
+    for (const auto& status : statuses_) {
+        if (status.type == StatusType::HealResistance) healResistance += status.potency;
+    }
+    amount = amount * (100 - (std::min)(100, healResistance)) / 100;
+    if (amount <= 0) return;
+    const int healingPotency = (std::min)(CombatMath::Balance::MaximumHealingPotency,
+        getHealingPotency());
+    const int healingReceived = (std::min)(CombatMath::Balance::MaximumHealingPotency,
+        totalStats_.healingReceived);
+    amount = amount * (100 + healingPotency) / 100;
+    amount = amount * (100 + healingReceived) / 100;
     hp_ += amount;
     if (hp_ > maxHp_) hp_ = maxHp_;
 }
@@ -86,7 +99,7 @@ int Player::AddBarrier(int amount, int duration) {
     if (amount <= 0) return barrier_;
     amount = amount * (100 + (std::min)(CombatMath::Balance::MaximumBarrierPotency, totalStats_.barrierPotency)) / 100;
     barrier_ += amount;
-    if (duration > 0) statuses_.push_back({StatusType::Barrier, duration, 0, 0});
+    if (duration > 0) statuses_.push_back({StatusType::Barrier, duration, amount, 0});
     return barrier_;
 }
 
@@ -313,19 +326,21 @@ void Player::ApplyStatus(const StatusEffect& status, int accuracy) {
 }
 
 void Player::ProcessStatuses() {
-    bool barrierExpired = false;
+    int expiredBarrier = 0;
     for (auto& status : statuses_) {
-        if (status.type == StatusType::Bleed) takeDamage(AbsorbDamage(status.sourceAttack * 30 * (100 + status.dotPotency) / 10000));
-        else if (status.type == StatusType::Burn) takeDamage(AbsorbDamage(status.sourceAttack * 60 * (100 + status.dotPotency) / 10000));
-        else if (status.type == StatusType::Poison) takeDamage(AbsorbDamage(maxHp_ * 5 * (100 + status.dotPotency) / 10000));
-        else if (status.type == StatusType::HealOverTime) heal(status.potency * (100 + totalStats_.healingPotency) / 100);
+        const int dotReduction = (std::min)(75, SumStatusBonus(StatusType::DotReduction));
+        const int dotUp = SumStatusBonus(StatusType::DotUp);
+        if (status.type == StatusType::Bleed) takeDamage((std::max)(1, status.sourceAttack * 30 * (100 + status.dotPotency + dotUp) * (100 - dotReduction) / 1000000));
+        else if (status.type == StatusType::Burn) takeDamage((std::max)(1, status.sourceAttack * 60 * (100 + status.dotPotency + dotUp) * (100 - dotReduction) / 1000000));
+        else if (status.type == StatusType::Poison) takeDamage((std::max)(1, maxHp_ * 5 * (100 + status.dotPotency + dotUp) * (100 - dotReduction) / 1000000));
+        else if (status.type == StatusType::HealOverTime) heal(status.potency);
         --status.turns;
-        if (status.type == StatusType::Barrier && status.turns <= 0) barrierExpired = true;
+        if (status.type == StatusType::Barrier && status.turns <= 0) expiredBarrier += status.potency;
     }
     statuses_.erase(std::remove_if(statuses_.begin(), statuses_.end(), [](const StatusEffect& status) {
         return status.turns <= 0;
     }), statuses_.end());
-    if (barrierExpired) barrier_ = 0;
+    if (expiredBarrier > 0) ReduceBarrier(expiredBarrier);
 }
 
 void Player::ClearStatuses() {

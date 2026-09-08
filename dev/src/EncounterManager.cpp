@@ -71,7 +71,7 @@ void InspectEnvironment(Area& area, Player& player, ProgressionManager& progress
     if (area.ConsumeClue()) {
         ui.ShowMessage("You uncover a clue hidden in the details.");
         player.AddClue({"A fragment recovered from the " + object + "."});
-        progression.GrantXP(10);
+        progression.GrantInvestigationXP(area.getName());
         progression.CheckLevelUp(player);
     } else {
         ui.ShowMessage("Nothing new is revealed.");

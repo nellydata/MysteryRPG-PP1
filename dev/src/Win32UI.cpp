@@ -886,7 +886,19 @@ void Win32UI::HandleCommand(int controlId) {
 		selectedInventoryIndex_ = -1;
 	} else if (controlId == ButtonSearch) {
 		if (view_ == View::Room && player_.isAlive() && selectedRoom_ >= 0 &&
-			selectedRoom_ < static_cast<int>(mapManager_.GetRooms().size())) SearchRoom();
+			selectedRoom_ < static_cast<int>(mapManager_.GetRooms().size())) {
+			Area& area = mapManager_.GetRooms()[selectedRoom_];
+			if (area.getName() == "Fountain" && area.IsHealingUnlocked()) {
+				const int recovered = area.IsHealingRoom() ? player_.getMaxHP() - player_.getHP() : 0;
+				player_.RestoreHealth(player_.getMaxHP());
+				statusMessage_ = "The Fountain restores you to full health.";
+				AddLog(recovered > 0
+					? "The Fountain restores " + std::to_string(recovered) + " HP."
+					: "The Fountain is already at full strength.");
+			} else {
+				SearchRoom();
+			}
+		}
 	} else if (controlId == ButtonBack) {
 		if (combatDefeatRecovery_) {
 			handlingCommand_ = false;
@@ -1102,7 +1114,7 @@ void Win32UI::Inspect(int interactableIndex) {
 	const std::string object = area.GetVisibleInteractables()[interactableIndex];
 	if (area.ConsumeClue()) {
 		player_.AddClue({"A fragment recovered from the " + object + "."});
-		progression_.GrantClueXP();
+		progression_.GrantInvestigationXP(area.getName());
 		progression_.CheckLevelUp(player_);
 		SyncProgressionRewards();
 		AddLog("Investigation: clue recovered from " + object + ".");
@@ -1237,7 +1249,7 @@ void Win32UI::SearchRoom() {
 		if (!area.HasAllClues()) {
 			if (area.ConsumeClue()) {
 				player_.AddClue({"A fragment recovered during the investigation."});
-		progression_.GrantClueXP();
+				progression_.GrantInvestigationXP(area.getName());
 				progression_.CheckLevelUp(player_);
 				SyncProgressionRewards();
 				AddLog("Search: a clue was recovered.");
@@ -1615,7 +1627,7 @@ void Win32UI::Paint(HDC deviceContext) {
 			status.type == StatusType::AttackDown || status.type == StatusType::DefenseDown || status.type == StatusType::AccuracyDown ||
 			status.type == StatusType::HealResistance || status.type == StatusType::DotReduction;
 		const COLORREF statusColor = negative ? Danger : RGB(90, 160, 245);
-		DrawTextLine(deviceContext, 48, y, StatusName(status.type) + L" (" + std::to_wstring(status.turns) + L", " + std::to_wstring(status.potency) + L")", statusColor, 15);
+		DrawTextLine(deviceContext, 48, y, StatusName(status.type) + L" (" + std::to_wstring(status.turns) + L")", statusColor, 15);
 		y += 25;
 	}
 	if (!displayedStatus) DrawTextLine(deviceContext, 48, y, L"No active effects", Muted, 15);
@@ -1923,7 +1935,7 @@ std::wstring Win32UI::StatusName(StatusType type) const {
 	case StatusType::Poison: return L"Poison";
 	case StatusType::HealOverTime: return L"Healing";
 	case StatusType::Slow: return L"Slow";
-	case StatusType::VerdigrisMark: return L"Verdigris Mark";
+	case StatusType::VerdigrisMark: return L"Verdigris";
 	case StatusType::DamageReduction: return L"Damage Reduction";
 	case StatusType::Barrier: return L"Barrier";
 	case StatusType::AttackUp: return L"Attack Up";

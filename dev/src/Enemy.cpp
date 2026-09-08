@@ -58,6 +58,18 @@ Enemy::~Enemy() = default;
 
 void Enemy::takeDamage(int amount) {
 	if (amount <= 0) return;
+	for (auto status = statuses_.begin(); status != statuses_.end() && amount > 0;) {
+		if (status->type != StatusType::Barrier) {
+			++status;
+			continue;
+		}
+		const int absorbed = (std::min)(status->potency, amount);
+		status->potency -= absorbed;
+		amount -= absorbed;
+		if (status->potency <= 0) status = statuses_.erase(status);
+		else ++status;
+	}
+	if (amount <= 0) return;
 	hp_ -= amount;
 	if (hp_ < 0) hp_ = 0;
 }
@@ -67,9 +79,10 @@ void Enemy::ProcessStatuses(std::vector<std::pair<StatusType, int>>& damageEvent
 	for (auto& status : statuses_) {
 		int damage = 0;
 		const int dotReduction = (std::min)(75, SumStatusBonus(StatusType::DotReduction));
-		if (status.type == StatusType::Bleed) damage = status.sourceAttack * 30 * (100 + status.dotPotency) * (100 - dotReduction) / 1000000;
-		else if (status.type == StatusType::Burn) damage = status.sourceAttack * 60 * (100 + status.dotPotency) * (100 - dotReduction) / 1000000;
-		else if (status.type == StatusType::Poison) damage = maxHp_ * 5 * (100 + status.dotPotency) * (100 - dotReduction) / 1000000;
+		const int dotUp = SumStatusBonus(StatusType::DotUp);
+		if (status.type == StatusType::Bleed) damage = (std::max)(1, status.sourceAttack * 30 * (100 + status.dotPotency + dotUp) * (100 - dotReduction) / 1000000);
+		else if (status.type == StatusType::Burn) damage = (std::max)(1, status.sourceAttack * 60 * (100 + status.dotPotency + dotUp) * (100 - dotReduction) / 1000000);
+		else if (status.type == StatusType::Poison) damage = (std::max)(1, maxHp_ * 5 * (100 + status.dotPotency + dotUp) * (100 - dotReduction) / 1000000);
 		else if (status.type == StatusType::HealOverTime) healing += status.potency;
 		if (damage > 0) {
 			takeDamage(damage);
@@ -126,7 +139,7 @@ int Enemy::GetSkillCooldown(std::size_t index) const {
 }
 bool Enemy::IsSkillReady(std::size_t index) const { return GetSkillCooldown(index) == 0; }
 void Enemy::StartSkillCooldown(std::size_t index) {
-	if (index < skillCooldowns_.size() && index < skills_.size()) skillCooldowns_[index] = skills_[index].cooldown + 1;
+	if (index < skillCooldowns_.size() && index < skills_.size()) skillCooldowns_[index] = skills_[index].cooldown;
 }
 void Enemy::TickSkillCooldowns() {
 	for (int& cooldown : skillCooldowns_) if (cooldown > 0) --cooldown;

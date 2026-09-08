@@ -273,11 +273,6 @@ ItemDefinition BuildInvestigationConsumable(ConsumableProfile profile, int playe
 	const std::string name = InvestigationConsumableName(profile, playerLevel);
 	for (auto definition : BuildConsumableCatalog()) {
 		if (definition.name != name) continue;
-		if (definition.effect.find("restore_") == 0) {
-			const int percent = (std::min)(80, 20 + (std::max)(0, playerLevel - 1) / 4);
-			definition.effect = "restore_" + std::to_string(percent) + "_percent_hp";
-			definition.description = "Restore " + std::to_string(percent) + " percent HP.";
-		}
 		return definition;
 	}
 	return {};

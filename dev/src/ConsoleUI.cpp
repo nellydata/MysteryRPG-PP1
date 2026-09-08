@@ -297,7 +297,7 @@ std::string ConsoleUI::StatusName(int statusType) const {
 	case StatusType::Poison: return "Poison";
 	case StatusType::HealOverTime: return "Healing";
 	case StatusType::Slow: return "Slow";
-	case StatusType::VerdigrisMark: return "Verdigris Mark";
+	case StatusType::VerdigrisMark: return "Verdigris";
 	case StatusType::DamageReduction: return "Damage Reduction";
 	case StatusType::Barrier: return "Barrier";
 	}

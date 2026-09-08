@@ -14,6 +14,20 @@ std::int64_t XPRequirementForLevel(int level) {
     return requirement;
 }
 
+int InvestigationAreaDepth(const std::string& areaName) {
+    if (areaName == "Archive Room") return 2;
+    if (areaName == "Chapel") return 3;
+    if (areaName == "Storage Room") return 4;
+    return 1;
+}
+
+std::int64_t CalculateInvestigationXP(int playerLevel, int areaDepth) {
+    const int level = (std::max)(1, (std::min)(100, playerLevel));
+    const int depth = (std::max)(1, (std::min)(5, areaDepth));
+    const std::int64_t requirement = XPRequirementForLevel(level);
+    return (std::max)(std::int64_t{1}, requirement * (5 + depth) / 100);
+}
+
 std::int64_t CalculateEnemyXP(int enemyLevel, int enemyTier) {
     const int level = (std::max)(1, (std::min)(100, enemyLevel));
     const double progress = static_cast<double>(level - 1) / 99.0;
@@ -32,7 +46,11 @@ void ProgressionManager::GrantXP(std::int64_t amount) {
 }
 
 void ProgressionManager::GrantClueXP() {
-    GrantXP((std::max)(std::int64_t{1}, xpToNextLevel_ / 8));
+    GrantXP(CalculateInvestigationXP(level_, 1));
+}
+
+void ProgressionManager::GrantInvestigationXP(const std::string& areaName) {
+    GrantXP(CalculateInvestigationXP(level_, InvestigationAreaDepth(areaName)));
 }
 
 bool ProgressionManager::UnequipShimmerSkill(const std::string& skillName, int cost) {

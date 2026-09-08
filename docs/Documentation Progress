@@ -187,4 +187,24 @@ Cleanup pass
 •	Merged Enemy::ProcessStatuses overloads and added SumStatusBonus.
 •	Added CombatManager::AdvanceTurn for repeated gauge transitions.
 •	Replaced direct CombatManager.cpp std::cout calls with CombatEvent logging.
-•	Preserved the requested exclusions.
+•	Fountain no longer heals on room entry.
+•	Fountain remains sealed until investigated.
+•	Win32 exposes a Fountain action only after discovery.
+•	Console has an equivalent Fountain recovery action.
+•	Investigation drops now announce exact item names.
+•	Repeat searches can drop consumables more commonly and equipment less commonly, with rarity rolls.
+•	Active status effects now display with potency.
+•	Negative statuses display red; beneficial statuses display blue.
+•	Active Attack, Defense, Speed, Accuracy, Crit, and Healing modifiers now affect calculated player/enemy stats.
+•	Phthorá uses typed DefenseDown rather than Verdigris Mark
+entralized Win32 and console investigation through ResolveInvestigation.
+•	Replaced fixed room-name investigation RNG with advancing per-room RNG.
+•	Removed duplicate console room-entry enemy spawning.
+•	Ensured item and clue outcomes are removed from weighted rolls when unavailable.
+•	Item investigation events now consume finite room item resources.
+•	Added stable discovery IDs for clue and interactable revelations.
+•	Preserved Fountain guardian discovery, healing unlock, and room progression.
+•	Removed the remaining fixed room-name seed from post-combat loot generation.
+•	Confirmed UI no longer directly grants investigation XP, rolls loot, consumes clues, or applies investigation damage.
+•	Added InvestigationHarness.vcxproj as a separate deterministic test target.
+•	Fresh investigation/combat harness build and execution passed.

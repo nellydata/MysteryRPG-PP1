@@ -5,11 +5,12 @@
 #include <algorithm>
 #include <random>
 #include <cmath>
+#include <limits>
 
 std::int64_t XPRequirementForLevel(int level) {
     if (level <= 1) return 100;
     std::int64_t requirement = 100;
-    for (int current = 1; current < level; ++current)
+    for (int current = 1; current < (std::min)(100, level); ++current)
         requirement = static_cast<std::int64_t>(std::llround(static_cast<double>(requirement) * 1.10));
     return requirement;
 }
@@ -38,10 +39,11 @@ std::int64_t CalculateEnemyXP(int enemyLevel, int enemyTier) {
 }
 
 ProgressionManager::ProgressionManager()
-    : level_(1), xp_(0), xpToNextLevel_(100), shimmerPointsUsed_(0) {}
+    : level_(1), xp_(0), xpToNextLevel_(100) {}
 
 void ProgressionManager::GrantXP(std::int64_t amount) {
-    if (amount > 0 && level_ < 100) xp_ += amount;
+    if (amount > 0 && level_ < 100)
+        xp_ += (std::min)(amount, (std::numeric_limits<std::int64_t>::max)() - xp_);
 }
 
 void ProgressionManager::GrantClueXP() {
@@ -53,12 +55,16 @@ void ProgressionManager::GrantInvestigationXP(const std::string& areaName) {
 }
 
 bool ProgressionManager::UnequipShimmerSkill(const std::string& skillName, int cost) {
-    if (cost <= 0 || equippedShimmerSkills_.erase(skillName) == 0) return false;
-    shimmerPointsUsed_ = (std::max)(0, shimmerPointsUsed_ - cost);
-    return true;
+    const auto skill = ShimmerSkill::Create(skillName);
+    return skill && cost == skill->getCost() && UnequipShimmerSkill(skillName);
+}
+
+bool ProgressionManager::UnequipShimmerSkill(const std::string& skillName) {
+    return equippedShimmerSkills_.erase(skillName) != 0;
 }
 
 bool ProgressionManager::CheckLevelUp(Player& player) {
+    if (!player.isAlive()) return false;
     bool leveledUp = false;
 
     while (level_ < 100 && xpToNextLevel_ > 0 && xp_ >= xpToNextLevel_) {
@@ -90,7 +96,7 @@ bool ProgressionManager::SelectPendingShimmerSkill(const std::string& skillName)
         std::find(GetPendingShimmerChoices().begin(), GetPendingShimmerChoices().end(), skillName) == GetPendingShimmerChoices().end() ||
         HasShimmerSkill(skillName)) return false;
     const std::string selected = skillName;
-    UnlockShimmerSkill(selected);
+    if (!UnlockShimmerSkill(selected)) return false;
     pendingLevelUpRewards_.pop_front();
     levelUpMessages_.push_back("Shimmer skill unlocked: " + selected + ".");
     return true;
@@ -194,7 +200,7 @@ bool ProgressionManager::HasCrux(const std::string& itemName) const {
 
 bool ProgressionManager::UnlockShimmerSkill(const std::string& skillName) {
     const std::string selected = skillName;
-    if (selected.empty() || !shimmerSkills_.insert(selected).second) return false;
+    if (!ShimmerSkill::Create(selected) || !shimmerSkills_.insert(selected).second) return false;
     for (auto& reward : pendingLevelUpRewards_) {
         auto& choices = reward.shimmerChoices;
         choices.erase(std::remove(choices.begin(), choices.end(), selected), choices.end());
@@ -220,12 +226,21 @@ std::vector<std::string> ProgressionManager::GetEquippedShimmerSkills() const {
     return std::vector<std::string>(equippedShimmerSkills_.begin(), equippedShimmerSkills_.end());
 }
 
-int ProgressionManager::GetShimmerPoints() const { return 12 - shimmerPointsUsed_; }
+int ProgressionManager::GetShimmerPoints() const {
+    int used = 0;
+    for (const auto& name : equippedShimmerSkills_)
+        if (const auto skill = ShimmerSkill::Create(name)) used += skill->getCost();
+    return 12 - used;
+}
+bool ProgressionManager::EquipShimmerSkill(const std::string& skillName) {
+    const auto skill = ShimmerSkill::Create(skillName);
+    if (!skill || !HasShimmerSkill(skillName) || skill->getCost() <= 0 ||
+        skill->getCost() > GetShimmerPoints()) return false;
+    return equippedShimmerSkills_.insert(skillName).second;
+}
 bool ProgressionManager::EquipShimmerSkill(const std::string& skillName, int cost) {
-    if (!HasShimmerSkill(skillName) || cost <= 0 || equippedShimmerSkills_.count(skillName) != 0 || shimmerPointsUsed_ + cost > 12) return false;
-    equippedShimmerSkills_.insert(skillName);
-    shimmerPointsUsed_ += cost;
-    return true;
+    const auto skill = ShimmerSkill::Create(skillName);
+    return skill && cost == skill->getCost() && EquipShimmerSkill(skillName);
 }
 
 bool ProgressionManager::UnlockShimmerFromTrigger(const std::string& trigger) {

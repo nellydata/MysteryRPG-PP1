@@ -1,0 +1,198 @@
+MICARE - console edition
+Investigator name (Enter for Adelaide):
+>
+=== MICARE: CATHEDRAL OF LIES ===
+Phase 1 audit | Level 1 | HP 105/105 | ATK 20 DEF 10 SPD 100 | XP 0/100
+Investigate, improve your equipment, and challenge each room's guardian.
+1. Fountain
+2. Entrance Hall [LOCKED]
+3. Archive Room [LOCKED]
+4. Chapel [LOCKED]
+5. Storage Room [LOCKED]
+6. Inventory
+7. Shimmer skills
+8. Floor map
+9. Last encounter log
+0. Quit
+
+Destination or panel:
+>
+=== ROOM: Fountain ===
+Phase 1 audit | Level 1 | HP 105/105 | ATK 20 DEF 10 SPD 100 | XP 0/100
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+0. Leave room
+
+Room action:
+> A weak guardian rises from the sealed Fountain. Defeat it to purify the sanctuary.
+[1] Encounter begins: Devotee Acolyte (level 1, Basic).
+[2] Phase 1 audit (level 1, HP 105) faces Devotee Acolyte.
+[3] Phase 1 audit's action begins (gauge 1000).
+[4] Waiting for Phase 1 audit to choose an action.
+Phase 1 audit | Level 1 | HP 105/105 | ATK 20 DEF 10 SPD 100 | XP 0/100
+Enemy: Devotee Acolyte | Level 1 Basic | HP 54/54 DEF 6 SPD 89
+Acting: Phase 1 audit
+1. Attack
+2. Consumable
+3. Shimmer
+4. Flee
+5. Full encounter log
+6. Toggle fast presentation
+
+Combat action:
+> [5] Phase 1 audit uses Attack on Devotee Acolyte.
+[6] Phase 1 audit hits Devotee Acolyte.
+[7] Phase 1 audit -> Devotee Acolyte: 20 requested damage; barrier absorbs 0; 20 actual HP damage. HP: 34.
+Phase 1 audit | Level 1 | HP 105/105 | ATK 20 DEF 10 SPD 100 | XP 0/100
+Enemy: Devotee Acolyte | Level 1 Basic | HP 34/54 DEF 6 SPD 89
+Acting: Devotee Acolyte
+[8] Devotee Acolyte's action begins (gauge 1068).
+[9] Devotee Acolyte uses Attack on Phase 1 audit.
+[10] Devotee Acolyte hits Phase 1 audit.
+[11] Devotee Acolyte -> Phase 1 audit: 8 requested damage; barrier absorbs 0; 8 actual HP damage. HP: 97.
+[12] Phase 1 audit's action begins (gauge 1000).
+Phase 1 audit | Level 1 | HP 97/105 | ATK 20 DEF 10 SPD 100 | XP 0/100
+Enemy: Devotee Acolyte | Level 1 Basic | HP 34/54 DEF 6 SPD 89
+Acting: Phase 1 audit
+1. Attack
+2. Consumable
+3. Shimmer
+4. Flee
+5. Full encounter log
+6. Toggle fast presentation
+
+Combat action:
+> [13] Phase 1 audit uses Attack on Devotee Acolyte.
+[14] Phase 1 audit hits Devotee Acolyte.
+[15] Phase 1 audit -> Devotee Acolyte: 20 requested damage; barrier absorbs 0; 20 actual HP damage. HP: 14.
+Phase 1 audit | Level 1 | HP 97/105 | ATK 20 DEF 10 SPD 100 | XP 0/100
+Enemy: Devotee Acolyte | Level 1 Basic | HP 14/54 DEF 6 SPD 89
+Acting: Devotee Acolyte
+[16] Devotee Acolyte's action begins (gauge 1047).
+[17] Devotee Acolyte uses Weak Prayer on Devotee Acolyte.
+[18] Devotee Acolyte heals 8 HP.
+[19] Phase 1 audit's action begins (gauge 1000).
+Phase 1 audit | Level 1 | HP 97/105 | ATK 20 DEF 10 SPD 100 | XP 0/100
+Enemy: Devotee Acolyte | Level 1 Basic | HP 22/54 DEF 6 SPD 89
+Acting: Phase 1 audit
+1. Attack
+2. Consumable
+3. Shimmer
+4. Flee
+5. Full encounter log
+6. Toggle fast presentation
+
+Combat action:
+> [20] Phase 1 audit uses Attack on Devotee Acolyte.
+[21] Phase 1 audit hits Devotee Acolyte.
+[22] Phase 1 audit -> Devotee Acolyte: 20 requested damage; barrier absorbs 0; 20 actual HP damage. HP: 2.
+Phase 1 audit | Level 1 | HP 97/105 | ATK 20 DEF 10 SPD 100 | XP 0/100
+Enemy: Devotee Acolyte | Level 1 Basic | HP 2/54 DEF 6 SPD 89
+Acting: Devotee Acolyte
+[23] Devotee Acolyte's action begins (gauge 1026).
+[24] Devotee Acolyte uses Attack on Phase 1 audit.
+[25] Devotee Acolyte hits Phase 1 audit.
+[26] Devotee Acolyte -> Phase 1 audit: 8 requested damage; barrier absorbs 0; 8 actual HP damage. HP: 89.
+[27] Phase 1 audit's action begins (gauge 1000).
+Phase 1 audit | Level 1 | HP 89/105 | ATK 20 DEF 10 SPD 100 | XP 0/100
+Enemy: Devotee Acolyte | Level 1 Basic | HP 2/54 DEF 6 SPD 89
+Acting: Phase 1 audit
+1. Attack
+2. Consumable
+3. Shimmer
+4. Flee
+5. Full encounter log
+6. Toggle fast presentation
+
+Combat action:
+> [28] Phase 1 audit uses Attack on Devotee Acolyte.
+[29] Phase 1 audit hits Devotee Acolyte.
+[30] Phase 1 audit -> Devotee Acolyte: 20 requested damage; barrier absorbs 0; 2 actual HP damage. HP: 0.
+[31] Devotee Acolyte has been defeated.
+[32] XP gained: +10.
+[33] The Fountain is purified. Full healing is now available.
+[34] Entrance Hall is now unlocked.
+[35] Found: dusty_prayer_book.
+[36] Found: choir_incense.
+[37] Encounter complete: victory.
+
+=== ROOM: Fountain ===
+Phase 1 audit | Level 1 | HP 89/105 | ATK 20 DEF 10 SPD 100 | XP 10/100
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+7. Heal at the Fountain
+0. Leave room
+
+Room action:
+> The Fountain restores you to full health.
+
+=== ROOM: Fountain ===
+Phase 1 audit | Level 1 | HP 105/105 | ATK 20 DEF 10 SPD 100 | XP 10/100
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+7. Heal at the Fountain
+0. Leave room
+
+Room action:
+>
+=== SHIMMER SKILLS | free points 10/12 ===
+1. Pulsus Luminis cost 2 cooldown 5 [EQUIPPED]
+   Deal 900% ATK as a focused Shimmer strike.
+
+Shimmer loadout: select skill to equip/unequip, 0 return.
+> Shimmer loadout updated.
+
+=== SHIMMER SKILLS | free points 12/12 ===
+1. Pulsus Luminis cost 2 cooldown 5
+   Deal 900% ATK as a focused Shimmer strike.
+
+Shimmer loadout: select skill to equip/unequip, 0 return.
+> Shimmer loadout updated.
+
+=== SHIMMER SKILLS | free points 10/12 ===
+1. Pulsus Luminis cost 2 cooldown 5 [EQUIPPED]
+   Deal 900% ATK as a focused Shimmer strike.
+
+Shimmer loadout: select skill to equip/unequip, 0 return.
+>
+=== ROOM: Fountain ===
+Phase 1 audit | Level 1 | HP 105/105 | ATK 20 DEF 10 SPD 100 | XP 10/100
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+7. Heal at the Fountain
+0. Leave room
+
+Room action:
+>
+=== MICARE: CATHEDRAL OF LIES ===
+Phase 1 audit | Level 1 | HP 105/105 | ATK 20 DEF 10 SPD 100 | XP 10/100
+Investigate, improve your equipment, and challenge each room's guardian.
+1. Fountain
+2. Entrance Hall
+3. Archive Room [LOCKED]
+4. Chapel [LOCKED]
+5. Storage Room [LOCKED]
+6. Inventory
+7. Shimmer skills
+8. Floor map
+9. Last encounter log
+0. Quit
+
+Destination or panel:
+> Session complete.

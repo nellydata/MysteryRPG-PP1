@@ -187,7 +187,7 @@ void ConsoleUI::ManageShimmerSkills(ProgressionManager& progression) const {
         const auto skill = ShimmerSkill::Create(name);
         if (!skill) continue;
         const bool worn = std::find(equipped.begin(), equipped.end(), name) != equipped.end();
-        const bool changed = worn ? progression.UnequipShimmerSkill(name, skill->getCost()) : progression.EquipShimmerSkill(name, skill->getCost());
+        const bool changed = worn ? progression.UnequipShimmerSkill(name) : progression.EquipShimmerSkill(name);
         ShowMessage(changed ? "Shimmer loadout updated." : "Not enough free Shimmer points.");
     }
 }

@@ -140,15 +140,46 @@ InvestigationResult EncounterManager::ResolveInvestigation(Area& area, Player& p
 VictoryResult EncounterManager::ResolveVictory(Area& area, Player& player, ProgressionManager& progression,
                                                MapManager& map, Enemy& enemy) {
     VictoryResult result;
-    if (!player.isAlive() || enemy.isAlive() || !enemy.ClaimLootReward()) return result;
-    result.resolved = true;
+    if (!player.isAlive()) {
+        enemy.ForfeitRewards();
+        return result;
+    }
+    if (!enemy.CanReceiveDefeatRewards() || enemy.HasClaimedLootReward()) return result;
     const RoomDefinition* room = map.GetRoomDefinition(area);
     const bool configuredBoss = room && enemy.getName() == room->bossId && enemy.IsFirstClearBoss();
     result.firstClear = configuredBoss && !area.HasBossBeenDefeated();
-    if (enemy.ClaimXPReward()) {
-        progression.GrantXP(enemy.getXPReward());
-        progression.CheckLevelUp(player);
+    const auto acceptedXP = CombatManager::DeliverDefeatXP(player, enemy, progression);
+    if (acceptedXP > 0) result.messages.push_back("XP gained: +" + std::to_string(acceptedXP) + ".");
+
+    LootContext context;
+    context.playerLevel = result.firstClear ? room->intendedProgressionLevel : progression.GetLevel();
+    context.roomId = area.getName();
+    context.enemyId = enemy.getName();
+    context.faction = enemy.getFaction();
+    context.enemyTier = enemy.getTier();
+    context.bossFirstClear = result.firstClear;
+    context.bossFarmEcho = enemy.IsFarmBoss();
+    result.items = GenerateLoot(context, area.NextInvestigationSeed());
+    std::vector<std::unique_ptr<Item>> pendingItems;
+    pendingItems.reserve(result.items.size());
+    for (const auto& item : result.items) pendingItems.push_back(std::make_unique<Item>(item));
+    std::vector<unsigned long long> deliveredItems;
+    deliveredItems.reserve(pendingItems.size());
+    try {
+        for (auto& item : pendingItems) {
+            const auto instanceId = item->getInstanceId();
+            player.AddItem(std::move(item));
+            deliveredItems.push_back(instanceId);
+        }
+    } catch (...) {
+        // Only this reward's newly inserted, unequipped items are rolled back.
+        for (const auto instanceId : deliveredItems) player.GetInventory().RemoveItem(instanceId);
+        throw;
     }
+    // Empty loot is also a successfully resolved roll. Commit only after every
+    // generated item arrived; first-clear flags and unlocks follow delivery.
+    enemy.ClaimLootReward();
+    result.resolved = true;
     bool unlockNext = false;
     if (area.IsHealingRoom() && !area.IsHealingUnlocked() && !area.hasEnemies()) {
         area.SetHealingUnlocked(true);
@@ -168,16 +199,6 @@ VictoryResult EncounterManager::ResolveVictory(Area& area, Player& player, Progr
             result.messages.push_back(room->nextRoomId + " is now unlocked.");
         }
     }
-    LootContext context;
-    context.playerLevel = result.firstClear ? room->intendedProgressionLevel : progression.GetLevel();
-    context.roomId = area.getName();
-    context.enemyId = enemy.getName();
-    context.faction = enemy.getFaction();
-    context.enemyTier = enemy.getTier();
-    context.bossFirstClear = result.firstClear;
-    context.bossFarmEcho = enemy.IsFarmBoss();
-    result.items = GenerateLoot(context, area.NextInvestigationSeed());
-    for (const auto& item : result.items) player.AddItem(std::make_unique<Item>(item));
     return result;
 }
 

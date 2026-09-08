@@ -20,9 +20,10 @@ public:
     int getMaxHP() const;
     int getAtk() const;
     std::int64_t getXPReward() const;
-    bool ClaimXPReward();
-    bool ClaimInvestigationReward();
-    bool ClaimLootReward();
+    bool CanReceiveDefeatRewards() const;
+    bool HasClaimedXPReward() const;
+    bool HasClaimedLootReward() const;
+    void ForfeitRewards();
     bool IsFirstClearBoss() const;
     bool IsFarmBoss() const;
     const DamageResolution& GetLastDamageResult() const;
@@ -77,8 +78,8 @@ protected:
     std::vector<int> skillCooldowns_;
     int phase_;
     bool xpRewardClaimed_;
-    bool investigationRewardClaimed_;
     bool lootRewardClaimed_;
+    bool rewardsForfeited_ = false;
     bool firstClearBoss_;
     bool farmBoss_;
     DamageResolution lastDamageResult_;
@@ -86,6 +87,10 @@ protected:
     std::vector<StatusApplicationResolution> statusApplications_;
 
 private:
+    friend class CombatManager;
+    friend class EncounterManager;
+    bool ClaimXPReward();
+    bool ClaimLootReward();
     static std::vector<std::pair<StatusType, int>>& EmptyDamageEvents();
     static int& EmptyHealing();
     int SumStatusBonus(StatusType type) const;

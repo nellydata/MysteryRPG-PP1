@@ -55,7 +55,7 @@ Enemy::Enemy(const EnemyDefinition& definition, int level, bool firstClearBoss,
 	  level_((std::max)(1, (std::min)(100, level))), resistance_(0), evasion_(0),
 	  critRate_(5), critDamage_(150), accuracy_(100),
 	  faction_(definition.faction), tier_(definition.tier), skills_(definition.skills),
-		phase_(1), xpRewardClaimed_(false), investigationRewardClaimed_(false),
+		phase_(1), xpRewardClaimed_(false),
 		lootRewardClaimed_(false), firstClearBoss_(firstClearBoss), farmBoss_(farmBoss) {
 	skillCooldowns_.assign(skills_.size(), 0);
 }
@@ -142,18 +142,17 @@ int Enemy::SumStatusBonus(StatusType type) const {
 }
 int Enemy::getAtk() const { return (std::max)(1, atk_ * (100 + SumStatusBonus(StatusType::AttackUp) - SumStatusBonus(StatusType::AttackDown)) / 100); }
 std::int64_t Enemy::getXPReward() const { return xpReward_; }
+bool Enemy::CanReceiveDefeatRewards() const { return !isAlive() && !rewardsForfeited_; }
+bool Enemy::HasClaimedXPReward() const { return xpRewardClaimed_; }
+bool Enemy::HasClaimedLootReward() const { return lootRewardClaimed_; }
+void Enemy::ForfeitRewards() { rewardsForfeited_ = true; }
 bool Enemy::ClaimXPReward() {
-	if (xpRewardClaimed_) return false;
+	if (!CanReceiveDefeatRewards() || xpRewardClaimed_) return false;
 	xpRewardClaimed_ = true;
 	return true;
 }
-bool Enemy::ClaimInvestigationReward() {
-	if (investigationRewardClaimed_) return false;
-	investigationRewardClaimed_ = true;
-	return true;
-}
 bool Enemy::ClaimLootReward() {
-	if (lootRewardClaimed_) return false;
+	if (!CanReceiveDefeatRewards() || lootRewardClaimed_) return false;
 	lootRewardClaimed_ = true;
 	return true;
 }

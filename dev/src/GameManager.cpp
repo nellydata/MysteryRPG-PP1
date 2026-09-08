@@ -34,7 +34,7 @@ void GameManager::Run() {
     for (const auto& definition : BuildCruxCatalog())
         if (definition.name == "first_nuns_diary") player.AddItem(std::make_unique<Item>(definition));
     progression.UnlockShimmerSkill("Pulsus Luminis");
-    if (auto skill = ShimmerSkill::Create("Pulsus Luminis")) progression.EquipShimmerSkill(skill->getName(), skill->getCost());
+    progression.EquipShimmerSkill("Pulsus Luminis");
     player.RestoreHealth(player.getMaxHP());
     int forcedRoom = -1;
     while (std::cin) {

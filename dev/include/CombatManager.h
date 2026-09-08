@@ -75,14 +75,13 @@ public:
     int GetSkillCooldown(const std::string& skillName) const;
     void ClearEvents();
     void ResetEncounter();
+    // Combat and the shared victory fallback use this same XP delivery path.
+    // Returns the XP actually accepted (zero at level 100 or after saturation).
+    static std::int64_t DeliverDefeatXP(Player& player, Enemy& enemy, ProgressionManager& progression);
 
 private:
-    bool interrogate(Player& player, Enemy& enemy,
-                     ProgressionManager* progression);
-
     bool blocked_;
     bool weaknessExposed_;
-    int interrogationAttempts_;
     int turnNumber_;
     bool playerTurn_;
     int playerGauge_;
@@ -106,4 +105,5 @@ private:
     void StartPlayerTurn(Player& player);
     void AdvanceTurn(Player& player, Enemy& enemy);
     void ResolveDefeatReward(Player& player, Enemy& enemy, ProgressionManager* progression);
+    void ForfeitEncounterRewards();
 };

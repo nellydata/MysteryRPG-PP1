@@ -10,6 +10,8 @@
 #include <cassert>
 #include "ProgressionRepairTests.h"
 #include "ConsoleConversionTests.h"
+#include "ProgressionOwnershipTests.h"
+#include "RewardOwnershipTests.h"
 
 namespace {
 class ConstructorContractSkill final : public ShimmerSkill {
@@ -366,5 +368,7 @@ int main() {
 
 	ProgressionRepairValidation::Run();
 	TestConsoleConversion();
+	TestProgressionOwnership();
+	RunRewardOwnershipTests();
 	return 0;
 }

@@ -29,3 +29,21 @@ Results for each completed phase will be added below with exact validation and r
 - Debug x64 game and both standalone projects built. EquipmentV2Tests, InvestigationHarness, and `COS-PP1.exe --validate` exited 0 after restoration. The actual console accepted a fresh character name, displayed the dashboard, and quit normally using keyboard input.
 - Earlier baseline statistics are recorded in `phase-0-tests.txt`; they describe the pre-equipment-correction economy and must not be used as final balance evidence.
 - Remaining functional findings above proceed to later phases; the old suite passing does not prove those mechanics.
+
+## Phase 1: authoritative rewards and progression ownership
+
+Verified defects: XP was delivered through two implementations, loot was marked claimed before generation/insertion, and reward state did not remember a fled/failed encounter. Loadout methods accepted caller-supplied costs, including an incorrect refund, and unknown skill IDs could be unlocked. Level-up processing could restore a dead player. Extreme XP input could overflow its 64-bit accumulator.
+
+Changes: `CombatManager::DeliverDefeatXP` is shared by combat and `EncounterManager::ResolveVictory`. XP claims follow XP delivery; loot claims and room transitions follow successful item insertion. Enemy retains reward forfeiture after defeat/flee across resets, while a newly created retry remains eligible. Removed the unused private interrogation reward path after checking its callers. Progression resolves costs from skill definitions, rejects unknown IDs and forged costs, preserves the 12-point budget, prevents level-up revival, and saturates excessive XP safely. The normal 1-100 XP curve is unchanged.
+
+The existing farm regression is updated to expect the newly visible, single XP delivery message and still reject first-clear/unlock messages. This is a presentation contract correction; reward values and boss profiles are unchanged.
+
+The user supplied the missing loot table and Basic gear pity during this phase. The authoritative quantities, gates, anchors, and proposed intermediate rarity interpolation are recorded in [approved-loot-rules.md](approved-loot-rules.md); implementation follows in the economy phase.
+
+### Phase 1 results
+
+- [Debug x64 build](phase-1-build.txt): game and both standalone projects passed.
+- EquipmentV2Tests, content validation, and [InvestigationHarness](phase-1-tests.txt): exit 0. New checks cover eight Attack/Shimmer/DOT/actual-catalogue-consumable kill paths with and without initial combat XP delivery; duplicate XP/loot/log rejection; unresolved/dead/fled enemies; reset/re-entry; fresh fixed-boss retry; and level-100 behavior.
+- Progression checks cover unknown IDs, ownership, forged charges/refunds, duplicates, the 12-point budget, one independently owned item per slot per level, queued/deferred/external-unlock/empty-pool rewards, dead-player level-up rejection, and extreme 64-bit XP inputs.
+- The [real console executable](phase-1-console.txt) accepted scripted keyboard input for fresh initialization, four ordinary attacks, Fountain purification, a single XP reward and loot delivery, recovery, Shimmer equip/unequip, and normal exit.
+- Remaining work: equipment, consumables, status/action/RNG mechanics, complete ability/set/Artifact behavior, discovery/loot reconciliation, later balance sampling, and the full end-to-end progression run. These phases are not certified by the results above.

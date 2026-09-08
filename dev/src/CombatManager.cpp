@@ -10,18 +10,6 @@
 #include <memory>
 
 namespace {
-unsigned InterrogationRoll(const Enemy& enemy, int playerLevel, int attempt) {
-    unsigned value = 2166136261u;
-    const std::string& name = enemy.getName();
-    for (unsigned char character : name) {
-        value ^= character;
-        value *= 16777619u;
-    }
-
-    value ^= static_cast<unsigned>(enemy.getHP() * 31 + playerLevel * 17 + attempt * 13);
-    return value % 100;
-}
-
 const char* TierDisplayName(EnemyTier tier) {
     switch (tier) {
     case EnemyTier::Basic: return "Basic";
@@ -63,25 +51,6 @@ const char* StatusDisplayName(StatusType type) {
     return "Status";
 }
 
-int InterrogationChance(const Enemy& enemy, int playerLevel) {
-    const int healthPercent = enemy.getMaxHP() > 0
-        ? enemy.getHP() * 100 / enemy.getMaxHP()
-        : 0;
-    int chance = 35;
-
-    if (healthPercent <= 25) chance += 25;
-    else if (healthPercent <= 50) chance += 15;
-
-    const std::string& type = enemy.getName();
-    if (type.find("Automata") != std::string::npos) chance -= 10;
-    else if (type.find("Nun") != std::string::npos) chance += 5;
-    else if (type.find("Boss") != std::string::npos) chance -= 15;
-    else if (type.find("Husk") != std::string::npos) chance += 10;
-
-    chance += std::min(playerLevel - 1, 5) * 3;
-    return std::max(10, std::min(chance, 85));
-}
-
 void AccumulateGaugesUntilReady(int& playerGauge, int& enemyGauge,
                                 int playerSpeed, int enemySpeed) {
     for (int step = 0; step < 10000 && playerGauge < 1000 && enemyGauge < 1000; ++step) {
@@ -98,12 +67,35 @@ void CombatManager::AdvanceTurn(Player& player, Enemy& enemy) {
     if (playerTurn_) StartPlayerTurn(player);
 }
 
-void CombatManager::ResolveDefeatReward(Player& player, Enemy& enemy, ProgressionManager* progression) {
-    if (progression != nullptr && player.isAlive() && !enemy.isAlive() && enemy.ClaimXPReward()) {
-        progression->GrantXP(enemy.getXPReward());
-        progression->CheckLevelUp(player);
-        AddEvent(CombatEvent::Kind::Reward, "XP gained: +" + std::to_string(enemy.getXPReward()) + ".");
+std::int64_t CombatManager::DeliverDefeatXP(Player& player, Enemy& enemy, ProgressionManager& progression) {
+    if (!player.isAlive()) {
+        enemy.ForfeitRewards();
+        return 0;
     }
+    if (!enemy.CanReceiveDefeatRewards() || enemy.HasClaimedXPReward()) return 0;
+    const auto before = progression.GetXP();
+    progression.GrantXP(enemy.getXPReward());
+    const auto accepted = progression.GetXP() - before;
+    // Delivery occurs before the claim. Mark before level-up item generation so
+    // an allocation failure there cannot cause the already-delivered XP to repeat.
+    enemy.ClaimXPReward();
+    progression.CheckLevelUp(player);
+    return accepted;
+}
+
+void CombatManager::ResolveDefeatReward(Player& player, Enemy& enemy, ProgressionManager* progression) {
+    if (!player.isAlive()) {
+        enemy.ForfeitRewards();
+        return;
+    }
+    if (progression == nullptr) return;
+    const auto accepted = DeliverDefeatXP(player, enemy, *progression);
+    if (accepted > 0) AddEvent(CombatEvent::Kind::Reward, "XP gained: +" + std::to_string(accepted) + ".");
+}
+
+void CombatManager::ForfeitEncounterRewards() {
+    if (activeEnemy_ != nullptr) activeEnemy_->ForfeitRewards();
+    for (Enemy* enemy : currentEnemyParty_) if (enemy != nullptr) enemy->ForfeitRewards();
 }
 
 void CombatManager::StartPlayerTurn(Player& player) {
@@ -126,7 +118,10 @@ void CombatManager::StartPlayerTurn(Player& player) {
     for (const auto& tick : player.GetStatusDamageResults())
         RecordDamage(StatusDisplayName(tick.type), player.getName(), StatusDisplayName(tick.type), tick.damage, CombatEvent::Kind::DotTick);
     if (playerHealing > 0) AddEvent(CombatEvent::Kind::Heal, player.getName() + " heals " + std::to_string(playerHealing) + " HP from Heal-over-time.", playerHealing);
-    if (!player.isAlive()) AddEvent(CombatEvent::Kind::Death, player.getName() + " has fallen.");
+    if (!player.isAlive()) {
+        ForfeitEncounterRewards();
+        AddEvent(CombatEvent::Kind::Death, player.getName() + " has fallen.");
+    }
     if (stunned && player.isAlive()) {
         AddEvent(CombatEvent::Kind::Info, player.getName() + " loses the turn to Stun.");
         playerGauge_ -= 1000;
@@ -136,7 +131,7 @@ void CombatManager::StartPlayerTurn(Player& player) {
 }
 
 CombatManager::CombatManager()
-    : blocked_(false), weaknessExposed_(false), interrogationAttempts_(0),
+    : blocked_(false), weaknessExposed_(false),
       turnNumber_(0), playerTurn_(true), activeEnemy_(nullptr),
       playerGauge_(0), enemyGauge_(0),
       consumableUsedThisTurn_(false),
@@ -152,7 +147,6 @@ void CombatManager::ResetEncounter() {
     activeEnemy_ = nullptr;
     blocked_ = false;
     weaknessExposed_ = false;
-    interrogationAttempts_ = 0;
     turnNumber_ = 0;
     playerTurn_ = true;
     playerGauge_ = 0;
@@ -180,6 +174,7 @@ void CombatManager::RecordEnvironmentalDefeat(const std::string& source, const P
 }
 void CombatManager::CompleteEncounter(const std::string& outcome) {
     if (encounterCompleted_) return;
+    if (outcome == "fled" || outcome == "defeat") ForfeitEncounterRewards();
     encounterCompleted_ = true;
     AddEvent(CombatEvent::Kind::Completion, "Encounter complete: " + outcome + ".");
 }
@@ -250,7 +245,6 @@ void CombatManager::BeginEncounter(Enemy& enemy) {
     enemyGauge_ = 0;
     playerTurn_ = false;
     weaknessExposed_ = false;
-    interrogationAttempts_ = 0;
     consumableUsedThisTurn_ = false;
     shimmerCooldowns_.clear();
     events_.clear();
@@ -294,7 +288,12 @@ bool CombatManager::resolve(CombatAction action, Player& player, Enemy& enemy,
         playerTurn_ = playerGauge_ >= 1000;
     }
 
-    if (!player.isAlive() || !enemy.isAlive()) return false;
+    if (!player.isAlive()) {
+        enemy.ForfeitRewards();
+        ForfeitEncounterRewards();
+        return false;
+    }
+    if (encounterCompleted_ || !enemy.isAlive()) return false;
     if (!playerTurn_) return false;
     ++turnNumber_;
 
@@ -412,6 +411,7 @@ bool CombatManager::resolve(CombatAction action, Player& player, Enemy& enemy,
         return false;
     }
     case CombatAction::Flee:
+        enemy.ForfeitRewards();
         AddEvent(CombatEvent::Kind::Info, player.getName() + " retreats from the encounter.");
         CompleteEncounter("fled");
         return true;
@@ -421,7 +421,12 @@ bool CombatManager::resolve(CombatAction action, Player& player, Enemy& enemy,
 }
 
 bool CombatManager::UseConsumable(const std::string& itemName, Player& player, Enemy& enemy, ProgressionManager* progression) {
-    if (!player.isAlive() || !enemy.isAlive() || !playerTurn_ || consumableUsedThisTurn_) {
+    if (!player.isAlive()) {
+        enemy.ForfeitRewards();
+        ForfeitEncounterRewards();
+        return false;
+    }
+    if (encounterCompleted_ || !player.isAlive() || !enemy.isAlive() || !playerTurn_ || consumableUsedThisTurn_) {
         AddEvent(CombatEvent::Kind::Info, "Only one consumable can be used per turn.");
         return false;
     }
@@ -449,7 +454,12 @@ bool CombatManager::UseConsumable(const std::string& itemName, Player& player, E
 }
 
 void CombatManager::enemyTurn(Player& player, Enemy& enemy, ProgressionManager* progression) {
-    if (!player.isAlive()) return;
+    if (!player.isAlive()) {
+        enemy.ForfeitRewards();
+        ForfeitEncounterRewards();
+        return;
+    }
+    if (encounterCompleted_) return;
     if (!enemy.isAlive()) {
         ResolveDefeatReward(player, enemy, progression);
         return;
@@ -483,7 +493,11 @@ void CombatManager::enemyTurn(Player& player, Enemy& enemy, ProgressionManager* 
         return;
     }
     const auto finishAction = [&](bool extraTurn = false) {
-        if (!player.isAlive()) AddEvent(CombatEvent::Kind::Death, player.getName() + " has been defeated.");
+        if (!player.isAlive()) {
+            enemy.ForfeitRewards();
+            ForfeitEncounterRewards();
+            AddEvent(CombatEvent::Kind::Death, player.getName() + " has been defeated.");
+        }
         enemyGauge_ -= 1000;
         if (extraTurn) enemyGauge_ = 1000;
         playerTurn_ = false;
@@ -607,7 +621,9 @@ void CombatManager::PrepareGroupTurn(Player& player, const std::vector<Enemy*>& 
 }
 
 bool CombatManager::StepEnemyPartyTurn(Player& player, const std::vector<Enemy*>& enemies, ProgressionManager* progression) {
+    if (encounterCompleted_) return false;
     if (!groupEnemyTurn_) PrepareGroupTurn(player, enemies);
+    if (!player.isAlive()) ForfeitEncounterRewards();
     while (nextPartyEnemy_ < currentEnemyParty_.size() && !currentEnemyParty_[nextPartyEnemy_]->isAlive()) ++nextPartyEnemy_;
     if (player.isAlive() && nextPartyEnemy_ < currentEnemyParty_.size()) {
         Enemy* candidate = currentEnemyParty_[nextPartyEnemy_];
@@ -631,28 +647,3 @@ void CombatManager::enemyTurn(Player& player, Enemy& enemy, const std::vector<En
 
 bool CombatManager::IsPlayerTurn() const { return playerTurn_; }
 bool CombatManager::HasUsedConsumableThisTurn() const { return consumableUsedThisTurn_; }
-
-bool CombatManager::interrogate(Player& player, Enemy& enemy,
-                                ProgressionManager* progression) {
-    ++interrogationAttempts_;
-    const int playerLevel = progression != nullptr ? progression->GetLevel() : 1;
-    const int chance = InterrogationChance(enemy, playerLevel);
-    const unsigned roll = InterrogationRoll(enemy, playerLevel, interrogationAttempts_);
-
-    AddEvent(CombatEvent::Kind::Info, "Interrogation success chance: " + std::to_string(chance) + "%.");
-    if (roll >= static_cast<unsigned>(chance)) {
-        AddEvent(CombatEvent::Kind::Info, enemy.getName() + " refuses to reveal anything.");
-        return true;
-    }
-
-    if (!enemy.ClaimInvestigationReward()) {
-        AddEvent(CombatEvent::Kind::Info, enemy.getName() + " has no new lore to reveal.");
-        return true;
-    }
-    AddEvent(CombatEvent::Kind::Info, enemy.getName() + " reveals a fragment of cathedral lore.");
-    if (progression != nullptr) {
-        progression->GrantXP(CalculateInvestigationXP(playerLevel, 1));
-        progression->CheckLevelUp(player);
-    }
-    return true;
-}

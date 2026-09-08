@@ -22,6 +22,8 @@
   <ItemGroup>
     <ClInclude Include="tests\ProgressionRepairTests.h" />
     <ClInclude Include="tests\ConsoleConversionTests.h" />
+    <ClInclude Include="tests\ProgressionOwnershipTests.h" />
+    <ClInclude Include="tests\RewardOwnershipTests.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>

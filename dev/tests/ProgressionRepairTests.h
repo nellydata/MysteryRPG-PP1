@@ -316,7 +316,11 @@ inline void TestFixedBossAndFirstClear() {
             if (level == 1) farmHP1 = enemy->getMaxHP(); else farmHP20 = enemy->getMaxHP();
             enemy->takeDamage(enemy->getHP());
             const auto farm = encounters.ResolveVictory(entrance, player, progression, map, *enemy);
-            assert(farm.resolved && !farm.firstClear && farm.messages.empty());
+            assert(farm.resolved && !farm.firstClear);
+            // The shared fallback now reports its actual XP delivery; farm kills
+            // still must not repeat first-clear or room-unlock messages.
+            assert(farm.messages.size() == 1);
+            assert(farm.messages.front() == "XP gained: +" + std::to_string(enemy->getXPReward()) + ".");
         }
         assert(foundFarm);
     }

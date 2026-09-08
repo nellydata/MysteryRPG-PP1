@@ -32,6 +32,9 @@ public:
     std::vector<std::string> GetUnlockedShimmerSkills() const;
     std::vector<std::string> GetEquippedShimmerSkills() const;
     int GetShimmerPoints() const;
+    bool EquipShimmerSkill(const std::string& skillName);
+    bool UnequipShimmerSkill(const std::string& skillName);
+    // Compatibility overloads reject a cost that differs from the catalogue.
     bool EquipShimmerSkill(const std::string& skillName, int cost);
     bool UnequipShimmerSkill(const std::string& skillName, int cost);
     bool UnlockShimmerFromTrigger(const std::string& trigger);
@@ -49,7 +52,6 @@ private:
     std::set<std::string> cruxItems_;
     std::set<std::string> shimmerSkills_;
     std::set<std::string> equippedShimmerSkills_;
-    int shimmerPointsUsed_;
     struct LevelUpReward {
         int levelReached = 1;
         std::vector<std::string> shimmerChoices;

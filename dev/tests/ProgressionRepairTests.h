@@ -217,6 +217,8 @@ inline FightMetrics Fight(Player& player, Enemy& enemy, ProgressionManager* prog
     }
     assert(!player.isAlive() || !enemy.isAlive());
     metrics.victory = !enemy.isAlive();
+    // Match the game's LeaveCombat behavior: clear statuses after combat ends.
+    player.ClearStatuses();
     return metrics;
 }
 
@@ -336,6 +338,70 @@ inline void EquipUpgrades(Player& player) {
     }
 }
 
+struct RunStats {
+    int finalLevel = 0;
+    int investigations = 0;
+    int ordinaryEncounters = 0;
+    int victories = 0;
+    int defeats = 0;
+    int bossWithdrawals = 0;
+    int itemEvents = 0;
+    int xpEvents = 0;
+    int clueEvents = 0;
+    int hazardEvents = 0;
+    int beneficialEvents = 0;
+    int recoveries = 0;
+    int actions = 0;
+    std::int64_t xpFromExploration = 0;
+    std::int64_t xpFromClues = 0;
+    std::int64_t xpFromEnemies = 0;
+    int equipmentAcquired = 0;
+    int equipmentEquipped = 0;
+};
+
+inline void PrintRunStats(int run, const RunStats& stats) {
+    std::cout << "RUN " << run
+              << " finalLevel=" << stats.finalLevel
+              << " investigations=" << stats.investigations
+              << " ordinaryEncounters=" << stats.ordinaryEncounters
+              << " victories=" << stats.victories
+              << " defeats=" << stats.defeats
+              << " bossWithdrawals=" << stats.bossWithdrawals
+              << " itemEvents=" << stats.itemEvents
+              << " xpEvents=" << stats.xpEvents
+              << " clueEvents=" << stats.clueEvents
+              << " hazardEvents=" << stats.hazardEvents
+              << " beneficialEvents=" << stats.beneficialEvents
+              << " recoveries=" << stats.recoveries
+              << " actions=" << stats.actions
+              << " xpExploration=" << stats.xpFromExploration
+              << " xpClues=" << stats.xpFromClues
+              << " xpEnemies=" << stats.xpFromEnemies
+              << " equipmentAcquired=" << stats.equipmentAcquired
+              << " equipmentEquipped=" << stats.equipmentEquipped << '\n';
+}
+
+inline void PrintFailureState(int run, const RunStats& stats, const std::string& assertion,
+                              const Player& player, const ProgressionManager& progression, const Area& room) {
+    std::cout << "FAILURE run=" << run << " assertion=\"" << assertion << "\"\n";
+    PrintRunStats(run, stats);
+    std::cout << "  playerHP=" << player.getHP() << "/" << player.getMaxHP()
+              << " level=" << progression.GetLevel()
+              << " xp=" << progression.GetXP() << "/" << progression.GetXPToNextLevel()
+              << " roomBossDefeated=" << room.HasBossBeenDefeated()
+              << " roomClues=" << room.HasClues()
+              << " roomItems=" << room.HasItems()
+              << " roomInteractablesRevealed=" << room.AreAllRequiredInteractablesRevealed() << '\n';
+}
+
+inline int CountEquipped(const Player& player) {
+    int count = 0;
+    for (EquipSlot slot : {EquipSlot::Head, EquipSlot::Torso, EquipSlot::Boots, EquipSlot::Hand, EquipSlot::Accessory}) {
+        if (player.GetEquipped(slot) != nullptr) ++count;
+    }
+    return count;
+}
+
 inline void SimulateFreshProgression() {
     constexpr int runs = 32;
     struct Totals { double investigations = 0, battles = 0, wins = 0, itemEvents = 0, xpEvents = 0, defeats = 0, recoveries = 0, actions = 0, bossWithdrawals = 0; };
@@ -348,39 +414,34 @@ inline void SimulateFreshProgression() {
         Area& fountain = map.GetRooms()[0];
         Area& room = map.GetRooms()[1];
         std::mt19937 seeds(0xA11CEu + run);
-        Totals counts;
+        RunStats stats;
+        const int equippedBefore = CountEquipped(player);
         auto guardian = encounters.ResolveInvestigation(fountain, player, progression, seeds());
-        std::cout << "DEBUG run=" << run << " guardian=" << (guardian.spawnedEnemy ? guardian.spawnedEnemy->getName() : "null")
-                  << " playerHP=" << player.getHP() << "/" << player.getMaxHP() << " level=" << progression.GetLevel() << '\n';
-        assert(guardian.spawnedEnemy);
+        if (!guardian.spawnedEnemy) { PrintFailureState(run, stats, "guardian.spawnedEnemy", player, progression, room); assert(false); }
         auto guardianFight = Fight(player, *guardian.spawnedEnemy, &progression);
-        std::cout << "DEBUG run=" << run << " guardianFight victory=" << guardianFight.victory
-                  << " actions=" << guardianFight.actions << " damage=" << guardianFight.damageReceived << '\n';
-        assert(guardianFight.victory);
+        if (!guardianFight.victory) { PrintFailureState(run, stats, "guardianFight.victory", player, progression, room); assert(false); }
         encounters.ResolveVictory(fountain, player, progression, map, *guardian.spawnedEnemy);
-        std::cout << "DEBUG run=" << run << " healingUnlocked=" << fountain.IsHealingUnlocked()
-                  << " roomUnlocked=" << room.IsUnlocked() << " level=" << progression.GetLevel() << '\n';
-        assert(fountain.IsHealingUnlocked() && room.IsUnlocked());
-        ++counts.battles; ++counts.wins; counts.actions += guardianFight.actions;
+        if (!fountain.IsHealingUnlocked() || !room.IsUnlocked()) { PrintFailureState(run, stats, "fountain.IsHealingUnlocked && room.IsUnlocked", player, progression, room); assert(false); }
+        ++stats.ordinaryEncounters; ++stats.victories; stats.actions += guardianFight.actions;
         int target = 0;
         int loopGuard = 0;
-        while (progression.GetLevel() < 10 && counts.investigations < 2000) {
-            if (++loopGuard % 25 == 0)
-                std::cout << "DEBUG run=" << run << " loop=" << loopGuard << " level=" << progression.GetLevel()
-                          << " investigations=" << counts.investigations << " playerHP=" << player.getHP() << "/" << player.getMaxHP()
-                          << " xp=" << progression.GetXP() << "/" << progression.GetXPToNextLevel()
-                          << " defeats=" << counts.defeats << " itemEvents=" << counts.itemEvents << " xpEvents=" << counts.xpEvents << '\n';
+        while (progression.GetLevel() < 10 && stats.investigations < 2000) {
+            ++loopGuard;
             if (player.getHP() < player.getMaxHP() * 60 / 100) {
-                player.ClearStatuses(); player.RestoreHealth(player.getMaxHP()); ++counts.recoveries;
+                player.ClearStatuses(); player.RestoreHealth(player.getMaxHP()); ++stats.recoveries;
             }
+            const int itemsBefore = ItemCount(player);
+            const int equippedBeforeLoop = CountEquipped(player);
             auto result = encounters.ResolveInvestigation(room, player, progression, seeds());
-            ++counts.investigations;
-            counts.itemEvents += result.type == InvestigationEventType::ItemDiscovery;
-            counts.xpEvents += result.xpAwarded > 0;
-            if (loopGuard <= 10)
-                std::cout << "DEBUG run=" << run << " inv=" << counts.investigations << " type=" << static_cast<int>(result.type)
-                          << " xp=" << result.xpAwarded << " enemy=" << (result.spawnedEnemy ? result.spawnedEnemy->getName() : "none")
-                          << " level=" << progression.GetLevel() << " xpTotal=" << progression.GetXP() << "/" << progression.GetXPToNextLevel() << '\n';
+            ++stats.investigations;
+            if (result.type == InvestigationEventType::ItemDiscovery) {
+                ++stats.itemEvents;
+                stats.equipmentAcquired += static_cast<int>(result.items.size());
+            }
+            if (result.type == InvestigationEventType::ExplorationXP) { ++stats.xpEvents; stats.xpFromExploration += result.xpAwarded; }
+            if (result.type == InvestigationEventType::ClueDiscovery) { ++stats.clueEvents; stats.xpFromClues += result.xpAwarded; }
+            if (result.type == InvestigationEventType::Hazard) ++stats.hazardEvents;
+            if (result.type == InvestigationEventType::Beneficial) ++stats.beneficialEvents;
             if (result.spawnedEnemy) {
                 if (result.spawnedEnemy->IsFirstClearBoss()) {
                     // Follow the actual flee action, including any faster boss opening.
@@ -388,53 +449,62 @@ inline void SimulateFreshProgression() {
                     combat.BeginEncounter(*result.spawnedEnemy); combat.PrepareTurn(player, *result.spawnedEnemy);
                     while (player.isAlive() && !combat.IsPlayerTurn()) combat.enemyTurn(player, *result.spawnedEnemy);
                     if (player.isAlive()) {
-                        std::cout << "DEBUG run=" << run << " bossFlee playerTurn=" << combat.IsPlayerTurn()
-                                  << " playerHP=" << player.getHP() << " boss=" << result.spawnedEnemy->getName() << '\n';
-                        assert(combat.resolve(CombatAction::Flee, player, *result.spawnedEnemy));
+                        if (!combat.resolve(CombatAction::Flee, player, *result.spawnedEnemy)) {
+                            PrintFailureState(run, stats, "combat.resolve(Flee)", player, progression, room); assert(false);
+                        }
                     }
-                    ++counts.bossWithdrawals;
+                    ++stats.bossWithdrawals;
                 } else {
-                    ++counts.battles;
+                    ++stats.ordinaryEncounters;
                     const auto fight = Fight(player, *result.spawnedEnemy, &progression);
-                    counts.actions += fight.actions;
-                    if (fight.victory) { ++counts.wins; encounters.ResolveVictory(room, player, progression, map, *result.spawnedEnemy); }
+                    stats.actions += fight.actions;
+                    if (fight.victory) {
+                        ++stats.victories;
+                        const auto victory = encounters.ResolveVictory(room, player, progression, map, *result.spawnedEnemy);
+                        stats.xpFromEnemies += result.spawnedEnemy->getXPReward();
+                        stats.equipmentAcquired += static_cast<int>(victory.items.size());
+                    }
                 }
             }
             if (!player.isAlive()) {
-                ++counts.defeats; ++counts.recoveries;
+                ++stats.defeats; ++stats.recoveries;
                 player.ClearStatuses(); player.RestoreHealth(player.getMaxHP());
-                assert(!room.HasBossBeenDefeated());
+                if (room.HasBossBeenDefeated()) { PrintFailureState(run, stats, "!room.HasBossBeenDefeated after defeat", player, progression, room); assert(false); }
             }
             progression.CheckLevelUp(player);
             EquipUpgrades(player);
+            stats.equipmentEquipped += CountEquipped(player) - equippedBeforeLoop;
             while (progression.HasPendingShimmerChoice()) {
                 if (progression.GetPendingShimmerChoices().empty()) progression.ResolvePendingShimmerChoice();
                 else progression.SelectPendingShimmerSkill(progression.GetPendingShimmerChoices().front());
             }
             while (target < 3 && progression.GetLevel() >= targets[target]) {
-                totals[target].investigations += counts.investigations;
-                totals[target].battles += counts.battles;
-                totals[target].wins += counts.wins;
-                totals[target].itemEvents += counts.itemEvents;
-                totals[target].xpEvents += counts.xpEvents;
-                totals[target].defeats += counts.defeats;
-                totals[target].recoveries += counts.recoveries;
-                totals[target].actions += counts.actions;
-                totals[target].bossWithdrawals += counts.bossWithdrawals;
+                totals[target].investigations += stats.investigations;
+                totals[target].battles += stats.ordinaryEncounters;
+                totals[target].wins += stats.victories;
+                totals[target].itemEvents += stats.itemEvents;
+                totals[target].xpEvents += stats.xpEvents;
+                totals[target].defeats += stats.defeats;
+                totals[target].recoveries += stats.recoveries;
+                totals[target].actions += stats.actions;
+                totals[target].bossWithdrawals += stats.bossWithdrawals;
                 ++target;
             }
         }
-        std::cout << "DEBUG run=" << run << " level=" << progression.GetLevel()
-                  << " investigations=" << counts.investigations << " target=" << target
-                  << " itemEvents=" << counts.itemEvents << " xpEvents=" << counts.xpEvents << '\n';
-        assert(target == 3 && !room.HasBossBeenDefeated() && counts.itemEvents > 0 && counts.xpEvents > 0);
+        stats.finalLevel = progression.GetLevel();
+        PrintRunStats(run, stats);
+        if (target != 3) { PrintFailureState(run, stats, "target == 3 (reached level 10)", player, progression, room); assert(false); }
+        if (room.HasBossBeenDefeated()) { PrintFailureState(run, stats, "!room.HasBossBeenDefeated", player, progression, room); assert(false); }
+        if (stats.itemEvents <= 0) { PrintFailureState(run, stats, "itemEvents > 0", player, progression, room); assert(false); }
+        if (stats.xpEvents <= 0) { PrintFailureState(run, stats, "xpEvents > 0", player, progression, room); assert(false); }
         player.ClearStatuses(); player.RestoreHealth(player.getMaxHP());
         auto boss = CreateFirstClearBoss(*map.GetRoomDefinition(room));
         const auto readyFight = Fight(player, *boss, &progression);
         if (readyFight.victory) {
             ++readyBossVictories;
-            assert(encounters.ResolveVictory(room, player, progression, map, *boss).firstClear);
-            assert(map.GetRooms()[2].IsUnlocked());
+            const auto victory = encounters.ResolveVictory(room, player, progression, map, *boss);
+            if (!victory.firstClear) { PrintFailureState(run, stats, "victory.firstClear", player, progression, room); assert(false); }
+            if (!map.GetRooms()[2].IsUnlocked()) { PrintFailureState(run, stats, "map.GetRooms()[2].IsUnlocked", player, progression, room); assert(false); }
         }
     }
     for (int target = 0; target < 3; ++target) {

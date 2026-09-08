@@ -118,19 +118,21 @@ void ConsoleUI::PrintPlayerPanel(const Player& player, const ProgressionManager&
 void ConsoleUI::PrintStatusEffects(const Player& player) const {
 	std::cout << "Statuses: ";
 	if (player.GetStatuses().empty()) {
-		std::cout << "none\n";
-		return;
+		std::cout << "no statuses active\n";
+	} else {
+		for (const auto& status : player.GetStatuses()) {
+			const bool negative = status.type == StatusType::Stun || status.type == StatusType::Bleed || status.type == StatusType::Burn ||
+				status.type == StatusType::Poison || status.type == StatusType::Slow || status.type == StatusType::VerdigrisMark ||
+				status.type == StatusType::AttackDown || status.type == StatusType::DefenseDown || status.type == StatusType::AccuracyDown ||
+				status.type == StatusType::HealResistance || status.type == StatusType::DotReduction;
+			if (colorEnabled_) std::cout << (negative ? "\x1b[31m" : "\x1b[34m");
+			std::cout << StatusName(static_cast<int>(status.type)) << " (" << status.turns << ")  ";
+			if (colorEnabled_) std::cout << Reset();
+		}
+		std::cout << "\n";
 	}
-	for (const auto& status : player.GetStatuses()) {
-		const bool negative = status.type == StatusType::Stun || status.type == StatusType::Bleed || status.type == StatusType::Burn ||
-			status.type == StatusType::Poison || status.type == StatusType::Slow || status.type == StatusType::VerdigrisMark ||
-			status.type == StatusType::AttackDown || status.type == StatusType::DefenseDown || status.type == StatusType::AccuracyDown ||
-			status.type == StatusType::HealResistance || status.type == StatusType::DotReduction;
-		if (colorEnabled_) std::cout << (negative ? "\x1b[31m" : "\x1b[34m");
-		std::cout << StatusName(static_cast<int>(status.type)) << " (" << status.turns << ")  ";
-		if (colorEnabled_) std::cout << Reset();
-	}
-	std::cout << "\n";
+	for (const auto& setName : player.GetActiveSets())
+		std::cout << "  Active set: " << setName << "\n";
 }
 
 void ConsoleUI::PrintEquipment(const Player& player) const {
@@ -232,12 +234,13 @@ void ConsoleUI::ShowMap(const std::vector<Area>& rooms) const {
 void ConsoleUI::ShowShimmerSkills(const CombatManager& combat) const {
 	Clear();
 	PrintTitle("SHIMMER SKILL BAR  //  LATIN RESONANCE");
-	std::cout << "  Pulsus Luminis       CD 3   Reveal and strike\n"
-			  << "  Velum Radiāns        CD 4   Negate the next attack\n"
-			  << "  Gradus Coruscus      CD 2   Gain an immediate turn\n"
-			  << "  Fulgur Aurorae       CD 5   Massive light attack\n"
-			  << "  Flos Aeruginis       CD 4   Burn and damage over time\n"
-			  << "  Lux Sanctorum        CD 4   Heal and cleanse\n";
+	const std::string skillNames[] = {"Phragmós Phōtós", "Ray of Mercy", "Prism Step", "Gleam Needle",
+		"Therapeía Anakláseōs", "Anástasis Phōtós", "Phthorá Phōtós"};
+	for (const auto& skillName : skillNames) {
+		const auto skill = ShimmerSkill::Create(skillName);
+		if (skill != nullptr) std::cout << "  " << skillName << "  " << skill->getPowerPercent()
+			<< "% power  CD " << skill->getCooldown() << "\n";
+	}
 	if (const ShimmerSkill* skill = combat.GetDefaultSkill()) {
 		std::cout << "\nEquipped: " << skill->getName() << "  //  "
 				  << (skill->IsReady() ? "READY" : "COOLDOWN") << "\n";

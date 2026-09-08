@@ -93,14 +93,21 @@ void CombatManager::StartPlayerTurn(Player& player) {
     consumableUsedThisTurn_ = false;
     for (auto& cooldown : shimmerCooldowns_) if (cooldown.second > 0) --cooldown.second;
     if (defaultSkill_ != nullptr) defaultSkill_->TickCooldown();
+    if (player.HasActiveSet("Verdigris Matron")) {
+        const int before = player.getHP();
+        player.heal(player.getMaxHP() * 25 / 100);
+        const int amount = player.getHP() - before;
+        if (amount > 0) AddEvent(CombatEvent::Kind::Heal, player.getName() + " restores " + std::to_string(amount) + " HP from Verdigris Matron.", amount);
+    }
     AddEvent(CombatEvent::Kind::Turn, player.getName() + "'s turn.");
     const int healthBefore = player.getHP();
     const bool stunned = player.HasStatus(StatusType::Stun);
-    player.ProcessStatuses();
-    const int damage = healthBefore - player.getHP();
-    if (damage > 0) AddEvent(CombatEvent::Kind::DotTick, "Ongoing effects deal " + std::to_string(damage) + " damage to " + player.getName() + ".", damage);
-    const int healing = player.getHP() - healthBefore;
-    if (healing > 0) AddEvent(CombatEvent::Kind::Heal, player.getName() + " heals " + std::to_string(healing) + " HP from HoT.", healing);
+    std::vector<std::pair<StatusType, int>> playerDamageEvents;
+    int playerHealing = 0;
+    player.ProcessStatuses(playerDamageEvents, playerHealing);
+    for (const auto& tick : playerDamageEvents)
+        AddEvent(CombatEvent::Kind::DotTick, StatusDisplayName(tick.first) + std::string(" deals ") + std::to_string(tick.second) + " raw damage to " + player.getName() + ".", tick.second);
+    if (playerHealing > 0) AddEvent(CombatEvent::Kind::Heal, player.getName() + " heals " + std::to_string(playerHealing) + " HP from Heal-over-time.", playerHealing);
     if (!player.isAlive()) AddEvent(CombatEvent::Kind::Death, player.getName() + " has fallen.");
     if (stunned && player.isAlive()) {
         AddEvent(CombatEvent::Kind::Info, player.getName() + " loses the turn to Stun.");
@@ -133,6 +140,7 @@ void CombatManager::ResetEncounter() {
     playerGauge_ = 0;
     enemyGauge_ = 0;
     consumableUsedThisTurn_ = false;
+    battleStartEffectsApplied_ = false;
     groupEnemyTurn_ = false;
     currentEnemyParty_.clear();
     shimmerCooldowns_.clear();
@@ -266,8 +274,8 @@ bool CombatManager::resolve(CombatAction action, Player& player, Enemy& enemy,
 
         const int dealt = enemyHealthBefore - enemy.getHP();
         const int healed = player.getHP() - playerHealthBefore;
-        if (dealt > 0) AddEvent(CombatEvent::Kind::Damage, "Shimmer dealt " + std::to_string(dealt) + " damage.", dealt);
-        if (healed > 0) AddEvent(CombatEvent::Kind::Heal, "Shimmer restored " + std::to_string(healed) + " HP.", healed);
+        if (dealt > 0) AddEvent(CombatEvent::Kind::Damage, player.getName() + " deals " + std::to_string(dealt) + " damage with " + skill->getName() + ".", dealt);
+        if (healed > 0) AddEvent(CombatEvent::Kind::Heal, player.getName() + " restores " + std::to_string(healed) + " HP with " + skill->getName() + ".", healed);
         if (effect.find("barrier") != std::string::npos) AddEvent(CombatEvent::Kind::Shield, player.getName() + " gains a Shimmer barrier.");
         if (effect.find("stun") != std::string::npos && enemy.HasStatus(StatusType::Stun)) AddEvent(CombatEvent::Kind::Debuff, enemy.getName() + " is stunned by Shimmer.");
         if (effect.find("burn") != std::string::npos && enemy.HasStatus(StatusType::Burn)) AddEvent(CombatEvent::Kind::Debuff, enemy.getName() + " suffers Burn from Shimmer.");
@@ -279,6 +287,7 @@ bool CombatManager::resolve(CombatAction action, Player& player, Enemy& enemy,
             effect.find("mark") == std::string::npos && effect != "stat_boost" && effect != "extra_turn") {
             AddEvent(CombatEvent::Kind::Info, "Shimmer effect resolved: " + effect + ".");
         }
+        if (player.HasActiveSet("Shimmer Ascendant") && dealt > 0) player.heal(player.getMaxHP() * 5 / 100);
         shimmerCooldowns_[skill->getName()] = skill->getCooldown();
         if (!enemy.isAlive() && progression != nullptr) {
             ResolveDefeatReward(player, enemy, progression);
@@ -385,22 +394,23 @@ void CombatManager::enemyTurn(Player& player, Enemy& enemy, ProgressionManager* 
         if (skill.effect == "bleed" || skill.effect == "burn" || skill.effect == "poison") {
             StatusType type = skill.effect == "bleed" ? StatusType::Bleed : skill.effect == "burn" ? StatusType::Burn : StatusType::Poison;
             const bool hadStatus = player.HasStatus(type);
-            player.ApplyStatus({type, skill.duration > 0 ? skill.duration : 2, 0, enemy.getAtk(), 0, enemy.getDefense()}, enemy.getAccuracy());
-            AddEvent(CombatEvent::Kind::Debuff, enemy.getName() + " inflicts " + std::string(StatusDisplayName(type)) + " on " + player.getName() + " for " +
+            player.ApplyStatus({type, skill.duration > 0 ? skill.duration : 2, 0, enemy.getAtk(), 0, enemy.getDefense(), skill.name}, enemy.getAccuracy());
+            AddEvent(CombatEvent::Kind::Debuff, enemy.getName() + " uses " + skill.name + " to inflict " + std::string(StatusDisplayName(type)) + " on " + player.getName() + " for " +
                 std::to_string(skill.duration > 0 ? skill.duration : 2) + " turns.");
         } else if (skill.effect == "tri_dot" || skill.effect == "burn_bleed") {
             const int duration = skill.duration > 0 ? skill.duration : 2;
             for (StatusType type : {StatusType::Burn, StatusType::Bleed, StatusType::Poison}) {
                 if (skill.effect == "burn_bleed" && type == StatusType::Poison) continue;
                 const bool hadStatus = player.HasStatus(type);
-                player.ApplyStatus({type, duration, 0, enemy.getAtk(), 0, enemy.getDefense()}, enemy.getAccuracy());
-                if (!hadStatus && player.HasStatus(type)) AddEvent(CombatEvent::Kind::Debuff, enemy.getName() + " inflicts " + std::string(StatusDisplayName(type)) + " on " + player.getName() + " for " + std::to_string(duration) + " turns.");
+                player.ApplyStatus({type, duration, 0, enemy.getAtk(), 0, enemy.getDefense(), skill.name}, enemy.getAccuracy());
+                if (!hadStatus && player.HasStatus(type)) AddEvent(CombatEvent::Kind::Debuff, enemy.getName() + " uses " + skill.name + " to inflict " + std::string(StatusDisplayName(type)) + " on " + player.getName() + " for " + std::to_string(duration) + " turns.");
             }
         } else if (skill.effect == "def_down" || skill.effect == "accuracy_down") {
             const StatusType type = skill.effect == "def_down" ? StatusType::DefenseDown : StatusType::AccuracyDown;
             const bool hadStatus = player.HasStatus(type);
-            player.ApplyStatus({type, skill.duration > 0 ? skill.duration : 2, skill.multiplier > 0 ? skill.multiplier / 2 : 20, enemy.getAtk(), 0, enemy.getDefense()}, enemy.getAccuracy());
-            if (!hadStatus && player.HasStatus(type)) AddEvent(CombatEvent::Kind::Debuff, enemy.getName() + " applies " + StatusDisplayName(type) + " to " + player.getName() + ".");
+            const int duration = skill.duration > 0 ? skill.duration : 2;
+            player.ApplyStatus({type, duration, skill.multiplier > 0 ? skill.multiplier / 2 : 20, enemy.getAtk(), 0, enemy.getDefense(), skill.name}, enemy.getAccuracy());
+            if (!hadStatus && player.HasStatus(type)) AddEvent(CombatEvent::Kind::Debuff, enemy.getName() + " uses " + skill.name + " to apply " + StatusDisplayName(type) + " (" + std::to_string(duration) + " turns) to " + player.getName() + ".");
         } else if (skill.effect == "heal_self" || skill.effect == "heal_cleanse") {
             const int amount = (std::max)(1, enemy.getMaxHP() * 15 / 100);
             const int before = enemy.getHP();

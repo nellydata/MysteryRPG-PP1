@@ -5,6 +5,7 @@
 #include "ProgressionManager.h"
 #include "EncounterManager.h"
 #include "Area.h"
+#include "ShimmerSkill.h"
 #include <cassert>
 
 namespace {
@@ -16,6 +17,16 @@ EnemyDefinition TestEnemyDefinition() {
 	definition.defBase = 10;
 	definition.speed = 100;
 	return definition;
+}
+
+void EquipFullSet(Player& player, const std::string& setName) {
+	const auto catalog = BuildEquippableCatalog();
+	for (const auto& definition : catalog) {
+		if (definition.setName == setName) {
+			player.AddItem(std::make_unique<Item>(definition));
+			player.Equip(*player.GetInventory().GetItems().back().item);
+		}
+	}
 }
 }
 
@@ -55,6 +66,17 @@ int main() {
 	}
 
 	{
+		Player player("Test", 100, 10);
+		player.ApplyStatus({StatusType::Bleed, 1, 0, 20});
+		std::vector<std::pair<StatusType, int>> damageEvents;
+		int healing = 0;
+		player.ProcessStatuses(damageEvents, healing);
+		assert(player.getHP() == 94);
+		assert(damageEvents.size() == 1);
+		assert(damageEvents.front().second == 6);
+	}
+
+	{
 		Enemy enemy(TestEnemyDefinition(), 1);
 		enemy.ApplyStatus({StatusType::Barrier, 2, 20});
 		const int before = enemy.getHP();
@@ -80,6 +102,14 @@ int main() {
 		const int before = player.getHP();
 		player.ProcessStatuses();
 		assert(before - player.getHP() >= 6);
+	}
+
+	{
+		Player player("Set Test", 100, 10);
+		EquipFullSet(player, "Automaton Overlord");
+		assert(player.HasActiveSet("Automaton Overlord"));
+		assert(player.getAccuracy() == 100);
+		assert(player.getCritDamage() >= 200);
 	}
 
 	{
@@ -154,6 +184,21 @@ int main() {
 			}
 		}
 		assert(sawHazard);
+	}
+
+	{
+		auto low = ShimmerSkill::Create("Gleam Needle");
+		auto mid = ShimmerSkill::Create("Lumen Spiculum");
+		auto high = ShimmerSkill::Create("Refractio Ultima");
+		assert(low != nullptr && mid != nullptr && high != nullptr);
+		assert(low->getCost() == 1 && low->getPowerPercent() >= 500);
+		assert(mid->getCost() == 3 && mid->getPowerPercent() >= 1200);
+		assert(high->getCost() == 5 && high->getPowerPercent() >= 2600);
+		Enemy enemy(TestEnemyDefinition(), 1);
+		Player player("Test", 100, 100);
+		const int before = enemy.getHP();
+		high->apply(player, enemy);
+		assert(before - enemy.getHP() >= 1);
 	}
 
 	return 0;

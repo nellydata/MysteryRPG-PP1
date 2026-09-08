@@ -69,6 +69,7 @@ private:
     std::unique_ptr<ShimmerSkill> defaultSkill_;
     std::vector<CombatEvent> events_;
     bool consumableUsedThisTurn_;
+    bool battleStartEffectsApplied_ = false;
     bool groupEnemyTurn_ = false;
     std::map<std::string, int> shimmerCooldowns_;
     std::vector<Enemy*> currentEnemyParty_;

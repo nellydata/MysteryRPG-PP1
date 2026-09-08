@@ -50,8 +50,7 @@ void Player::takeDamage(int amount) {
     if (amount <= 0) return;
     amount = AbsorbDamage(amount);
     if (amount <= 0) return;
-    const auto activeSets = GetActiveSets();
-    const bool verdigrisSet = std::find(activeSets.begin(), activeSets.end(), "Verdigris Matron") != activeSets.end();
+    const bool verdigrisSet = HasActiveSet("Verdigris Matron");
     const int healthBefore = hp_;
     hp_ -= amount;
     if (hp_ < 0) hp_ = 0;
@@ -108,6 +107,14 @@ int Player::AbsorbDamage(int amount) {
     const int absorbed = (std::min)(barrier_, amount);
     barrier_ -= absorbed;
     return amount - absorbed;
+}
+
+int Player::ApplyDamageOverTime(int amount) {
+    if (amount <= 0) return 0;
+    const int remaining = AbsorbDamage(amount);
+    const int healthBefore = hp_;
+    hp_ = (std::max)(0, hp_ - remaining);
+    return healthBefore - hp_;
 }
 
 void Player::ReduceBarrier(int amount) {
@@ -246,10 +253,29 @@ std::vector<std::string> Player::GetActiveSets() const {
         for (const Item* equipped : equipped_) {
             if (equipped != nullptr && equipped->getSetName() == item->getSetName()) ++pieces;
         }
-        const bool hasCompleteSet = pieces == 5;
+        const bool hasCompleteSet = pieces >= 5;
         if (hasCompleteSet) activeSets.push_back(item->getSetName());
     }
     return activeSets;
+}
+
+bool Player::HasActiveSet(const std::string& setName) const {
+    for (const std::string& activeSet : GetActiveSets()) {
+        if (activeSet == setName) return true;
+    }
+    return false;
+}
+
+int Player::GetShimmerDamageMultiplierPercent() const {
+    return HasActiveSet("Shimmer Ascendant") ? 125 : 100;
+}
+
+bool Player::HasBarrierAbsorptionSet() const {
+    return HasActiveSet("Shimmer Reliquary");
+}
+
+void Player::StartBattleEffects() {
+    if (HasActiveSet("Choir of Verdigris")) AddBarrier(maxHp_ / 4);
 }
 
 bool Player::UseConsumable(const std::string& itemName, Enemy* target) {
@@ -325,15 +351,47 @@ void Player::ApplyStatus(const StatusEffect& status, int accuracy) {
     statuses_.push_back(adjusted);
 }
 
+std::vector<std::pair<StatusType, int>>& Player::EmptyDamageEvents() {
+    static std::vector<std::pair<StatusType, int>> events;
+    events.clear();
+    return events;
+}
+
 void Player::ProcessStatuses() {
+    auto& damageEvents = EmptyDamageEvents();
+    int& healing = EmptyHealing();
+    ProcessStatuses(damageEvents, healing);
+}
+
+int& Player::EmptyHealing() {
+    static int healing = 0;
+    healing = 0;
+    return healing;
+}
+
+void Player::ProcessStatuses(std::vector<std::pair<StatusType, int>>& damageEvents, int& healing) {
+    damageEvents.clear();
+    healing = 0;
     int expiredBarrier = 0;
     for (auto& status : statuses_) {
         const int dotReduction = (std::min)(75, SumStatusBonus(StatusType::DotReduction));
         const int dotUp = SumStatusBonus(StatusType::DotUp);
-        if (status.type == StatusType::Bleed) takeDamage((std::max)(1, status.sourceAttack * 30 * (100 + status.dotPotency + dotUp) * (100 - dotReduction) / 1000000));
-        else if (status.type == StatusType::Burn) takeDamage((std::max)(1, status.sourceAttack * 60 * (100 + status.dotPotency + dotUp) * (100 - dotReduction) / 1000000));
-        else if (status.type == StatusType::Poison) takeDamage((std::max)(1, maxHp_ * 5 * (100 + status.dotPotency + dotUp) * (100 - dotReduction) / 1000000));
-        else if (status.type == StatusType::HealOverTime) heal(status.potency);
+        int damage = 0;
+        if (status.type == StatusType::Bleed || status.type == StatusType::Burn) {
+            damage = status.sourceAttack * 30 / 100;
+            damage = damage * (100 + status.dotPotency + dotUp) / 100;
+            damage = damage * (100 - dotReduction) / 100;
+        } else if (status.type == StatusType::Poison) {
+            damage = maxHp_ * 5 / 100;
+            damage = damage * (100 + status.dotPotency + dotUp) / 100;
+            damage = damage * (100 - dotReduction) / 100;
+        }
+        if (status.type == StatusType::HealOverTime) healing += status.potency;
+        damage = (std::max)(1, damage);
+        if (damage > 0) {
+            ApplyDamageOverTime(damage);
+            damageEvents.emplace_back(status.type, damage);
+        }
         --status.turns;
         if (status.type == StatusType::Barrier && status.turns <= 0) expiredBarrier += status.potency;
     }
@@ -341,6 +399,7 @@ void Player::ProcessStatuses() {
         return status.turns <= 0;
     }), statuses_.end());
     if (expiredBarrier > 0) ReduceBarrier(expiredBarrier);
+    if (healing > 0) heal(healing);
 }
 
 void Player::ClearStatuses() {
@@ -433,12 +492,19 @@ void Player::RecalculateStats() {
     }
 
     for (const std::string& setName : GetActiveSets()) {
-        if (setName == "Verdigris Matron") {
+        if (setName == "Choir of Verdigris") {
+            totalStats_.healingReceived += 25;
+        } else if (setName == "Shimmer Ascendant") {
+            totalStats_.critDamage += 0;
+        } else if (setName == "Automaton Overlord") {
+            totalStats_.acc = 100;
+            totalStats_.critDamage += 50;
+        } else if (setName == "Verdigris Matron") {
             totalStats_.healingPotency += 100;
             totalStats_.lifesteal += 50;
             totalStats_.barrierPotency += 25;
         } else if (setName == "Shimmer Reliquary") {
-            totalStats_.barrierPotency += 75;
+            totalStats_.barrierPotency += 50;
             totalStats_.healingReceived += 50;
             totalStats_.critRate += 25;
         } else if (setName == "Oracle Automaton") {

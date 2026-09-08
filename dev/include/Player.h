@@ -18,6 +18,7 @@ public:
     int GetBarrier() const;
     int AddBarrier(int amount, int duration = 0);
     int AbsorbDamage(int amount);
+    int ApplyDamageOverTime(int amount);
     void ReduceBarrier(int amount);
     bool isAlive() const;
 
@@ -61,6 +62,7 @@ public:
     bool HasStatus(StatusType type) const;
     void ApplyStatus(const StatusEffect& status, int accuracy = 100);
     void ProcessStatuses();
+    void ProcessStatuses(std::vector<std::pair<StatusType, int>>& damageEvents, int& healing);
     void ClearStatuses();
     int CleanseNegativeStatuses();
     void ModifyStats(const Stats& delta);
@@ -70,6 +72,10 @@ public:
     const std::vector<StatusEffect>& GetStatuses() const;
     const Item* GetEquipped(EquipSlot slot) const;
     std::vector<std::string> GetActiveSets() const;
+    bool HasActiveSet(const std::string& setName) const;
+    int GetShimmerDamageMultiplierPercent() const;
+    bool HasBarrierAbsorptionSet() const;
+    void StartBattleEffects();
 
 private:
     std::string name_;
@@ -86,4 +92,6 @@ private:
 
     void RecalculateStats();
     int SumStatusBonus(StatusType type) const;
+    static std::vector<std::pair<StatusType, int>>& EmptyDamageEvents();
+    static int& EmptyHealing();
 };

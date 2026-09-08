@@ -66,6 +66,7 @@ struct StatusEffect {
 	int sourceAttack = 0;
 	int dotPotency = 0;
 	int sourceDefense = 0;
+	std::string source;
 };
 
 enum class StackPolicy {

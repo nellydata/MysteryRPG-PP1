@@ -80,10 +80,17 @@ void Enemy::ProcessStatuses(std::vector<std::pair<StatusType, int>>& damageEvent
 		int damage = 0;
 		const int dotReduction = (std::min)(75, SumStatusBonus(StatusType::DotReduction));
 		const int dotUp = SumStatusBonus(StatusType::DotUp);
-		if (status.type == StatusType::Bleed) damage = (std::max)(1, status.sourceAttack * 30 * (100 + status.dotPotency + dotUp) * (100 - dotReduction) / 1000000);
-		else if (status.type == StatusType::Burn) damage = (std::max)(1, status.sourceAttack * 60 * (100 + status.dotPotency + dotUp) * (100 - dotReduction) / 1000000);
-		else if (status.type == StatusType::Poison) damage = (std::max)(1, maxHp_ * 5 * (100 + status.dotPotency + dotUp) * (100 - dotReduction) / 1000000);
-		else if (status.type == StatusType::HealOverTime) healing += status.potency;
+		if (status.type == StatusType::Bleed || status.type == StatusType::Burn) {
+			damage = status.sourceAttack * 30 / 100;
+			damage = damage * (100 + status.dotPotency + dotUp) / 100;
+			damage = damage * (100 - dotReduction) / 100;
+		} else if (status.type == StatusType::Poison) {
+			damage = maxHp_ * 5 / 100;
+			damage = damage * (100 + status.dotPotency + dotUp) / 100;
+			damage = damage * (100 - dotReduction) / 100;
+		}
+		if (status.type == StatusType::HealOverTime) healing += status.potency;
+		damage = (std::max)(1, damage);
 		if (damage > 0) {
 			takeDamage(damage);
 			damageEvents.emplace_back(status.type, damage);

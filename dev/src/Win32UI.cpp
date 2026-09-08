@@ -539,9 +539,9 @@ void Win32UI::LayoutControls(int width, int height) {
 		const int combatButtonY = actionY;
 		for (int i = 0; i < 12; ++i) {
 			MoveWindow(controls_[8 + i], center + (i % 5) * (combatButtonWidth + combatButtonGap),
-				combatButtonY + (i / 5) * 50, combatButtonWidth, 42, TRUE);
+				combatButtonY + (i / 5) * 78, combatButtonWidth, 70, TRUE);
 			MoveWindow(controls_[36 + i], center + (i % 5) * (combatButtonWidth + combatButtonGap),
-				combatButtonY + (i / 5) * 50, combatButtonWidth, 42, TRUE);
+				combatButtonY + (i / 5) * 78, combatButtonWidth, 70, TRUE);
 		}
 		MoveWindow(controls_[21], center, combatButtonY + 160, 180, 42, TRUE);
 		return;
@@ -722,7 +722,7 @@ void Win32UI::ShowCombatItems() {
 	if (command < 700 || command >= 700 + static_cast<UINT>(consumables.size())) return;
  if (combat_.UseConsumable(consumables[command - 700], player_, *activeEnemy_, &progression_)) {
 		statusMessage_ = "Consumable used without ending the turn.";
-		AddLog("Combat: consumable used.");
+		AddLog(player_.getName() + " used " + consumables[command - 700] + ".");
 	} else {
 		statusMessage_ = "That consumable is unavailable.";
 		AddLog("Combat: consumable use failed.");
@@ -1489,7 +1489,7 @@ void Win32UI::Paint(HDC deviceContext) {
 		DrawTextLine(deviceContext, 48, y, StatusName(status.type) + L" (" + std::to_wstring(status.turns) + L")", statusColor, 15);
 		y += 25;
 	}
-	if (!displayedStatus) DrawTextLine(deviceContext, 48, y, L"No active effects", Muted, 15);
+	if (!displayedStatus) DrawTextLine(deviceContext, 48, y, L"No statuses active", Muted, 15);
 	const auto activeSets = player_.GetActiveSets();
 	if (!activeSets.empty()) {
 		if (!displayedStatus) y += 25;
@@ -1597,6 +1597,11 @@ void Win32UI::Paint(HDC deviceContext) {
 				infoY += 32;
 				DrawTextLine(deviceContext, detailLeft + 20, infoY, L"Cost: " + std::to_wstring(skill->getCost()) + L"   Cooldown: " + std::to_wstring(skill->getCooldown()), Text, 17);
 				infoY += 34;
+				if (skill->getPowerPercent() > 0) {
+					infoY += DrawTextLine(deviceContext, detailLeft + 20, infoY,
+						L"Power: " + std::to_wstring(skill->getPowerPercent()) + L"%", Shimmer, 17, true,
+						right - detailLeft - 40) + 8;
+				}
 				infoY += DrawTextLine(deviceContext, detailLeft + 20, infoY, L"Effect: " + FormatDisplayText(skill->getEffect()), Shimmer, 17, false, right - detailLeft - 40) + 10;
 				DrawTextLine(deviceContext, detailLeft + 20, infoY, FormatDisplayText(skill->getDescription()), Text, 17, false, right - detailLeft - 40);
 			}

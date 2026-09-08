@@ -201,6 +201,31 @@ void AddEquippables(std::vector<ItemDefinition>& result, EquipSlot slot, const c
 }
 }
 
+std::vector<ItemDefinition> GenerateInvestigationLoot(ConsumableProfile profile, int playerLevel, const std::string& roomId, unsigned seed) {
+	std::vector<ItemDefinition> result;
+	const int level = (std::max)(1, playerLevel);
+	const int roll = static_cast<int>(seed % 100);
+	if (roll < 70) {
+		const ItemDefinition consumable = BuildInvestigationConsumable(profile, level);
+		if (!consumable.name.empty()) result.push_back(consumable);
+		return result;
+	}
+	if (roll >= 88) {
+		const int rarityRoll = static_cast<int>((seed / 7) % 100);
+		Rarity rarity = level >= 5 ? Rarity::Uncommon : Rarity::Common;
+		if (level >= 20 && rarityRoll < 20) rarity = Rarity::Epic;
+		else if (level >= 10 && rarityRoll < 55) rarity = Rarity::Rare;
+		else if (level >= 5 && rarityRoll < 80) rarity = Rarity::Uncommon;
+		std::vector<ItemDefinition> candidates;
+		for (const auto& item : BuildEquippableCatalog()) {
+			if (item.rarity == rarity && (roomId.empty() || item.name.find(roomId.substr(0, 4)) != std::string::npos)) candidates.push_back(item);
+		}
+		if (candidates.empty()) for (const auto& item : BuildEquippableCatalog()) if (item.rarity == rarity) candidates.push_back(item);
+		if (!candidates.empty()) result.push_back(RollLootInstance(candidates[(seed / 13) % candidates.size()], seed + 97));
+	}
+	return result;
+}
+
 bool ValidateMicareContent(std::string* error) {
 	if (!ValidateContentCatalog(error)) return false;
 	if (!ValidateEnemyCatalogue(error)) return false;

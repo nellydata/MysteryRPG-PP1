@@ -122,7 +122,13 @@ void ConsoleUI::PrintStatusEffects(const Player& player) const {
 		return;
 	}
 	for (const auto& status : player.GetStatuses()) {
+		const bool negative = status.type == StatusType::Stun || status.type == StatusType::Bleed || status.type == StatusType::Burn ||
+			status.type == StatusType::Poison || status.type == StatusType::Slow || status.type == StatusType::VerdigrisMark ||
+			status.type == StatusType::AttackDown || status.type == StatusType::DefenseDown || status.type == StatusType::AccuracyDown ||
+			status.type == StatusType::HealResistance || status.type == StatusType::DotReduction;
+		if (colorEnabled_) std::cout << (negative ? "\x1b[31m" : "\x1b[34m");
 		std::cout << StatusName(static_cast<int>(status.type)) << " (" << status.turns << ")  ";
+		if (colorEnabled_) std::cout << Reset();
 	}
 	std::cout << "\n";
 }
@@ -151,6 +157,8 @@ void ConsoleUI::RenderRoom(const Area& area, const Player& player,
 	}
 	std::cout << "\nActions:\n  1. Inspect environment\n  2. Search room\n"
 			  << "  3. Open inventory\n  4. View map\n  0. Leave room\n";
+	if (area.getName() == "Fountain" && area.IsHealingUnlocked())
+		std::cout << "  5. Fountain\n";
 }
 
 void ConsoleUI::RenderCombat(const Player& player, const ProgressionManager& progression,

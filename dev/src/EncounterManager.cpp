@@ -60,6 +60,11 @@ void InspectEnvironment(Area& area, Player& player, ProgressionManager& progress
     const std::string& object = interactables[choice - 1];
     std::cout << "You inspect the " << object << ".\n";
     area.RecordSearch();
+    if (area.getName() == "Fountain" && !area.IsHealingUnlocked()) {
+        area.SetHealingUnlocked(true);
+        ui.ShowMessage("You uncover the sealed Fountain. It can now restore your health.");
+        return;
+    }
     if (object == "Figure in the shadows" && area.HasNPC()) {
         ui.ShowMessage("You see an NPC here. Interaction system coming soon.");
     }
@@ -93,11 +98,17 @@ void SearchRoom(Area& area, Player& player) {
             }
         }
     } else {
-        const ItemDefinition reward = BuildInvestigationConsumable(
-            definition == nullptr ? ConsumableProfile::SupplyCache : definition->consumableProfile, 1);
-        if (!reward.name.empty()) player.AddItem(std::make_unique<Item>(reward));
+        const auto rewards = GenerateInvestigationLoot(
+            definition == nullptr ? ConsumableProfile::SupplyCache : definition->consumableProfile,
+            1, room, RoomSeed(room) + static_cast<unsigned>(area.GetSearchCount() * 31));
+        for (const auto& reward : rewards) {
+            player.AddItem(std::make_unique<Item>(reward));
+            std::cout << "\nInvestigation found: " << reward.name << ". It was added to your inventory.\n";
+        }
+        if (rewards.empty()) std::cout << "\nYou find nothing useful.\n";
+        return;
     }
-    std::cout << "\nYou found something useful. It was added to your inventory.\n";
+    std::cout << "\nYou found: choir_logbook. It was added to your inventory.\n";
 }
 }
 
@@ -203,7 +214,8 @@ bool EncounterManager::Explore(Area& area, Player& player,
         }
 
         ui.RenderRoom(area, player, progression);
-        const int choice = ui.Prompt("Choose an exploration action.", 0, 4);
+        const int maximumChoice = area.getName() == "Fountain" && area.IsHealingUnlocked() ? 5 : 4;
+        const int choice = ui.Prompt("Choose an exploration action.", 0, maximumChoice);
         switch (choice) {
         case 1: InspectEnvironment(area, player, progression, ui); break;
         case 2: SearchRoom(area, player); break;
@@ -213,6 +225,10 @@ bool EncounterManager::Explore(Area& area, Player& player,
             break;
         case 4:
             ui.ShowMessage("The floor map is etched into the cathedral ledger. Return to the room selection to view it.");
+            break;
+        case 5:
+            player.RestoreHealth(player.getMaxHP());
+            ui.ShowMessage("The Fountain restores Adelaide to full health.");
             break;
         case 0: return true;
         default: ui.ShowMessage("That action is not available."); break;

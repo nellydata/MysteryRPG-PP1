@@ -22,7 +22,6 @@ bool HasValue(const Stats& stats, ItemStat stat) {
     case ItemStat::Lifesteal: return stats.lifesteal != 0;
     case ItemStat::DebuffDurationReduction: return stats.debuffDurationReduction != 0;
     }
-
     return false;
 }
 
@@ -109,20 +108,24 @@ void Player::SetName(const std::string& name) {
 }
 int Player::getHP() const { return hp_; }
 int Player::getMaxHP() const { return maxHp_; }
-int Player::getAttack() const { return totalStats_.atk; }
-int Player::getDefense() const { return totalStats_.def; }
+int Player::getAttack() const {
+    return (std::max)(1, totalStats_.atk * (100 + SumStatusBonus(StatusType::AttackUp) - SumStatusBonus(StatusType::AttackDown)) / 100);
+}
+int Player::getDefense() const {
+    return (std::max)(0, totalStats_.def * (100 + SumStatusBonus(StatusType::DefenseUp) - SumStatusBonus(StatusType::DefenseDown)) / 100);
+}
 int Player::getSP() const { return sp_; }
 int Player::getSpeed() const {
-    int slow = 0;
-    for (const auto& status : statuses_) if (status.type == StatusType::Slow) slow += status.potency;
-    return (std::max)(1, totalStats_.spd * (100 - (std::min)(75, slow)) / 100);
+    int slow = SumStatusBonus(StatusType::Slow);
+    const int speedUp = SumStatusBonus(StatusType::SpeedUp);
+    return (std::max)(1, totalStats_.spd * (100 + speedUp - (std::min)(75, slow)) / 100);
 }
-int Player::getAccuracy() const { return (std::min)(100, totalStats_.acc); }
+int Player::getAccuracy() const { return (std::max)(0, totalStats_.acc + SumStatusBonus(StatusType::AccuracyUp) - SumStatusBonus(StatusType::AccuracyDown)); }
 int Player::getResistance() const { return (std::min)(100, totalStats_.res); }
-int Player::getCritRate() const { return (std::min)(100, totalStats_.critRate); }
-int Player::getCritDamage() const { return totalStats_.critDamage; }
+int Player::getCritRate() const { return (std::max)(0, (std::min)(100, totalStats_.critRate + SumStatusBonus(StatusType::CritUp))); }
+int Player::getCritDamage() const { return (std::max)(0, totalStats_.critDamage + SumStatusBonus(StatusType::CritDamageUp)); }
 int Player::getEvasion() const { return totalStats_.evasion; }
-int Player::getHealingPotency() const { return totalStats_.healingPotency; }
+int Player::getHealingPotency() const { return totalStats_.healingPotency + SumStatusBonus(StatusType::HealingPotencyUp); }
 int Player::getBarrierPotency() const { return totalStats_.barrierPotency; }
 int Player::getDotPotency() const { return totalStats_.dotPotency; }
 int Player::getLifesteal() const { return totalStats_.lifesteal; }
@@ -271,9 +274,16 @@ int Player::CleanseNegativeStatuses() {
     const auto oldSize = statuses_.size();
     statuses_.erase(std::remove_if(statuses_.begin(), statuses_.end(), [](const StatusEffect& status) {
         return status.type == StatusType::Stun || status.type == StatusType::Bleed || status.type == StatusType::Burn ||
-            status.type == StatusType::Poison || status.type == StatusType::Slow || status.type == StatusType::VerdigrisMark;
+            status.type == StatusType::Poison || status.type == StatusType::Slow || status.type == StatusType::VerdigrisMark ||
+            status.type == StatusType::AttackDown || status.type == StatusType::DefenseDown || status.type == StatusType::AccuracyDown;
     }), statuses_.end());
     return static_cast<int>(oldSize - statuses_.size());
+}
+
+int Player::SumStatusBonus(StatusType type) const {
+    int bonus = 0;
+    for (const auto& status : statuses_) if (status.type == type) bonus += status.potency;
+    return bonus;
 }
 
 bool Player::HasStatus(StatusType type) const {
@@ -284,7 +294,8 @@ bool Player::HasStatus(StatusType type) const {
 void Player::ApplyStatus(const StatusEffect& status, int accuracy) {
     StatusEffect adjusted = status;
     if (adjusted.type == StatusType::Stun || adjusted.type == StatusType::Bleed || adjusted.type == StatusType::Burn ||
-        adjusted.type == StatusType::Poison || adjusted.type == StatusType::Slow || adjusted.type == StatusType::VerdigrisMark) {
+        adjusted.type == StatusType::Poison || adjusted.type == StatusType::Slow || adjusted.type == StatusType::VerdigrisMark ||
+        adjusted.type == StatusType::AttackDown || adjusted.type == StatusType::DefenseDown || adjusted.type == StatusType::AccuracyDown) {
         const int resistance = (std::min)(CombatMath::Balance::MaximumResistance, totalStats_.res);
         const unsigned roll = static_cast<unsigned>((hp_ * 17 + maxHp_ * 31 + static_cast<int>(adjusted.type) * 13) % 100);
         if (roll >= static_cast<unsigned>(CombatMath::AccuracyChance(100, accuracy, resistance))) return;

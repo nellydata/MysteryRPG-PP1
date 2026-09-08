@@ -43,11 +43,17 @@ enum class StatusType {
 	DamageReduction,
 	Barrier,
 	AttackUp,
+	AttackDown,
+	DefenseUp,
+	DefenseDown,
+	SpeedUp,
 	AccuracyUp,
+	AccuracyDown,
 	CritUp,
 	CritDamageUp,
 	GuaranteedCrit,
 	DotUp,
+	HealingPotencyUp,
 	DotReduction,
 	HealResistance,
 	AccuracyFloor
@@ -83,11 +89,16 @@ inline StackPolicy GetStatusStackPolicy(StatusType type) {
 	case StatusType::DamageReduction:
 	case StatusType::Barrier:
 	case StatusType::AttackUp:
+	case StatusType::AttackDown:
+	case StatusType::DefenseUp:
+	case StatusType::DefenseDown:
 	case StatusType::AccuracyUp:
+	case StatusType::AccuracyDown:
 	case StatusType::CritUp:
 	case StatusType::CritDamageUp:
 	case StatusType::GuaranteedCrit:
 	case StatusType::DotUp:
+	case StatusType::HealingPotencyUp:
 	case StatusType::HealResistance:
 	case StatusType::AccuracyFloor:
 		return StackPolicy::RefreshDuration;

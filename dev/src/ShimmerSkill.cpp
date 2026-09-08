@@ -41,10 +41,15 @@ public:
 			player.heal(damage * 25 / 100);
 		} else if (effect_ == "damage_defdown") {
 			enemy.takeDamage(CombatMath::Mitigate((std::max)(1, player.getAttack() * powerPercent_ / 100), enemy.getDefense()));
-			enemy.ApplyStatus({StatusType::VerdigrisMark, duration_, 60, player.getAttack()}, player.getAccuracy());
+			enemy.ApplyStatus({StatusType::DefenseDown, duration_, powerPercent_ >= 600 ? 60 : 20, player.getAttack()}, player.getAccuracy());
 		} else if (effect_ == "stat_boost") {
-			player.ApplyStatus({StatusType::AttackUp, duration_ > 0 ? duration_ : 2, 25});
-			player.ApplyStatus({StatusType::DamageReduction, duration_ > 0 ? duration_ : 2, 15});
+			const int duration = duration_ > 0 ? duration_ : 2;
+			player.ApplyStatus({StatusType::AttackUp, duration, 25});
+			player.ApplyStatus({StatusType::DefenseUp, duration, 25});
+			player.ApplyStatus({StatusType::SpeedUp, duration, 25});
+			player.ApplyStatus({StatusType::CritUp, duration, 15});
+			player.ApplyStatus({StatusType::CritDamageUp, duration, 25});
+			player.ApplyStatus({StatusType::DamageReduction, duration, 15});
 		} else if (effect_ == "revive") {
 			player.AddBarrier(player.getMaxHP() * powerPercent_ / 100, 1);
 		}

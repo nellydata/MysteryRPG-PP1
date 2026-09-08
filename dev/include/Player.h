@@ -85,4 +85,5 @@ private:
     Item* equipped_[5];
 
     void RecalculateStats();
+    int SumStatusBonus(StatusType type) const;
 };

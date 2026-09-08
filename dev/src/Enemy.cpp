@@ -92,7 +92,7 @@ int Enemy::SumStatusBonus(StatusType type) const {
 	for (const auto& status : statuses_) if (status.type == type) bonus += status.potency;
 	return bonus;
 }
-int Enemy::getAtk() const { return atk_ * (100 + SumStatusBonus(StatusType::AttackUp)) / 100; }
+int Enemy::getAtk() const { return (std::max)(1, atk_ * (100 + SumStatusBonus(StatusType::AttackUp) - SumStatusBonus(StatusType::AttackDown)) / 100); }
 std::int64_t Enemy::getXPReward() const { return xpReward_; }
 bool Enemy::ClaimXPReward() {
 	if (xpRewardClaimed_) return false;
@@ -104,18 +104,18 @@ bool Enemy::ClaimInvestigationReward() {
 	investigationRewardClaimed_ = true;
 	return true;
 }
-int Enemy::getDefense() const { return defense_; }
+int Enemy::getDefense() const { return (std::max)(0, defense_ * (100 + SumStatusBonus(StatusType::DefenseUp) - SumStatusBonus(StatusType::DefenseDown)) / 100); }
 int Enemy::getSpeed() const {
 	const int slow = SumStatusBonus(StatusType::Slow);
-	return (std::max)(1, speed_ * (100 - (std::min)(75, slow)) / 100);
+	return (std::max)(1, speed_ * (100 + SumStatusBonus(StatusType::SpeedUp) - (std::min)(75, slow)) / 100);
 }
 int Enemy::getLevel() const { return level_; }
 int Enemy::getResistance() const { return resistance_; }
 int Enemy::getCritRate() const { return critRate_; }
 int Enemy::getCritDamage() const { return critDamage_; }
 int Enemy::getAccuracy() const {
-	const int bonus = SumStatusBonus(StatusType::AccuracyUp);
-	return (std::min)(100, accuracy_ + bonus);
+	const int bonus = SumStatusBonus(StatusType::AccuracyUp) - SumStatusBonus(StatusType::AccuracyDown);
+	return (std::max)(0, accuracy_ + bonus);
 }
 int Enemy::getEvasion() const { return evasion_; }
 EnemyFaction Enemy::getFaction() const { return faction_; }

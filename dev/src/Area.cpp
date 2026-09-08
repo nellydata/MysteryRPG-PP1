@@ -56,7 +56,6 @@ void Area::SetCleared(bool cleared) {
     discoveredNPC_ = hasNPC_;
     bossDefeated_ = true;
     bossEncountered_ = false;
-    if (healingRoom_) healingUnlocked_ = true;
 }
 
 bool Area::hasEnemies() const {

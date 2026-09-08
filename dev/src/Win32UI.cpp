@@ -347,6 +347,11 @@ void Win32UI::RefreshControls() {
 			ShowWindow(controls_[21], SW_HIDE);
 		} else {
 			const auto& interactables = mapManager_.GetRooms()[selectedRoom_].GetVisibleInteractables();
+			Area& area = mapManager_.GetRooms()[selectedRoom_];
+			if (area.getName() == "Fountain" && area.IsHealingUnlocked()) {
+				SetWindowTextW(controls_[20], L"Fountain");
+			}
+			else SetWindowTextW(controls_[20], L"Investigate");
 			for (std::size_t i = 0; i < interactables.size() && i < 5; ++i) {
 				SetWindowTextW(inspectButtons_[i], ToWide(interactables[i]).c_str());
 				ShowWindow(inspectButtons_[i], SW_SHOW);
@@ -1051,12 +1056,7 @@ void Win32UI::EnterRoom(int roomIndex) {
 	if (!area.IsUnlocked()) return;
 	LeaveCombat();
 	ChangeView(View::Room);
-	if (area.getName() == "Fountain" && area.IsHealingUnlocked()) {
-		const int recovered = player_.getMaxHP() - player_.getHP();
-		player_.RestoreHealth(player_.getMaxHP());
-		statusMessage_ = "The fountain restores " + std::to_string(recovered) + " HP. You are fully healed.";
-		AddLog("Fountain: " + player_.getName() + " recovered to full health.");
-	} else if (area.getName() == "Fountain") {
+	if (area.getName() == "Fountain" && !area.IsHealingUnlocked()) {
 		statusMessage_ = "The fountain is sealed. Investigate it to find its guardian.";
 	}
 	AddLog("Entered " + area.getName() + ". Investigate the visible interactions.");
@@ -1251,9 +1251,12 @@ void Win32UI::SearchRoom() {
 		area.DiscoverNPC();
 		AddLog("Search: an NPC steps from the shadows.");
 	} else if (area.ConsumeItem()) {
-		const auto definition = BuildInvestigationConsumable(roomDefinition == nullptr ? ConsumableProfile::SupplyCache : roomDefinition->consumableProfile, playerLevel);
-		if (!definition.name.empty()) player_.AddItem(std::make_unique<Item>(definition));
-		AddLog("Search: an item was added to the inventory.");
+		const auto rewards = GenerateInvestigationLoot(roomDefinition == nullptr ? ConsumableProfile::SupplyCache : roomDefinition->consumableProfile, playerLevel, area.getName(), searchSeed + 31);
+		for (const auto& definition : rewards) {
+			player_.AddItem(std::make_unique<Item>(definition));
+			AddLog("Search: found " + definition.name + ".");
+		}
+		if (rewards.empty()) AddLog("Search: nothing useful was found.");
 	} else {
 		AddLog(area.IsFullySearched() ? "Search: the room is fully investigated." : "Search: nothing useful found.");
 	}
@@ -1606,12 +1609,13 @@ void Win32UI::Paint(HDC deviceContext) {
 	int y = 348;
 	bool displayedStatus = false;
 	for (const auto& status : player_.GetStatuses()) {
-		if (status.type == StatusType::VerdigrisMark) continue;
 		displayedStatus = true;
-		const bool healing = status.type == StatusType::HealOverTime;
-		const bool beneficial = status.type == StatusType::Barrier || status.type == StatusType::DamageReduction;
-		const COLORREF statusColor = healing ? RGB(90, 210, 110) : beneficial ? RGB(90, 160, 245) : Danger;
-		DrawTextLine(deviceContext, 48, y, StatusName(status.type) + L" (" + std::to_wstring(status.turns) + L")", statusColor, 15);
+		const bool negative = status.type == StatusType::Stun || status.type == StatusType::Bleed || status.type == StatusType::Burn ||
+			status.type == StatusType::Poison || status.type == StatusType::Slow || status.type == StatusType::VerdigrisMark ||
+			status.type == StatusType::AttackDown || status.type == StatusType::DefenseDown || status.type == StatusType::AccuracyDown ||
+			status.type == StatusType::HealResistance || status.type == StatusType::DotReduction;
+		const COLORREF statusColor = negative ? Danger : RGB(90, 160, 245);
+		DrawTextLine(deviceContext, 48, y, StatusName(status.type) + L" (" + std::to_wstring(status.turns) + L", " + std::to_wstring(status.potency) + L")", statusColor, 15);
 		y += 25;
 	}
 	if (!displayedStatus) DrawTextLine(deviceContext, 48, y, L"No active effects", Muted, 15);
@@ -1923,11 +1927,17 @@ std::wstring Win32UI::StatusName(StatusType type) const {
 	case StatusType::DamageReduction: return L"Damage Reduction";
 	case StatusType::Barrier: return L"Barrier";
 	case StatusType::AttackUp: return L"Attack Up";
+	case StatusType::AttackDown: return L"Attack Down";
+	case StatusType::DefenseUp: return L"Defense Up";
+	case StatusType::DefenseDown: return L"Defense Down";
+	case StatusType::SpeedUp: return L"Speed Up";
 	case StatusType::AccuracyUp: return L"Accuracy Up";
+	case StatusType::AccuracyDown: return L"Accuracy Down";
 	case StatusType::CritUp: return L"Critical Rate Up";
 	case StatusType::CritDamageUp: return L"Critical Damage Up";
 	case StatusType::GuaranteedCrit: return L"Guaranteed Critical";
 	case StatusType::DotUp: return L"DOT Up";
+	case StatusType::HealingPotencyUp: return L"Healing Potency Up";
 	case StatusType::DotReduction: return L"DOT Reduction";
 	case StatusType::HealResistance: return L"Healing Resistance";
 	case StatusType::AccuracyFloor: return L"Accuracy Floor";
@@ -1947,11 +1957,17 @@ std::wstring Win32UI::CombatStatusSymbol(StatusType type) const {
 	case StatusType::DamageReduction: return L"\U0001F6E1\uFE0F";
 	case StatusType::HealOverTime: return L"\U0001F49A";
 	case StatusType::AttackUp: return L"\U0001F4AA";
+	case StatusType::AttackDown: return L"\U0001F53B";
+	case StatusType::DefenseUp: return L"\U0001F6E1\uFE0F";
+	case StatusType::DefenseDown: return L"\U0001F53B";
+	case StatusType::SpeedUp: return L"\u26A1";
 	case StatusType::AccuracyUp: return L"\U0001F3AF";
+	case StatusType::AccuracyDown: return L"\U0001F53B";
 	case StatusType::CritUp: return L"\U0001F3B2";
 	case StatusType::CritDamageUp: return L"\U0001F4A5";
 	case StatusType::GuaranteedCrit: return L"\u2694\uFE0F";
 	case StatusType::DotUp: return L"\U0001F4A2";
+	case StatusType::HealingPotencyUp: return L"\U0001F49A";
 	case StatusType::DotReduction: return L"\U0001F6E1\uFE0F";
 	case StatusType::HealResistance: return L"\U0001F6AB\U0001F49A";
 	case StatusType::AccuracyFloor: return L"\U0001F6E1\uFE0F";

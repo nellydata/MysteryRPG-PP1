@@ -138,6 +138,7 @@ void Win32UI::LeaveCombat() {
 	combatTransition_ = false;
 	combatDefeatRecovery_ = false;
 	combat_.ClearEvents();
+	combat_.ResetEncounter();
 	if (selectedRoom_ >= 0 && selectedRoom_ < static_cast<int>(mapManager_.GetRooms().size())) {
 		mapManager_.GetRooms()[selectedRoom_].ClearEnemies();
 	}
@@ -383,9 +384,10 @@ void Win32UI::RefreshControls() {
 			const int entry = firstEntry + button;
 			if (entry < static_cast<int>(inventoryEntryItems_.size())) {
 				const Item* item = inventoryEntryItems_[entry];
-				const std::string label = item == nullptr ? "Clue" : item->getName() +
+			const std::string label = item == nullptr ? "Clue" : item->getName() +
 					(player_.GetInventory().GetQuantity(item->getName()) > 1
-						? " x" + std::to_string(player_.GetInventory().GetQuantity(item->getName())) : "");
+					? " x" + std::to_string(player_.GetInventory().GetQuantity(item->getName())) : "") +
+				(item->isEquippable() ? " #" + std::to_string(item->getInstanceId()) : "");
 				SetWindowTextW(controls_[8 + button], FormatDisplayText(label).c_str());
 				ShowWindow(controls_[8 + button], SW_SHOW);
 			}
@@ -399,6 +401,7 @@ void Win32UI::RefreshControls() {
 		ShowWindow(controls_[35], SW_SHOW);
 	} else if (view_ == View::Skills) {
 		skillNames_.clear();
+		for (const auto& name : progression_.GetPendingShimmerChoices()) skillNames_.push_back(name);
 		for (const auto& name : progression_.GetUnlockedShimmerSkills()) {
 			auto skill = ShimmerSkill::Create(name);
 			if (skill == nullptr) continue;
@@ -924,6 +927,14 @@ void Win32UI::HandleCommand(int controlId) {
 				return;
 			}
 			const std::string& skillName = skillNames_[selectedSkillIndex_];
+			if (progression_.SelectPendingShimmerSkill(skillName)) {
+				AddLog("Shimmer skill selected: " + skillName + ".");
+				statusMessage_ = "Unlocked " + skillName + ".";
+				selectedSkillIndex_ = -1;
+				RefreshControls();
+				handlingCommand_ = false;
+				return;
+			}
 			auto skill = ShimmerSkill::Create(skillName);
 			if (skill != nullptr) {
 				const auto equipped = progression_.GetEquippedShimmerSkills();
@@ -1051,6 +1062,13 @@ void Win32UI::SyncCombatEvents() {
 	}
 }
 
+void Win32UI::SyncProgressionRewards() {
+	for (const auto& message : progression_.ConsumeLevelUpMessages()) AddLog(message);
+	if (!progression_.HasPendingShimmerChoice()) return;
+	AddLog("Choose one pending Shimmer skill from the Skills view:");
+	for (const auto& choice : progression_.GetPendingShimmerChoices()) AddLog("  " + choice);
+}
+
 void Win32UI::ScheduleEnemyTurn() {
 	if (enemyTurnPending_ || activeEnemy_ == nullptr || !activeEnemy_->isAlive() || !player_.isAlive()) return;
 	enemyTurnPending_ = true;
@@ -1072,6 +1090,7 @@ void Win32UI::Inspect(int interactableIndex) {
 		player_.AddClue({"A fragment recovered from the " + object + "."});
 		progression_.GrantClueXP();
 		progression_.CheckLevelUp(player_);
+		SyncProgressionRewards();
 		AddLog("Investigation: clue recovered from " + object + ".");
 		statusMessage_ = "Investigation complete: clue recovered.";
 	} else {
@@ -1146,53 +1165,23 @@ void Win32UI::SearchRoom() {
 		AddLog("Investigation: a Shimmer anomaly rippled through the room.");
 		return;
 	}
-	if (activeEnemy_ == nullptr && roomDefinition != nullptr && interactablesComplete && !area.HasBossBeenDefeated() && roll < roomDefinition->firstBossSpawnChance) {
-		area.MarkBossEncountered();
-		if (auto boss = CreateCatalogueEnemy(roomDefinition->bossId, enemyLevel)) area.addEnemy(std::move(boss));
-		activeEnemy_ = area.getFirstAliveEnemy();
-		combat_.BeginEncounter(*activeEnemy_);
-		combat_.PrepareTurn(player_, *activeEnemy_);
-		view_ = View::Combat;
-		if (!player_.isAlive()) ShowDefeatRecovery();
-		AddLog("Search: " + roomDefinition->bossId + " emerges.");
-		return;
-	}
 	if (activeEnemy_ == nullptr && roll >= 50 && roll < 55) {
 		AddLog("Nothing Was Found.");
 		statusMessage_ = "Nothing Was Found.";
 		return;
 	}
-	if (activeEnemy_ == nullptr && roomDefinition != nullptr && area.HasAllClues() && area.HasAllItems() && area.HasBossBeenDefeated()) {
-		const int repeatRoll = static_cast<int>(searchSeed % 100);
-		if (repeatRoll < roomDefinition->farmBossStartingChance && playerLevel >= 1) {
-			const int enemyLevel = progression_.GetLevel();
+	if (activeEnemy_ == nullptr && encounterAllowed) {
+		const bool investigationComplete = area.IsFullySearched() && area.HasAllClues() && area.HasAllItems();
+		const int bossRoll = static_cast<int>((searchSeed / 17) % 100);
+		const bool bossEligible = roomDefinition != nullptr && !roomDefinition->bossId.empty() && investigationComplete;
+		if (bossEligible && bossRoll < roomDefinition->firstBossSpawnChance && !area.HasBossBeenDefeated()) {
+			area.MarkBossEncountered();
+			if (auto boss = CreateCatalogueEnemy(roomDefinition->bossId, enemyLevel)) area.addEnemy(std::move(boss));
+			AddLog("Search: " + roomDefinition->bossId + " emerges.");
+		} else if (bossEligible && bossRoll < roomDefinition->farmBossStartingChance + roomDefinition->firstBossSpawnChance && area.HasBossBeenDefeated()) {
 			if (auto boss = CreateCatalogueEnemy(roomDefinition->bossId, enemyLevel + 2)) area.addEnemy(std::move(boss));
 			AddLog("Search: the defeated boss returns in a stronger form.");
-		} else if (repeatRoll < 60) {
-			const int enemyLevel = (std::max)(1, progression_.GetLevel() + static_cast<int>(searchSeed % 3) - 1);
-			if (auto enemy = roomDefinition == nullptr ? nullptr : CreateRoomEnemy(*roomDefinition, searchSeed, enemyLevel, true)) area.addEnemy(std::move(enemy));
-			AddLog("Search: a Nun emerges from the cleared room.");
 		} else {
-			const int enemyLevel = (std::max)(1, progression_.GetLevel() + static_cast<int>(searchSeed % 3) - 1);
-			if (auto enemy = roomDefinition == nullptr ? nullptr : CreateRoomEnemy(*roomDefinition, searchSeed + 1, enemyLevel, true)) area.addEnemy(std::move(enemy));
-			AddLog("Search: an Automata stirs in the cleared room.");
-		}
-		activeEnemy_ = area.getFirstAliveEnemy();
-		if (activeEnemy_ == nullptr || !activeEnemy_->isAlive()) {
-			activeEnemy_ = nullptr;
-		if (selectedRoom_ >= 0 && selectedRoom_ < static_cast<int>(mapManager_.GetRooms().size()))
-			mapManager_.GetRooms()[selectedRoom_].removeDeadEnemies();
-		combat_.ClearEvents();
-			view_ = View::Room;
-			return;
-		}
-		combat_.BeginEncounter(*activeEnemy_);
-	combat_.PrepareTurn(player_, *activeEnemy_);
-		view_ = View::Combat;
-		if (!player_.isAlive()) ShowDefeatRecovery();
-		return;
-	}
-	if (activeEnemy_ == nullptr && encounterAllowed) {
 		const int compositionRoll = static_cast<int>((searchSeed / 11) % 100);
 		const int enemyCount = playerLevel >= 100 ? 2 + compositionRoll % 3
 			: playerLevel >= 50 ? (compositionRoll < playerLevel ? 2 + compositionRoll % 2 : 1)
@@ -1205,6 +1194,7 @@ void Win32UI::SearchRoom() {
 			else if (rarityRoll < 25 && playerLevel >= 6) rolledTier = EnemyTier::Epic;
 			const int rolledLevel = (std::max)(1, (std::min)(100, playerLevel + static_cast<int>((enemySeed / 7) % 5) - 2));
 			if (auto enemy = roomDefinition == nullptr ? nullptr : CreateRoomEnemy(*roomDefinition, enemySeed, rolledLevel, false)) area.addEnemy(std::move(enemy));
+		}
 		}
 		activeEnemy_ = area.getFirstAliveEnemy();
 		if (activeEnemy_ == nullptr) return;
@@ -1235,6 +1225,7 @@ void Win32UI::SearchRoom() {
 				player_.AddClue({"A fragment recovered during the investigation."});
 		progression_.GrantClueXP();
 				progression_.CheckLevelUp(player_);
+				SyncProgressionRewards();
 				AddLog("Search: a clue was recovered.");
 			}
 			return;
@@ -1287,6 +1278,7 @@ void Win32UI::PerformCombatAction(CombatAction action) {
 		return;
 	}
 	statusMessage_ = action == CombatAction::Shimmer ? "Shimmer effect resolved." : player_.getName() + "'s action resolved.";
+	SyncProgressionRewards();
 	if (!activeEnemy_->isAlive()) {
 		Area& area = mapManager_.GetRooms()[selectedRoom_];
 		const std::string defeatedName = activeEnemy_->getName();
@@ -1297,7 +1289,7 @@ void Win32UI::PerformCombatAction(CombatAction action) {
 		const bool firstBossClear = wasBoss && !area.HasBossBeenDefeated();
 		const RoomDefinition* roomDefinition = mapManager_.GetRoomDefinition(area);
 		const bool allEnemiesDefeated = !area.hasEnemies();
-		if (area.getName() == "Fountain" && !area.IsHealingUnlocked() && allEnemiesDefeated) {
+		if (area.IsHealingRoom() && !area.IsHealingUnlocked() && allEnemiesDefeated) {
 			area.SetHealingUnlocked(true);
 			if (roomDefinition != nullptr && !roomDefinition->nextRoomId.empty()) {
 				if (const RoomDefinition* nextDefinition = mapManager_.GetRoomDefinition(roomDefinition->nextRoomId)) {
@@ -1907,6 +1899,15 @@ std::wstring Win32UI::StatusName(StatusType type) const {
 	case StatusType::VerdigrisMark: return L"Verdigris Mark";
 	case StatusType::DamageReduction: return L"Damage Reduction";
 	case StatusType::Barrier: return L"Barrier";
+	case StatusType::AttackUp: return L"Attack Up";
+	case StatusType::AccuracyUp: return L"Accuracy Up";
+	case StatusType::CritUp: return L"Critical Rate Up";
+	case StatusType::CritDamageUp: return L"Critical Damage Up";
+	case StatusType::GuaranteedCrit: return L"Guaranteed Critical";
+	case StatusType::DotUp: return L"DOT Up";
+	case StatusType::DotReduction: return L"DOT Reduction";
+	case StatusType::HealResistance: return L"Healing Resistance";
+	case StatusType::AccuracyFloor: return L"Accuracy Floor";
 	}
 	return L"Unknown";
 }
@@ -1922,6 +1923,15 @@ std::wstring Win32UI::CombatStatusSymbol(StatusType type) const {
 	case StatusType::Barrier: return L"\U0001F6E1\uFE0F";
 	case StatusType::DamageReduction: return L"\U0001F6E1\uFE0F";
 	case StatusType::HealOverTime: return L"\U0001F49A";
+	case StatusType::AttackUp: return L"\U0001F4AA";
+	case StatusType::AccuracyUp: return L"\U0001F3AF";
+	case StatusType::CritUp: return L"\U0001F3B2";
+	case StatusType::CritDamageUp: return L"\U0001F4A5";
+	case StatusType::GuaranteedCrit: return L"\u2694\uFE0F";
+	case StatusType::DotUp: return L"\U0001F4A2";
+	case StatusType::DotReduction: return L"\U0001F6E1\uFE0F";
+	case StatusType::HealResistance: return L"\U0001F6AB\U0001F49A";
+	case StatusType::AccuracyFloor: return L"\U0001F6E1\uFE0F";
 	}
-	return L"•";
+	return L"\u2753";
 }

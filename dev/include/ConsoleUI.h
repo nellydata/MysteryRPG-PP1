@@ -25,6 +25,7 @@ public:
 	void ShowShimmerSkills(const CombatManager& combat) const;
 	void ShowDeveloperPanel() const;
 	void ShowMessage(const std::string& message) const;
+	bool ChoosePendingShimmerSkill(ProgressionManager& progression) const;
 	int Prompt(const std::string& prompt, int minimum, int maximum) const;
 	bool IsDeveloperMode() const;
 

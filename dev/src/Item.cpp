@@ -1,18 +1,20 @@
 #include "Item.h"
 #include <vector>
 
+unsigned long long Item::nextInstanceId_ = 0;
+
 Item::Item(const std::string& name, const std::string& description)
 	: name_(name), description_(description), category_(ItemCategory::Consumable),
-	  rarity_(Rarity::Common), slot_(EquipSlot::None), mainStatValue_(0), mainStatPercent_(0) {}
+	  rarity_(Rarity::Common), slot_(EquipSlot::None), mainStatValue_(0), mainStatPercent_(0), instanceId_(++nextInstanceId_) {}
 
 Item::Item(const ItemDefinition& definition)
 	: name_(definition.name), description_(definition.description),
 	  category_(definition.category), rarity_(definition.rarity),
 	  slot_(definition.slot), stats_(definition.stats), effect_(definition.effect),
 	  uniqueEffect_(definition.uniqueEffect), theme_(definition.theme),
-			mainStat_(definition.mainStat), mainStatValue_(definition.mainStatValue), mainStatPercent_(definition.mainStatPercent), allowedSubstats_(definition.allowedSubstats), substats_(definition.substats),
+	  mainStat_(definition.mainStat), mainStatValue_(definition.mainStatValue), mainStatPercent_(definition.mainStatPercent), allowedSubstats_(definition.allowedSubstats), substats_(definition.substats),
 	  forbiddenStats_(definition.forbiddenStats), setName_(definition.setName),
-	  passive_(definition.passive), setPassive_(definition.setPassive) {}
+	  passive_(definition.passive), setPassive_(definition.setPassive), instanceId_(++nextInstanceId_) {}
 
 Item::~Item() = default;
 
@@ -35,3 +37,4 @@ const std::string& Item::getSetName() const { return setName_; }
 const std::string& Item::getPassive() const { return passive_; }
 const std::string& Item::getSetPassive() const { return setPassive_; }
 bool Item::isEquippable() const { return category_ == ItemCategory::Equippable; }
+unsigned long long Item::getInstanceId() const { return instanceId_; }

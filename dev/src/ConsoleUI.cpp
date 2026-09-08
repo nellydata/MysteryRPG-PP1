@@ -175,6 +175,11 @@ void ConsoleUI::RenderCombat(const Player& player, const ProgressionManager& pro
 				  << (skill->IsReady() ? "READY" : "COOLDOWN " + std::to_string(skill->getRemainingCooldown()))
 				  << "]\n";
 	}
+	std::cout << "\nBattle event log:\n";
+	const auto& events = combat.GetEvents();
+	const std::size_t firstEvent = events.size() > 12 ? events.size() - 12 : 0;
+	for (std::size_t index = firstEvent; index < events.size(); ++index)
+		std::cout << "  " << events[index].message << "\n";
 }
 
 void ConsoleUI::ShowInventory(const Player& player) const {
@@ -185,6 +190,7 @@ void ConsoleUI::ShowInventory(const Player& player) const {
 	for (const auto& item : player.GetInventory().GetItems()) {
 		if (colorEnabled_) std::cout << (item->getRarity() == Rarity::Artifact ? Shimmer() : "");
 		std::cout << "  " << item->getName() << "  [" << RarityName(item->getRarity()) << "]";
+		if (item->isEquippable()) std::cout << "  id=" << item->getInstanceId();
 		if (item->isEquippable()) std::cout << "  slot=" << SlotName(item->getSlot());
 		if (!item->getUniqueEffect().empty()) std::cout << "  * " << item->getUniqueEffect();
 		std::cout << "\n";
@@ -240,6 +246,17 @@ void ConsoleUI::ShowDeveloperPanel() const {
 
 void ConsoleUI::ShowMessage(const std::string& message) const {
 	std::cout << "\n  " << message << "\n";
+}
+
+bool ConsoleUI::ChoosePendingShimmerSkill(ProgressionManager& progression) const {
+	if (!progression.HasPendingShimmerChoice()) return true;
+	const auto& choices = progression.GetPendingShimmerChoices();
+	std::cout << "\nLevel-up Shimmer skills:\n";
+	for (std::size_t index = 0; index < choices.size(); ++index)
+		std::cout << "  " << index + 1 << ". " << choices[index] << "\n";
+	const int choice = Prompt("Choose a skill, or 0 to decide later.", 0, static_cast<int>(choices.size()));
+	if (choice == 0) return false;
+	return progression.SelectPendingShimmerSkill(choices[static_cast<std::size_t>(choice - 1)]);
 }
 
 int ConsoleUI::Prompt(const std::string& prompt, int minimum, int maximum) const {

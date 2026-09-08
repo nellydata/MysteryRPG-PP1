@@ -44,6 +44,7 @@ void Area::DiscoverNPC() { if (hasNPC_) discoveredNPC_ = true; }
 bool Area::HasBossBeenDefeated() const { return bossDefeated_; }
 void Area::SetBossDefeated(bool defeated) { bossDefeated_ = defeated; }
 bool Area::IsHealingUnlocked() const { return healingUnlocked_; }
+bool Area::IsHealingRoom() const { return healingRoom_; }
 void Area::SetHealingUnlocked(bool unlocked) { healingUnlocked_ = unlocked; }
 void Area::SetHealingRoom(bool healingRoom) { healingRoom_ = healingRoom; }
 bool Area::HasBossBeenEncountered() const { return bossEncountered_; }

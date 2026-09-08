@@ -39,6 +39,7 @@ const char* StatusDisplayName(StatusType type) {
     case StatusType::CritDamageUp: return "Critical Damage Up";
     case StatusType::GuaranteedCrit: return "Guaranteed Critical";
     case StatusType::DotUp: return "DOT Up";
+    case StatusType::DotReduction: return "DOT Reduction";
     case StatusType::HealResistance: return "Healing Resistance";
     case StatusType::AccuracyFloor: return "Accuracy Floor";
     }
@@ -107,6 +108,21 @@ const ShimmerSkill* CombatManager::GetDefaultSkill() const { return defaultSkill
 
 const std::vector<CombatManager::CombatEvent>& CombatManager::GetEvents() const { return events_; }
 void CombatManager::ClearEvents() { events_.clear(); }
+void CombatManager::ResetEncounter() {
+    activeEnemy_ = nullptr;
+    blocked_ = false;
+    weaknessExposed_ = false;
+    interrogationAttempts_ = 0;
+    turnNumber_ = 0;
+    playerTurn_ = true;
+    playerGauge_ = 0;
+    enemyGauge_ = 0;
+    consumableUsedThisTurn_ = false;
+    groupEnemyTurn_ = false;
+    currentEnemyParty_.clear();
+    shimmerCooldowns_.clear();
+    events_.clear();
+}
 void CombatManager::RecordInfo(const std::string& message) { AddEvent(CombatEvent::Kind::Info, message); }
 int CombatManager::GetSkillCooldown(const std::string& skillName) const {
     const auto found = shimmerCooldowns_.find(skillName);
@@ -207,7 +223,7 @@ bool CombatManager::resolve(CombatAction action, Player& player, Enemy& enemy,
             AddEvent(CombatEvent::Kind::Info, "Boss enters Phase " + std::to_string(enemy.GetPhase()) + ".");
         }
         AddEvent(CombatEvent::Kind::Info, player.getName() + " attacks " + enemy.getName()
-                  + " for " + std::to_string(damage) + (critical ? " critical" : "") + " damage.");
+                  + " for " + std::to_string(damage) + (critical ? " [CRITICAL]" : "") + " damage.");
         if (!enemy.isAlive() && progression != nullptr) {
             progression->GrantXP(enemy.getXPReward());
             progression->CheckLevelUp(player);
@@ -328,6 +344,7 @@ void CombatManager::enemyTurn(Player& player, Enemy& enemy) {
         if (skill.effect == "heal_self" && enemy.getHP() >= enemy.getMaxHP() / 2) continue;
         if (skill.effect == "cleanse_self" && enemy.GetStatuses().empty()) continue;
         AddEvent(CombatEvent::Kind::Skill, enemy.getName() + " uses " + skill.name + ".");
+        const bool grantsExtraTurn = skill.effect == "extra_turn";
         Enemy* allyTarget = nullptr;
         if (skill.effect.find("ally") != std::string::npos) {
             for (Enemy* ally : currentEnemyParty_) {
@@ -382,7 +399,8 @@ void CombatManager::enemyTurn(Player& player, Enemy& enemy) {
             AddEvent(CombatEvent::Kind::Shield, enemy.getName() + " gains a barrier.");
         } else if (skill.effect == "attack_up" || skill.effect == "accuracy_up" || skill.effect == "crit_up" ||
                    skill.effect == "crit_damage_up" || skill.effect == "guaranteed_crit" || skill.effect == "dot_up" ||
-                   skill.effect == "heal_resistance" || skill.effect == "accuracy_floor") {
+                skill.effect == "heal_resistance" || skill.effect == "accuracy_floor" ||
+                   skill.effect == "dot_reduction" || skill.effect == "accuracy_crit_up") {
             StatusType status = StatusType::AttackUp;
             if (skill.effect == "accuracy_up") status = StatusType::AccuracyUp;
             else if (skill.effect == "crit_up") status = StatusType::CritUp;
@@ -391,12 +409,22 @@ void CombatManager::enemyTurn(Player& player, Enemy& enemy) {
             else if (skill.effect == "dot_up") status = StatusType::DotUp;
             else if (skill.effect == "heal_resistance") status = StatusType::HealResistance;
             else if (skill.effect == "accuracy_floor") status = StatusType::AccuracyFloor;
+            else if (skill.effect == "dot_reduction") status = StatusType::DotReduction;
+            else if (skill.effect == "accuracy_crit_up") {
+                enemy.ApplyStatus({StatusType::AccuracyUp, skill.duration > 0 ? skill.duration : 2, 25});
+                enemy.ApplyStatus({StatusType::CritUp, skill.duration > 0 ? skill.duration : 2, 20});
+                AddEvent(CombatEvent::Kind::Buff, enemy.getName() + " gains Accuracy Up and Critical Rate Up.");
+                goto finish_enemy_skill;
+            }
             enemy.ApplyStatus({status, skill.duration > 0 ? skill.duration : 2, skill.multiplier > 0 ? skill.multiplier / 2 : 20});
             AddEvent(CombatEvent::Kind::Buff, enemy.getName() + " gains " + StatusDisplayName(status) + ".");
         }
+        if (skill.effect == "extra_turn") AddEvent(CombatEvent::Kind::ExtraTurn, enemy.getName() + " gains an extra turn.");
+    finish_enemy_skill:
         if (!enemy.isAlive()) AddEvent(CombatEvent::Kind::Death, enemy.getName() + " has been defeated.");
         enemy.StartSkillCooldown(index);
         enemyGauge_ -= 1000;
+        if (grantsExtraTurn) enemyGauge_ = 1000;
         playerTurn_ = false;
         AdvanceTurn(player, enemy);
         return;
@@ -419,7 +447,8 @@ void CombatManager::enemyTurn(Player& player, Enemy& enemy) {
     AddEvent(CombatEvent::Kind::Attack, enemy.getName() + " attacks " + player.getName() + ".", finalDamage);
     AddEvent(CombatEvent::Kind::Damage, enemy.getName() + " deals " + std::to_string(finalDamage) + " damage to " + player.getName() + ".", finalDamage);
     if (!player.isAlive()) AddEvent(CombatEvent::Kind::Death, player.getName() + " has fallen.");
-    AddEvent(CombatEvent::Kind::Info, enemy.getName() + " attacks for " + std::to_string(damage) + " damage.");
+    AddEvent(CombatEvent::Kind::Info, enemy.getName() + " attacks for " + std::to_string(damage)
+        + (critical ? " [CRITICAL]" : "") + " damage.");
     enemyGauge_ -= 1000;
     playerTurn_ = false;
     AdvanceTurn(player, enemy);

@@ -58,6 +58,7 @@ public:
     bool HasBossBeenDefeated() const;
     void SetBossDefeated(bool defeated);
     bool IsHealingUnlocked() const;
+    bool IsHealingRoom() const;
     void SetHealingUnlocked(bool unlocked);
     void SetHealingRoom(bool healingRoom);
     bool HasBossBeenEncountered() const;

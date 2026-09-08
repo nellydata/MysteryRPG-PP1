@@ -28,6 +28,9 @@ public:
 		} else if (effect_ == "damage_burn") {
 			enemy.takeDamage(CombatMath::Mitigate((std::max)(1, player.getAttack() * powerPercent_ / 100), enemy.getDefense()));
 				enemy.ApplyStatus({StatusType::Burn, duration_, 0, player.getAttack(), 50, player.getDefense()}, player.getAccuracy());
+		} else if (effect_ == "damage_stun") {
+			enemy.takeDamage(CombatMath::Mitigate((std::max)(1, player.getAttack() * powerPercent_ / 100), enemy.getDefense()));
+			enemy.ApplyStatus({StatusType::Stun, duration_ > 0 ? duration_ : 1, 0, player.getAttack()}, player.getAccuracy());
 		} else if (effect_ == "damage_tridot") {
 			enemy.takeDamage(CombatMath::Mitigate((std::max)(1, player.getAttack() * powerPercent_ / 100), enemy.getDefense()));
 			for (StatusType type : {StatusType::Burn, StatusType::Bleed, StatusType::Poison})
@@ -97,7 +100,7 @@ std::unique_ptr<ShimmerSkill> ShimmerSkill::Create(const std::string& skillName)
 	if (skillName == "Lux Ascension" || skillName == "Onus Coruscum" || skillName == "Resonantia Chori") return std::make_unique<DefinedShimmerSkill>(skillName, 5, 10, "Gain major ATK, DEF, SPD, and critical buffs for 3 turns.", "stat_boost", 0, 3);
 	if (skillName == "Pulsus Luminis") return std::make_unique<DefinedShimmerSkill>(skillName, 2, 5, "Deal a focused 250% ATK Shimmer strike.", "damage_ignore", 250, 0);
 	if (skillName == "Gradus Coruscus" || skillName == "Mutatio Horologii") return std::make_unique<DefinedShimmerSkill>(skillName, 2, 4, "Accelerate the next combat action.", "stat_boost", 0, 1);
-	if (skillName == "Lucerna Echo" || skillName == "Catena Aeruginis") return std::make_unique<DefinedShimmerSkill>(skillName, 3, 6, "Deal 400% ATK and attempt to stun the enemy.", "damage_burn", 400, 2);
+	if (skillName == "Lucerna Echo" || skillName == "Catena Aeruginis") return std::make_unique<DefinedShimmerSkill>(skillName, 3, 6, "Deal 400% ATK and attempt to stun the enemy.", "damage_stun", 400, 2);
 	if (skillName == "Fulgur Aurorae") return std::make_unique<DefinedShimmerSkill>(skillName, 4, 8, "Deal a heavy 700% ATK Shimmer strike.", "damage_ignore", 700, 0);
 	if (skillName == "Flos Aeruginis") return std::make_unique<DefinedShimmerSkill>(skillName, 3, 6, "Deal 600% ATK and apply Burn.", "damage_burn", 600, 3);
 	if (skillName == "Scutum Coruscum") return std::make_unique<DefinedShimmerSkill>(skillName, 2, 4, "Gain a 500% max HP barrier.", "defensive_buff", 500, 3);

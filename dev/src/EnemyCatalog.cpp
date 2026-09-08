@@ -89,7 +89,12 @@ const std::vector<EnemyDefinition>& GetEnemyCatalogue() {
 
 std::unique_ptr<Enemy> CreateRoomEnemy(const RoomDefinition& room, unsigned seed, int level, bool afterClear) {
 	const auto& pool = afterClear ? room.enemiesAfterClear : room.enemiesBeforeClear;
-	const auto* entry = SelectPoolEntry(pool, seed);
+	std::vector<WeightedEnemyEntry> nonBossPool;
+	for (const auto& entry : pool) {
+		const EnemyDefinition* definition = FindEnemyDefinition(entry.enemyId);
+		if (definition != nullptr && definition->tier != EnemyTier::Boss) nonBossPool.push_back(entry);
+	}
+	const auto* entry = SelectPoolEntry(nonBossPool, seed);
 	return entry == nullptr ? nullptr : CreateCatalogueEnemy(entry->enemyId, level);
 }
 

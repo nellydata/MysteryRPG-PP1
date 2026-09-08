@@ -133,5 +133,8 @@
     <ClCompile Include="dev\src\ShimmerSkill.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="dev\tests\EquipmentV2Tests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

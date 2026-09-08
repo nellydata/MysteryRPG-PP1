@@ -50,6 +50,7 @@ public:
     void RecordInfo(const std::string& message);
     int GetSkillCooldown(const std::string& skillName) const;
     void ClearEvents();
+    void ResetEncounter();
 
 private:
     bool interrogate(Player& player, Enemy& enemy,

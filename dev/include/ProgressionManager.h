@@ -28,6 +28,10 @@ public:
     bool UnequipShimmerSkill(const std::string& skillName, int cost);
     bool UnlockShimmerFromTrigger(const std::string& trigger);
     std::string RollShimmerSkill();
+    bool HasPendingShimmerChoice() const;
+    const std::vector<std::string>& GetPendingShimmerChoices() const;
+    bool SelectPendingShimmerSkill(const std::string& skillName);
+    std::vector<std::string> ConsumeLevelUpMessages();
 
 private:
     int level_;
@@ -37,4 +41,9 @@ private:
     std::set<std::string> shimmerSkills_;
     std::set<std::string> equippedShimmerSkills_;
     int shimmerPointsUsed_;
+    std::vector<std::string> pendingShimmerChoices_;
+    std::vector<std::string> levelUpMessages_;
+
+    void QueueLevelUpChoice();
+    void AddLevelUpEquipmentRewards(Player& player);
 };

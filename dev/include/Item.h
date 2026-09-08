@@ -28,6 +28,7 @@ public:
     const std::string& getPassive() const;
     const std::string& getSetPassive() const;
     bool isEquippable() const;
+    unsigned long long getInstanceId() const;
 
 private:
     std::string name_;
@@ -48,4 +49,6 @@ private:
     std::string setName_;
     std::string passive_;
     std::string setPassive_;
+    unsigned long long instanceId_;
+    static unsigned long long nextInstanceId_;
 };

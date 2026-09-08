@@ -35,6 +35,7 @@ public:
 	void AddClue(const Clue& clue);
 	void AddItem(std::unique_ptr<Item> item);
 	bool RemoveItem(const std::string& name);
+	bool RemoveItem(unsigned long long instanceId);
 	Item* FindItem(const std::string& name);
 	const std::vector<ItemEntry>& GetItems() const;
 	const std::vector<Clue>& GetClues() const;
@@ -43,6 +44,7 @@ public:
 	bool IsLocked(const std::string& name) const;
 	void SetLocked(const std::string& name, bool locked);
 	bool DiscardItem(const std::string& name, int amount = 1);
+	bool DiscardItem(unsigned long long instanceId);
 	std::vector<Item*> GetSortedItems(InventorySort sort, ItemStat focusStat = ItemStat::ATK) const;
 	std::size_t GetItemCount() const;
 

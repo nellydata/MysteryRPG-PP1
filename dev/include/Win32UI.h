@@ -74,6 +74,7 @@ private:
 	std::string CompactConsumableSummary(const Item& item) const;
 	void AddLog(const std::string& message);
 	void SyncCombatEvents();
+ void SyncProgressionRewards();
 	void InitializePlayer();
 	void InitializeCompletionState();
 	void Invalidate();

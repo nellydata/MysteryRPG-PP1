@@ -10,7 +10,7 @@ const std::vector<RoomDefinition>& MapManager::GetFloor1Definitions() {
     static const std::vector<RoomDefinition> definitions = {
         {"Fountain", "Fountain", RoomType::Sanctuary,
             {{"Devotee Acolyte", 60}, {"Devotee Penitent", 25}, {"Devotee Flagellant", 15}},
-            {{"Devotee Acolyte", 70}, {"Devotee Penitent", 30}}, "Choir Warden", 50, 8, ConsumableProfile::Restorative, "Entrance Hall"},
+            {{"Devotee Acolyte", 70}, {"Devotee Penitent", 30}}, "", 0, 0, ConsumableProfile::Restorative, "Entrance Hall"},
         {"Entrance Hall", "Entrance Hall", RoomType::Entrance,
             {{"Devotee Acolyte", 30}, {"Devotee Penitent", 20}, {"Devotee Flagellant", 15}, {"Choir Ascetic", 10}, {"Benediction Sister", 10}, {"Automata Unit-01", 5}},
             {{"Devotee Acolyte", 25}, {"Devotee Penitent", 20}, {"Devotee Flagellant", 15}, {"Choir Ascetic", 15}, {"Benediction Sister", 15}, {"Choir Warden", 10}}, "Matron of the Catacombs", 50, 8, ConsumableProfile::Devotional, "Archive Room"},

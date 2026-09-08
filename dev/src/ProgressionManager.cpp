@@ -1,8 +1,8 @@
 #include "ProgressionManager.h"
+#include "ContentCatalog.h"
 #include "Player.h"
 #include "ShimmerSkill.h"
 #include <algorithm>
-#include <iostream>
 #include <random>
 
 ProgressionManager::ProgressionManager()
@@ -31,15 +31,76 @@ bool ProgressionManager::CheckLevelUp(Player& player) {
         player.SetLevelStats(level_);
         player.RestoreHealth(player.getMaxHP());
         xpToNextLevel_ = static_cast<int>(xpToNextLevel_ * 1.10f + 0.5f);
-        const std::string reward = RollShimmerSkill();
-        if (!reward.empty()) UnlockShimmerSkill(reward);
+        QueueLevelUpChoice();
+        AddLevelUpEquipmentRewards(player);
+        levelUpMessages_.push_back("Level up! " + player.getName() + " is now level " + std::to_string(level_) + ". Five equipment rewards were added.");
         leveledUp = true;
-
-        std::cout << "Level up! Adelaide is now level " << level_ << ".\n"
-                   << "Recovered to full health and discovered Shimmer skill " << reward << ".\n";
     }
 
     return leveledUp;
+}
+
+bool ProgressionManager::HasPendingShimmerChoice() const {
+    return !pendingShimmerChoices_.empty();
+}
+
+const std::vector<std::string>& ProgressionManager::GetPendingShimmerChoices() const {
+    return pendingShimmerChoices_;
+}
+
+bool ProgressionManager::SelectPendingShimmerSkill(const std::string& skillName) {
+    if (!HasPendingShimmerChoice() ||
+        std::find(pendingShimmerChoices_.begin(), pendingShimmerChoices_.end(), skillName) == pendingShimmerChoices_.end() ||
+        HasShimmerSkill(skillName)) return false;
+    UnlockShimmerSkill(skillName);
+    pendingShimmerChoices_.clear();
+    levelUpMessages_.push_back("Shimmer skill unlocked: " + skillName + ".");
+    return true;
+}
+
+std::vector<std::string> ProgressionManager::ConsumeLevelUpMessages() {
+    std::vector<std::string> messages;
+    messages.swap(levelUpMessages_);
+    return messages;
+}
+
+void ProgressionManager::QueueLevelUpChoice() {
+    pendingShimmerChoices_.clear();
+    static const std::vector<std::string> names = {
+        "Ray of Mercy", "Prism Step", "Gleam Needle", "Phragmós Phōtós", "Therapeía Anakláseōs", "Anástasis Phōtós", "Phthorá Phōtós",
+        "Phōteinḕ Kátharsis", "Phōteinòs Thṓrax", "Refractio Ultima", "Lumen Spiculum", "Lux Vortex", "Siphon Lux", "Lux Aegis",
+        "Refraction Cataclysm", "Lux Ascension"
+    };
+    std::vector<std::string> candidates;
+    for (const auto& name : names) {
+        if (!HasShimmerSkill(name) && ShimmerSkill::Create(name) != nullptr) candidates.push_back(name);
+    }
+    static std::mt19937 generator(0x4D494341u);
+    std::shuffle(candidates.begin(), candidates.end(), generator);
+    const std::size_t count = (std::min)(static_cast<std::size_t>(3), candidates.size());
+    pendingShimmerChoices_.assign(candidates.begin(), candidates.begin() + static_cast<std::ptrdiff_t>(count));
+}
+
+void ProgressionManager::AddLevelUpEquipmentRewards(Player& player) {
+    const auto catalog = BuildEquippableCatalog();
+    static std::mt19937 generator(0x4D494342u);
+    const auto rarityForLevel = [this]() {
+        if (level_ >= 40) return Rarity::Epic;
+        if (level_ >= 20) return Rarity::Rare;
+        if (level_ >= 8) return Rarity::Uncommon;
+        return Rarity::Common;
+    };
+    const Rarity rewardRarity = rarityForLevel();
+    for (EquipSlot slot : {EquipSlot::Head, EquipSlot::Torso, EquipSlot::Hand, EquipSlot::Boots, EquipSlot::Accessory}) {
+        std::vector<const ItemDefinition*> slotCandidates;
+        for (const auto& definition : catalog) {
+            if (definition.slot == slot && definition.rarity == rewardRarity) slotCandidates.push_back(&definition);
+        }
+        if (slotCandidates.empty()) continue;
+        std::uniform_int_distribution<std::size_t> pick(0, slotCandidates.size() - 1);
+        const ItemDefinition rolled = RollLootInstance(*slotCandidates[pick(generator)], generator());
+        player.AddItem(std::make_unique<Item>(rolled));
+    }
 }
 
 std::string ProgressionManager::RollShimmerSkill() {

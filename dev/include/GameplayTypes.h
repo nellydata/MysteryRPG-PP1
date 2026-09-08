@@ -48,6 +48,7 @@ enum class StatusType {
 	CritDamageUp,
 	GuaranteedCrit,
 	DotUp,
+	DotReduction,
 	HealResistance,
 	AccuracyFloor
 };

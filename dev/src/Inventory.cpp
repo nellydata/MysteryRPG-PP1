@@ -6,14 +6,33 @@ void Inventory::AddClue(const Clue& clue) {
 	clues.push_back(clue);
 }
 
+bool Inventory::RemoveItem(unsigned long long instanceId) {
+	for (std::size_t index = 0; index < items_.size(); ++index) {
+		if (!items_[index].item || items_[index].item->getInstanceId() != instanceId) continue;
+		if (items_[index].locked) return false;
+		items_.erase(items_.begin() + static_cast<std::ptrdiff_t>(index));
+		return true;
+	}
+	return false;
+}
+
 void Inventory::AddItem(std::unique_ptr<Item> item) {
 	if (!item) return;
 	items_.push_back({ std::move(item), 1, false, ++nextAcquisitionOrder_ });
 }
 
+bool Inventory::DiscardItem(unsigned long long instanceId) {
+	for (std::size_t index = 0; index < items_.size(); ++index) {
+		if (!items_[index].item || items_[index].item->getInstanceId() != instanceId || items_[index].locked) continue;
+		items_.erase(items_.begin() + static_cast<std::ptrdiff_t>(index));
+		return true;
+	}
+	return false;
+}
+
 bool Inventory::RemoveItem(const std::string& name) {
 	for (std::size_t index = 0; index < items_.size(); ++index) {
-		if (items_[index].item && items_[index]->getName() == name) {
+		if (items_[index].item && items_[index].item->getName() == name) {
 			if (items_[index].quantity > 1) {
 				--items_[index].quantity;
 			} else if (!items_[index].locked) {
@@ -28,19 +47,19 @@ bool Inventory::RemoveItem(const std::string& name) {
 int Inventory::GetQuantity(const std::string& name) const {
 	int quantity = 0;
 	for (std::size_t index = 0; index < items_.size(); ++index)
-		if (items_[index].item && items_[index]->getName() == name) quantity += items_[index].quantity;
+		if (items_[index].item && items_[index].item->getName() == name) quantity += items_[index].quantity;
 	return quantity;
 }
 
 bool Inventory::IsLocked(const std::string& name) const {
 	for (std::size_t index = 0; index < items_.size(); ++index)
-		if (items_[index].item && items_[index]->getName() == name) return items_[index].locked;
+		if (items_[index].item && items_[index].item->getName() == name) return items_[index].locked;
 	return false;
 }
 
 void Inventory::SetLocked(const std::string& name, bool locked) {
 	for (std::size_t index = 0; index < items_.size(); ++index) {
-		if (items_[index].item && items_[index]->getName() == name) {
+		if (items_[index].item && items_[index].item->getName() == name) {
 			items_[index].locked = locked;
 			return;
 		}
@@ -50,7 +69,7 @@ void Inventory::SetLocked(const std::string& name, bool locked) {
 bool Inventory::DiscardItem(const std::string& name, int amount) {
 	if (amount <= 0 || IsLocked(name)) return false;
 	for (std::size_t index = 0; index < items_.size(); ++index) {
-		if (items_[index].item && items_[index]->getName() == name) {
+		if (items_[index].item && items_[index].item->getName() == name) {
 			if (amount >= items_[index].quantity) {
 				items_.erase(items_.begin() + static_cast<std::ptrdiff_t>(index));
 			} else items_[index].quantity -= amount;

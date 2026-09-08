@@ -187,6 +187,7 @@
     <ClCompile Include="dev\src\Player.cpp" />
     <ClCompile Include="dev\src\ProgressionManager.cpp" />
     <ClCompile Include="dev\src\ShimmerSkill.cpp" />
+    <ClCompile Include="dev\tests\EquipmentV2Tests.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

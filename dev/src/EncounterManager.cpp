@@ -189,8 +189,14 @@ bool EncounterManager::Explore(Area& area, Player& player,
                 area.removeDeadEnemies();
             } else {
                 while (!combat.IsPlayerTurn() && player.isAlive() && enemy->isAlive())
+                {
                     combat.enemyTurn(player, *enemy);
+                    ui.RenderCombat(player, progression, *enemy, combat);
+                    if (!player.isAlive()) break;
+                }
             }
+            for (const auto& message : progression.ConsumeLevelUpMessages()) ui.ShowMessage(message);
+            ui.ChoosePendingShimmerSkill(progression);
             continue;
         }
 

@@ -97,12 +97,34 @@ int MainStatValue(Rarity rarity, int value) {
 int SubstatCount(Rarity rarity) {
 	switch (rarity) {
 	case Rarity::Uncommon: return 1;
-	case Rarity::Rare: return 1;
+	case Rarity::Rare: return 2;
 	case Rarity::Epic: return 3;
 	case Rarity::Legendary: return 4;
 	case Rarity::Artifact: return 4;
 	default: return 0;
 	}
+}
+
+std::pair<int, int> MainStatRange(const std::string& mainStat, EquipSlot slot, Rarity rarity) {
+	const int tier = static_cast<int>(rarity);
+	if (slot == EquipSlot::Boots || mainStat == "spd") {
+		static const std::pair<int, int> ranges[] = {{5, 5}, {8, 8}, {12, 12}, {12, 16}, {16, 20}, {20, 25}};
+		return ranges[tier];
+	}
+	if (mainStat == "hp") {
+		static const std::pair<int, int> ranges[] = {{5, 5}, {10, 15}, {15, 20}, {20, 25}, {25, 30}, {30, 35}};
+		return ranges[tier];
+	}
+	if (mainStat == "acc" || mainStat == "res") {
+		static const std::pair<int, int> ranges[] = {{5, 5}, {8, 12}, {12, 18}, {18, 24}, {24, 30}, {30, 36}};
+		return ranges[tier];
+	}
+	if (mainStat == "def") {
+		static const std::pair<int, int> ranges[] = {{60, 90}, {80, 120}, {120, 180}, {160, 240}, {200, 300}, {240, 360}};
+		return ranges[tier];
+	}
+	static const std::pair<int, int> ranges[] = {{80, 120}, {120, 180}, {160, 240}, {240, 360}, {320, 480}, {400, 600}};
+	return ranges[tier];
 }
 
 void AddSubstat(ItemDefinition& item, ItemStat stat, int value) {
@@ -183,11 +205,11 @@ bool ValidateMicareContent(std::string* error) {
 	if (!ValidateContentCatalog(error)) return false;
 	if (!ValidateEnemyCatalogue(error)) return false;
 	for (const auto& room : MapManager::GetFloor1Definitions()) {
-		if (room.id.empty() || room.bossId.empty() || room.firstBossSpawnChance != 50) {
+		if (room.id.empty() || (room.id != "Fountain" && room.bossId.empty()) || room.firstBossSpawnChance < 0 || room.firstBossSpawnChance > 100) {
 			if (error) *error = "Room profile has invalid boss progression: " + room.id;
 			return false;
 		}
-		if (FindEnemyDefinition(room.bossId) == nullptr) {
+		if (!room.bossId.empty() && FindEnemyDefinition(room.bossId) == nullptr) {
 			if (error) *error = "Room boss is missing from enemy catalogue: " + room.bossId;
 			return false;
 		}
@@ -240,17 +262,24 @@ std::vector<ItemDefinition> GenerateLoot(const LootContext& context, unsigned se
 	std::vector<ItemDefinition> result;
 	const bool boss = context.enemyTier == EnemyTier::Boss;
 	const bool elite = context.enemyTier == EnemyTier::Elite;
+	const bool rareEnemy = context.enemyTier == EnemyTier::Rare || context.enemyTier == EnemyTier::Epic;
 	const int level = (std::max)(1, context.playerLevel);
-	const int count = boss ? (context.bossFirstClear ? 4 : 3) : elite ? 2 : level >= 20 ? 2 : 1;
+	const int count = boss ? (context.bossFirstClear ? 4 : 3) : elite ? 2 : rareEnemy ? 1 : 1;
+	const int equipmentChance = boss || elite || rareEnemy ? 100 : (std::min)(100, 85 + level / 10);
 	for (int drop = 0; drop < count; ++drop) {
 		const unsigned roll = seed + static_cast<unsigned>(drop * 41);
-		const int dropChance = boss || elite ? 100 : (std::min)(90, 15 + level);
-		if (static_cast<int>(roll % 100) >= dropChance) continue;
+		if (static_cast<int>(roll % 100) >= equipmentChance) continue;
 		const int rarityRoll = static_cast<int>((roll / 7) % 100);
 		Rarity rarity = Rarity::Common;
-		if (boss) rarity = rarityRoll < 1 ? Rarity::Artifact : rarityRoll < 11 ? Rarity::Legendary : rarityRoll < 85 ? Rarity::Epic : Rarity::Rare;
-		else if (elite) rarity = rarityRoll < 8 ? Rarity::Epic : rarityRoll < 60 ? Rarity::Rare : Rarity::Uncommon;
-		else rarity = rarityRoll < (level / 5) ? Rarity::Epic : rarityRoll < 35 ? Rarity::Rare : rarityRoll < 75 ? Rarity::Uncommon : Rarity::Common;
+		const bool rareUnlocked = level >= 10;
+		const bool epicUnlocked = level >= 20;
+		const bool legendaryUnlocked = boss && level >= 40;
+		const bool artifactUnlocked = boss && level >= 70;
+		if (boss && artifactUnlocked && rarityRoll < 5) rarity = Rarity::Artifact;
+		else if (boss && legendaryUnlocked && rarityRoll < 30) rarity = Rarity::Legendary;
+		else if (epicUnlocked && rarityRoll < (boss ? 95 : elite ? 75 : 45)) rarity = Rarity::Epic;
+		else if (rareUnlocked && rarityRoll < (boss ? 100 : elite ? 95 : 80)) rarity = Rarity::Rare;
+		else rarity = level >= 5 ? Rarity::Uncommon : Rarity::Common;
 		std::vector<ItemDefinition> candidates;
 		for (const auto& item : BuildEquippableCatalog()) {
 			if (item.rarity != rarity) continue;
@@ -258,25 +287,34 @@ std::vector<ItemDefinition> GenerateLoot(const LootContext& context, unsigned se
 		}
 		if (candidates.empty()) for (const auto& item : BuildEquippableCatalog()) if (item.rarity == rarity) candidates.push_back(item);
 		if (!candidates.empty()) result.push_back(RollLootInstance(candidates[(roll / 13) % candidates.size()], roll + 97));
-		if ((roll / 19) % 100 < (boss ? 35 : elite ? 20 : 8)) {
-			const auto consumables = BuildConsumableCatalog();
-			if (!consumables.empty()) result.push_back(consumables[(roll / 23) % consumables.size()]);
-		}
+	}
+	const int consumableChance = boss ? 100 : elite ? 65 : context.enemyTier == EnemyTier::Epic ? 50 : rareEnemy ? 40 : 30;
+	const auto consumables = BuildConsumableCatalog();
+	if (!consumables.empty() && (boss || static_cast<int>((seed / 19) % 100) < consumableChance)) {
+		result.push_back(consumables[(seed / 23) % consumables.size()]);
 	}
 	return result;
 }
 
 ItemDefinition RollLootInstance(ItemDefinition item, unsigned seed) {
-	const int variation = 90 + static_cast<int>(seed % 21);
-	if (item.mainStatValue > 0) item.mainStatValue = (std::max)(1, item.mainStatValue * variation / 100);
-	if (item.mainStatPercent > 0) item.mainStatPercent = (std::max)(1, item.mainStatPercent * variation / 100);
-	item.stats.hp = item.stats.hp * variation / 100;
-	item.stats.def = item.stats.def * variation / 100;
-	item.stats.spd = item.stats.spd * variation / 100;
-	item.stats.atk = item.stats.atk * variation / 100;
+	if (item.category != ItemCategory::Equippable || item.slot == EquipSlot::None) return item;
+	const auto range = MainStatRange(item.mainStat, item.slot, item.rarity);
+	const int mainRoll = range.first + static_cast<int>(seed % static_cast<unsigned>(range.second - range.first + 1));
+	item.mainStatValue = 0;
+	item.mainStatPercent = 0;
+	item.stats.hp = item.stats.def = item.stats.spd = item.stats.atk = 0;
+	if (item.mainStat == "hp") item.mainStatPercent = mainRoll;
+	else if (item.mainStat == "acc") item.mainStatPercent = mainRoll;
+	else if (item.mainStat == "res") item.mainStatPercent = mainRoll;
+	else if (item.mainStat == "def") { item.mainStatValue = mainRoll; item.stats.def = mainRoll; }
+	else if (item.mainStat == "spd") { item.mainStatValue = mainRoll; item.stats.spd = mainRoll; }
+	else { item.mainStatValue = mainRoll; item.stats.atk = mainRoll; }
 	item.substats.clear();
+	std::vector<ItemStat> selected;
 	for (std::size_t index = 0; index < item.allowedSubstats.size() && index < static_cast<std::size_t>(SubstatCount(item.rarity)); ++index) {
 		const ItemStat stat = item.allowedSubstats[(index + seed) % item.allowedSubstats.size()];
+		if (std::find(selected.begin(), selected.end(), stat) != selected.end()) continue;
+		selected.push_back(stat);
 		AddSubstat(item, stat, CombatMath::SubstatRoll(stat, item.rarity, seed + static_cast<unsigned>(index * 37)));
 	}
 	return item;

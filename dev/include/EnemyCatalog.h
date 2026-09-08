@@ -1,6 +1,7 @@
 #pragma once
 
 #include "GameplayTypes.h"
+#include "Enemy.h"
 #include <memory>
 #include <string>
 #include <vector>

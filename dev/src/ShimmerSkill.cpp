@@ -59,6 +59,10 @@ public:
 };
 }
 
+ShimmerSkill::ShimmerSkill(const std::string& name, int equipCost, int cooldown,
+	const std::string& description, const std::string& effect)
+	: ShimmerSkill(name, equipCost, cooldown, description, effect, 100, 0) {}
+
 ShimmerSkill::ShimmerSkill(const std::string& name, int equipCost, int cooldown, const std::string& description,
 	const std::string& effect, int powerPercent, int duration)
 	: name_(name), description_(description), effect_(effect), equipCost_(equipCost), cooldown_(cooldown),

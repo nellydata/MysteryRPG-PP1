@@ -6,8 +6,8 @@
 #include <set>
 #include "Clue.h"
 #include "GameplayTypes.h"
+#include "Item.h"
 
-class Item;
 
 struct ItemEntry {
 	std::unique_ptr<Item> item;

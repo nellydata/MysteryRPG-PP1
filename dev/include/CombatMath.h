@@ -1,5 +1,6 @@
 #pragma once
 
+#include "GameplayTypes.h"
 #include <algorithm>
 #include <cmath>
 

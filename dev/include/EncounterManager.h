@@ -1,6 +1,7 @@
 #pragma once
 
 #include "GameplayTypes.h"
+#include "Enemy.h"
 #include <memory>
 #include <string>
 #include <vector>
@@ -9,7 +10,6 @@ class Area;
 class CombatManager;
 class Player;
 class ProgressionManager;
-class Enemy;
 class MapManager;
 
 enum class InvestigationEventType {

@@ -12,119 +12,159 @@
 #include "ShimmerSkill.h"
 #include <iostream>
 #include <memory>
+#include <algorithm>
+#include <random>
 
 namespace {
-unsigned RoomSeed(const std::string& roomName) {
-    unsigned seed = 2166136261u;
-    for (unsigned char character : roomName) {
-        seed ^= character;
-        seed *= 16777619u;
-    }
-    return seed;
-}
-
-int SpawnChance(EnemySpawnCondition condition) {
-    switch (condition) {
-    case EnemySpawnCondition::None: return 0;
-    case EnemySpawnCondition::Low: return 20;
-    case EnemySpawnCondition::Medium: return 50;
-    case EnemySpawnCondition::High: return 80;
-    }
-    return 0;
-}
-
-void SpawnEnemy(Area& area, unsigned seed) {
-    const int level = 1 + static_cast<int>((seed / 3) % 5);
-    MapManager map;
-    const RoomDefinition* definition = map.GetRoomDefinition(area);
-    if (definition != nullptr) {
-        if (auto enemy = CreateRoomEnemy(*definition, seed, level, area.HasBossBeenDefeated())) area.addEnemy(std::move(enemy));
-    } else if (auto enemy = CreateRandomCatalogueEnemy(seed, level, false, false))
-        area.addEnemy(std::move(enemy));
-}
-
-void InspectEnvironment(Area& area, Player& player, ProgressionManager& progression,
-                        ConsoleUI& ui) {
-    const auto& interactables = area.GetVisibleInteractables();
-    std::cout << "\nObjects:\n";
-    for (std::size_t index = 0; index < interactables.size(); ++index)
-        std::cout << "  " << index + 1 << ". " << interactables[index] << "\n";
-    const int choice = ui.Prompt("Choose an object to inspect, or 0 to return.", 0,
-                                 static_cast<int>(interactables.size()));
-    if (choice == 0) return;
-    if (choice < 1 || choice > static_cast<int>(interactables.size())) {
-        ui.ShowMessage("That is not a valid interactable.");
-        return;
-    }
-
-    const std::string& object = interactables[choice - 1];
-    std::cout << "You inspect the " << object << ".\n";
-    area.RecordSearch();
-    if (area.getName() == "Fountain" && !area.IsHealingUnlocked()) {
-        area.SetHealingUnlocked(true);
-        ui.ShowMessage("You uncover the sealed Fountain. It can now restore your health.");
-        return;
-    }
-    if (object == "Figure in the shadows" && area.HasNPC()) {
-        ui.ShowMessage("You see an NPC here. Interaction system coming soon.");
-    }
-    if (area.ConsumeClue()) {
-        ui.ShowMessage("You uncover a clue hidden in the details.");
-        player.AddClue({"A fragment recovered from the " + object + "."});
-        progression.GrantInvestigationXP(area.getName());
-        progression.CheckLevelUp(player);
-    } else {
-        ui.ShowMessage("Nothing new is revealed.");
-    }
-    if (area.RevealNextInteractable()) ui.ShowMessage("Another interaction becomes visible.");
-    if (area.HasNPC() && !area.HasDiscoveredNPC() && area.IsFullySearched()) area.DiscoverNPC();
-}
-
-void SearchRoom(Area& area, Player& player) {
-    if (!area.ConsumeItem()) {
-        std::cout << "\nYou find nothing useful.\n";
-        return;
-    }
-
-    MapManager map;
-    const RoomDefinition* definition = map.GetRoomDefinition(area);
-    const std::string& room = area.getName();
-    const auto clues = BuildClueCatalog();
-    if (room == "Archive Room") {
-        for (const auto& definition : clues) {
-            if (definition.name == "choir_logbook") {
-                player.AddItem(std::make_unique<Item>(definition));
-                break;
-            }
-        }
-    } else {
-        const auto rewards = GenerateInvestigationLoot(
-            definition == nullptr ? ConsumableProfile::SupplyCache : definition->consumableProfile,
-            1, room, RoomSeed(room) + static_cast<unsigned>(area.GetSearchCount() * 31));
-        for (const auto& reward : rewards) {
-            player.AddItem(std::make_unique<Item>(reward));
-            std::cout << "\nInvestigation found: " << reward.name << ". It was added to your inventory.\n";
-        }
-        if (rewards.empty()) std::cout << "\nYou find nothing useful.\n";
-        return;
-    }
-    std::cout << "\nYou found: choir_logbook. It was added to your inventory.\n";
-}
 }
 
 EncounterManager::EncounterManager() = default;
+
+InvestigationResult EncounterManager::ResolveInvestigation(Area& area, Player& player,
+                                                           ProgressionManager& progression) {
+    InvestigationResult result;
+    if (!player.isAlive() || area.hasEnemies()) {
+        result.narrative = area.hasEnemies() ? "Combat is still unresolved." : "You cannot investigate while incapacitated.";
+        return result;
+    }
+
+    area.RecordSearch();
+    const unsigned seed = area.NextInvestigationSeed();
+    const int roll = static_cast<int>(seed % 100);
+    MapManager map;
+    const RoomDefinition* definition = map.GetRoomDefinition(area);
+    const int level = progression.GetLevel();
+
+    if (area.getName() == "Fountain" && !area.IsHealingUnlocked()) {
+        result.type = InvestigationEventType::FountainDiscovery;
+        result.narrative = "A weak guardian rises from the sealed Fountain. Defeat it to purify the sanctuary.";
+        result.enemyId = "Devotee Acolyte";
+        result.spawnedEnemy = CreateCatalogueEnemy(result.enemyId, (std::max)(1, level));
+        result.primaryResolved = result.spawnedEnemy != nullptr;
+        return result;
+    }
+
+    const bool requiredDiscovery = !area.AreAllRequiredInteractablesRevealed() || area.HasClues();
+    if (requiredDiscovery && area.GetSearchCount() >= 5) {
+        if (area.ConsumeClue()) {
+            result.type = InvestigationEventType::ClueDiscovery;
+            result.discoveryId = area.getName() + ":clue:" + std::to_string(area.GetSearchCount());
+            result.xpAwarded = CalculateInvestigationXP(level, InvestigationAreaDepth(area.getName()));
+            progression.GrantXP(result.xpAwarded);
+            area.RevealNextInteractable();
+            result.narrative = "You recover a meaningful fragment from the room.";
+            result.primaryResolved = true;
+            return result;
+        }
+        if (area.RevealNextInteractable()) {
+            result.type = InvestigationEventType::ClueDiscovery;
+            result.discoveryId = area.GetVisibleInteractables().back();
+            result.narrative = "A previously hidden interaction is revealed.";
+            result.primaryResolved = true;
+            return result;
+        }
+    }
+
+    const bool bossEligible = definition != nullptr && !definition->bossId.empty() &&
+        area.AreAllRequiredInteractablesRevealed() && area.HasAllClues();
+    if (bossEligible && !area.HasBossBeenDefeated() && roll < definition->firstBossSpawnChance) {
+        area.MarkBossEncountered();
+        result.type = InvestigationEventType::EnemyEncounter;
+        result.enemyId = definition->bossId;
+        result.spawnedEnemy = CreateCatalogueEnemy(result.enemyId, (std::max)(1, level));
+        result.narrative = "A major presence emerges from the room.";
+        result.primaryResolved = result.spawnedEnemy != nullptr;
+        return result;
+    }
+
+    const bool repeat = area.AreAllRequiredInteractablesRevealed() && !area.HasClues();
+    const int enemyWeight = repeat ? 30 : 25;
+    const int itemWeight = repeat ? 42 : 35;
+    const int xpWeight = repeat ? 20 : 18;
+    const int clueWeight = repeat ? 0 : 12;
+    const int specialWeight = repeat ? 4 : 6;
+    const int hazardWeight = 4;
+    const bool enemiesEligible = area.GetSpawnCondition() != EnemySpawnCondition::None;
+    const bool itemsEligible = area.HasItems();
+    const bool cluesEligible = area.HasClues() || !area.AreAllRequiredInteractablesRevealed();
+    const int total = (enemiesEligible ? enemyWeight : 0) + (itemsEligible ? itemWeight : 0) +
+        xpWeight + (cluesEligible ? clueWeight : 0) + specialWeight + hazardWeight;
+    int choice = static_cast<int>((seed / 17) % static_cast<unsigned>(total));
+
+    if (enemiesEligible && (choice -= enemyWeight) < 0) {
+        result.type = InvestigationEventType::EnemyEncounter;
+        result.narrative = "A hostile presence emerges from the darkness.";
+        const EnemyFaction faction = area.getName() == "Archive Room" ? EnemyFaction::Automata :
+            area.getName() == "Chapel" ? EnemyFaction::Verdigris : EnemyFaction::Devotee;
+        const EnemyTier tier = level >= 20 ? EnemyTier::Elite : level >= 6 ? EnemyTier::Epic : EnemyTier::Rare;
+        result.spawnedEnemy = CreateRandomCatalogueEnemy(seed, (std::max)(1, level), faction, tier);
+        result.primaryResolved = result.spawnedEnemy != nullptr;
+        return result;
+    }
+    if (itemsEligible && (choice -= itemWeight) < 0) {
+        result.type = InvestigationEventType::ItemDiscovery;
+        area.ConsumeItem();
+        result.items = GenerateInvestigationLoot(definition == nullptr ? ConsumableProfile::SupplyCache : definition->consumableProfile,
+            level, area.getName(), seed);
+        result.narrative = result.items.empty() ? "You uncover an empty compartment." : "You discover supplies hidden in the room.";
+        if (result.items.empty()) {
+            result.type = InvestigationEventType::ExplorationXP;
+            result.xpAwarded = (std::max)(std::int64_t{1}, XPRequirementForLevel(level) * 5 / 100);
+            progression.GrantXP(result.xpAwarded);
+            result.narrative = "The cache is empty, but the search reveals a useful detail.";
+        }
+        result.primaryResolved = true;
+        return result;
+    }
+    if ((choice -= xpWeight) < 0) {
+        result.type = InvestigationEventType::ExplorationXP;
+        const std::int64_t requirement = XPRequirementForLevel(level);
+        result.xpAwarded = (std::max)(std::int64_t{1}, requirement * (5 + static_cast<int>((seed / 29) % 6)) / 100);
+        progression.GrantXP(result.xpAwarded);
+        result.narrative = "You piece together a useful detail about the cathedral.";
+        result.primaryResolved = true;
+        return result;
+    }
+    if (cluesEligible && (choice -= clueWeight) < 0 && area.ConsumeClue()) {
+        result.type = InvestigationEventType::ClueDiscovery;
+        result.discoveryId = area.getName() + ":clue:" + std::to_string(area.GetSearchCount());
+        result.xpAwarded = CalculateInvestigationXP(level, InvestigationAreaDepth(area.getName()));
+        progression.GrantXP(result.xpAwarded);
+        area.RevealNextInteractable();
+        result.narrative = "A clue is recovered from the room's details.";
+        result.primaryResolved = true;
+        return result;
+    }
+    if (!area.AreAllRequiredInteractablesRevealed() && area.RevealNextInteractable()) {
+        result.type = InvestigationEventType::ClueDiscovery;
+        result.discoveryId = area.getName() + ":object:" + std::to_string(area.GetVisibleInteractables().size() - 1);
+        result.narrative = "A previously hidden interaction is revealed.";
+        result.primaryResolved = true;
+        return result;
+    }
+    if ((choice -= specialWeight) < 0) {
+        result.type = InvestigationEventType::Beneficial;
+        player.heal((std::max)(1, player.getMaxHP() * 10 / 100));
+        result.hpDelta = player.getMaxHP() * 10 / 100;
+        result.narrative = "A clean restorative cache helps you recover.";
+        result.primaryResolved = true;
+        return result;
+    }
+
+    result.type = InvestigationEventType::Hazard;
+    const int before = player.getHP();
+    player.takeDamage((std::max)(1, player.getMaxHP() * 5 / 100));
+    result.hpDelta = player.getHP() - before;
+    result.narrative = "Falling masonry catches you by surprise.";
+    result.primaryResolved = true;
+    return result;
+}
 
 bool EncounterManager::Explore(Area& area, Player& player,
                                ProgressionManager& progression,
                                CombatManager& combat) {
     ConsoleUI ui;
-    const unsigned seed = RoomSeed(area.getName());
     if (area.GetVisibleInteractables().empty()) area.RevealNextInteractable();
-    if (!area.hasEnemies()
-        && static_cast<int>(seed % 100) < SpawnChance(area.GetSpawnCondition())) {
-        SpawnEnemy(area, seed);
-        ui.ShowMessage("A hostile presence emerges from the room. Combat begins.");
-    }
 
     while (player.isAlive()) {
         Enemy* enemy = area.getFirstAliveEnemy();
@@ -217,8 +257,24 @@ bool EncounterManager::Explore(Area& area, Player& player,
         const int maximumChoice = area.getName() == "Fountain" && area.IsHealingUnlocked() ? 5 : 4;
         const int choice = ui.Prompt("Choose an exploration action.", 0, maximumChoice);
         switch (choice) {
-        case 1: InspectEnvironment(area, player, progression, ui); break;
-        case 2: SearchRoom(area, player); break;
+        case 1:
+        case 2: {
+            InvestigationResult result = ResolveInvestigation(area, player, progression);
+            ui.ShowMessage(result.narrative);
+            if (result.xpAwarded > 0) ui.ShowMessage("Investigation gained " + std::to_string(result.xpAwarded) + " XP.");
+            for (const auto& item : result.items) {
+                player.AddItem(std::make_unique<Item>(item));
+                ui.ShowMessage("Found: " + item.name + ".");
+            }
+            if (result.hpDelta < 0) ui.ShowMessage("You lose " + std::to_string(-result.hpDelta) + " HP. Current HP: " +
+                std::to_string(player.getHP()) + "/" + std::to_string(player.getMaxHP()) + ".");
+            if (result.spawnedEnemy != nullptr) {
+                area.addEnemy(std::move(result.spawnedEnemy));
+                ui.ShowMessage("Combat begins.");
+            }
+            progression.CheckLevelUp(player);
+            break;
+        }
         case 3:
             ui.ShowInventory(player);
             ui.Prompt("Press 0 to return.", 0, 0);

@@ -23,15 +23,6 @@ constexpr COLORREF Verdigris = RGB(105, 157, 145);
 constexpr COLORREF Shimmer = RGB(190, 222, 220);
 constexpr COLORREF Danger = RGB(190, 76, 82);
 
-unsigned RoomSeed(const std::string& roomName) {
-	unsigned seed = 2166136261u;
-	for (unsigned char character : roomName) {
-		seed ^= character;
-		seed *= 16777619u;
-	}
-	return seed;
-}
-
 bool IsSupportSkill(const std::string& effect) {
 	return effect == "barrier" || effect == "heal_cleanse" || effect == "extra_turn" || effect == "stat_boost";
 }
@@ -1108,21 +1099,8 @@ void Win32UI::ScheduleEnemyTurn() {
 void Win32UI::Inspect(int interactableIndex) {
 	if (!player_.isAlive()) return;
 	if (selectedRoom_ < 0 || selectedRoom_ >= static_cast<int>(mapManager_.GetRooms().size())) return;
-	Area& area = mapManager_.GetRooms()[selectedRoom_];
-	combat_.ClearEvents();
-	if (interactableIndex < 0 || interactableIndex >= static_cast<int>(area.GetVisibleInteractables().size())) return;
-	const std::string object = area.GetVisibleInteractables()[interactableIndex];
-	if (area.ConsumeClue()) {
-		player_.AddClue({"A fragment recovered from the " + object + "."});
-		progression_.GrantInvestigationXP(area.getName());
-		progression_.CheckLevelUp(player_);
-		SyncProgressionRewards();
-		AddLog("Investigation: clue recovered from " + object + ".");
-		statusMessage_ = "Investigation complete: clue recovered.";
-	} else {
-		AddLog("Investigation: nothing new revealed at " + object + ".");
-		statusMessage_ = "Investigation complete: nothing new revealed.";
-	}
+	if (interactableIndex < 0 || interactableIndex >= static_cast<int>(mapManager_.GetRooms()[selectedRoom_].GetVisibleInteractables().size())) return;
+	SearchRoom();
 }
 
 void Win32UI::SearchRoom() {
@@ -1131,147 +1109,28 @@ void Win32UI::SearchRoom() {
 	statusMessage_ = "Investigating the room...";
 	combat_.ClearEvents();
 	Area& area = mapManager_.GetRooms()[selectedRoom_];
-	area.RecordSearch();
-	const unsigned searchSeed = RoomSeed(area.getName()) + static_cast<unsigned>(area.GetSearchCount() * 31);
-	const int roll = static_cast<int>(searchSeed % 100);
-	const bool interactablesComplete = area.AreAllRequiredInteractablesRevealed();
-	const int playerLevel = progression_.GetLevel();
-	const RoomDefinition* roomDefinition = mapManager_.GetRoomDefinition(area);
-	const EnemyFaction roomFaction = RoomFaction(area.getName());
-	const EnemyTier encounterTier = MaximumEncounterTier(playerLevel);
-	const int levelDisparity = static_cast<int>((searchSeed / 7) % 8) - 2;
-	const int enemyLevel = (std::max)(1, (std::min)(100, playerLevel + levelDisparity));
-	const bool encounterAllowed = area.GetSpawnCondition() != EnemySpawnCondition::None &&
-		roll < SpawnChance(area.GetSpawnCondition());
-	const int enemyThreshold = interactablesComplete ? 70 : 50;
-	const int consumableThreshold = (std::max)(25, 62 - playerLevel / 3);
-	if (area.getName() == "Fountain" && !area.IsHealingUnlocked() && activeEnemy_ == nullptr && !area.hasEnemies() && area.GetSearchCount() == 1) {
-		if (auto enemy = CreateRandomCatalogueEnemy(searchSeed, 1, EnemyFaction::Devotee, EnemyTier::Basic)) {
-			area.addEnemy(std::move(enemy));
-			activeEnemy_ = area.getFirstAliveEnemy();
-			combat_.BeginEncounter(*activeEnemy_);
-			combat_.PrepareTurn(player_, *activeEnemy_);
-			view_ = View::Combat;
-			AddLog("Fountain investigation: a weak guardian appears. Defeat it to purify the fountain.");
-		}
+	if (activeEnemy_ != nullptr && activeEnemy_->isAlive()) {
+		statusMessage_ = "Resolve the current encounter before investigating again.";
 		return;
 	}
-	if (activeEnemy_ == nullptr && roll >= 90) {
-		const int damage = (std::max)(1, player_.getMaxHP() * 5 / 100);
-		player_.takeDamage(damage);
-		AddLog("Investigation: environmental hazard caused " + std::to_string(damage) + " damage.");
-		if (!player_.isAlive()) {
-			if (activeEnemy_ != nullptr && activeEnemy_->isAlive()) ShowDefeatRecovery();
-			else player_.RestoreHealth((std::max)(1, player_.getMaxHP() * 10 / 100));
-		}
-		return;
+	InvestigationResult result = investigation_.ResolveInvestigation(area, player_, progression_);
+	AddLog(result.narrative);
+	if (result.xpAwarded > 0) AddLog("Investigation gained " + std::to_string(result.xpAwarded) + " XP.");
+	for (const auto& definition : result.items) {
+		player_.AddItem(std::make_unique<Item>(definition));
+		AddLog("Found " + definition.name + ".");
 	}
-	if (activeEnemy_ == nullptr && roll >= 84) {
-		player_.heal((std::max)(1, player_.getMaxHP() * 10 / 100));
-		AddLog("Shimmer Surge: the player gains a temporary restorative pulse.");
-		if (roll % 5 == 0) {
-			const int eliteLevel = progression_.GetLevel();
-			if (static_cast<int>(encounterTier) >= static_cast<int>(EnemyTier::Elite)) {
-				if (auto elite = CreateRandomCatalogueEnemy(searchSeed + 7, eliteLevel, roomFaction, EnemyTier::Elite)) {
-				if (elite->getTier() == EnemyTier::Elite) {
-					area.addEnemy(std::move(elite));
-					activeEnemy_ = area.getFirstAliveEnemy();
-					combat_.ContinueEncounter(*activeEnemy_);
-					combat_.PrepareTurn(player_, *activeEnemy_);
-					view_ = View::Combat;
-			if (!player_.isAlive()) ShowDefeatRecovery();
-					AddLog("Shimmer Anomaly: an elite enemy spawned.");
-				}
-			}
-			}
-		}
-		return;
-	}
-	if (activeEnemy_ == nullptr && roll >= 78) {
-		AddLog("Investigation: a Shimmer anomaly rippled through the room.");
-		return;
-	}
-	if (activeEnemy_ == nullptr && roll >= 50 && roll < 55) {
-		AddLog("Nothing Was Found.");
-		statusMessage_ = "Nothing Was Found.";
-		return;
-	}
-	if (activeEnemy_ == nullptr && encounterAllowed) {
-		const bool investigationComplete = area.IsFullySearched() && area.HasAllClues() && area.HasAllItems();
-		const int bossRoll = static_cast<int>((searchSeed / 17) % 100);
-		const bool bossEligible = roomDefinition != nullptr && !roomDefinition->bossId.empty() && investigationComplete;
-		if (bossEligible && bossRoll < roomDefinition->firstBossSpawnChance && !area.HasBossBeenDefeated()) {
-			area.MarkBossEncountered();
-			if (auto boss = CreateCatalogueEnemy(roomDefinition->bossId, enemyLevel)) area.addEnemy(std::move(boss));
-			AddLog("Search: " + roomDefinition->bossId + " emerges.");
-		} else if (bossEligible && bossRoll < roomDefinition->farmBossStartingChance + roomDefinition->firstBossSpawnChance && area.HasBossBeenDefeated()) {
-			if (auto boss = CreateCatalogueEnemy(roomDefinition->bossId, enemyLevel + 2)) area.addEnemy(std::move(boss));
-			AddLog("Search: the defeated boss returns in a stronger form.");
-		} else {
-		const int compositionRoll = static_cast<int>((searchSeed / 11) % 100);
-		const int enemyCount = playerLevel >= 100 ? 2 + compositionRoll % 3
-			: playerLevel >= 50 ? (compositionRoll < playerLevel ? 2 + compositionRoll % 2 : 1)
-			: playerLevel >= 10 ? (compositionRoll < playerLevel * 2 ? 2 : 1) : 1;
-		for (int count = 0; count < enemyCount && count < 4; ++count) {
-			const unsigned enemySeed = searchSeed + static_cast<unsigned>(count * 17);
-			const int rarityRoll = static_cast<int>((enemySeed / 13) % 100);
-			EnemyTier rolledTier = encounterTier;
-			if (rarityRoll < 8 && playerLevel >= 20) rolledTier = EnemyTier::Elite;
-			else if (rarityRoll < 25 && playerLevel >= 6) rolledTier = EnemyTier::Epic;
-			const int rolledLevel = (std::max)(1, (std::min)(100, playerLevel + static_cast<int>((enemySeed / 7) % 5) - 2));
-			if (auto enemy = roomDefinition == nullptr ? nullptr : CreateRoomEnemy(*roomDefinition, enemySeed, rolledLevel, false)) area.addEnemy(std::move(enemy));
-		}
-		}
+	if (result.hpDelta < 0) AddLog("Investigation damage: " + std::to_string(-result.hpDelta) + " HP.");
+	if ((result.type == InvestigationEventType::EnemyEncounter || result.type == InvestigationEventType::FountainDiscovery) && result.spawnedEnemy != nullptr) {
+		area.addEnemy(std::move(result.spawnedEnemy));
 		activeEnemy_ = area.getFirstAliveEnemy();
-		if (activeEnemy_ == nullptr) return;
 		combat_.BeginEncounter(*activeEnemy_);
 		combat_.PrepareTurn(player_, *activeEnemy_);
 		view_ = View::Combat;
-		if (!player_.isAlive()) ShowDefeatRecovery();
-		AddLog("Search: an enemy ambushes you in " + area.getName() + ".");
-		return;
 	}
-	if (activeEnemy_ == nullptr && roll >= consumableThreshold && roll < enemyThreshold) {
-		if (!area.HasAllItems()) area.ConsumeItem();
-		const auto definition = BuildInvestigationConsumable(roomDefinition == nullptr ? ConsumableProfile::SupplyCache : roomDefinition->consumableProfile, playerLevel);
-		if (!definition.name.empty()) player_.AddItem(std::make_unique<Item>(definition));
-		AddLog("Search: a consumable item was added to the inventory.");
-		return;
-	}
-	if (roll >= enemyThreshold && (interactablesComplete || roll < 80)) {
-		if (!area.HasAllItems()) area.ConsumeItem();
-		const auto definition = BuildInvestigationConsumable(roomDefinition == nullptr ? ConsumableProfile::SupplyCache : roomDefinition->consumableProfile, playerLevel);
-		if (!definition.name.empty()) player_.AddItem(std::make_unique<Item>(definition));
-		AddLog("Search: a consumable item was added to the inventory.");
-		return;
-	}
-	if (!interactablesComplete && roll >= 80) {
-		if (!area.HasAllClues()) {
-			if (area.ConsumeClue()) {
-				player_.AddClue({"A fragment recovered during the investigation."});
-				progression_.GrantInvestigationXP(area.getName());
-				progression_.CheckLevelUp(player_);
-				SyncProgressionRewards();
-				AddLog("Search: a clue was recovered.");
-			}
-			return;
-		}
-	}
-	if (area.RevealNextInteractable()) {
-		AddLog("Search: a new interaction became visible.");
-	} else if (area.HasNPC() && !area.HasDiscoveredNPC()) {
-		area.DiscoverNPC();
-		AddLog("Search: an NPC steps from the shadows.");
-	} else if (area.ConsumeItem()) {
-		const auto rewards = GenerateInvestigationLoot(roomDefinition == nullptr ? ConsumableProfile::SupplyCache : roomDefinition->consumableProfile, playerLevel, area.getName(), searchSeed + 31);
-		for (const auto& definition : rewards) {
-			player_.AddItem(std::make_unique<Item>(definition));
-			AddLog("Search: found " + definition.name + ".");
-		}
-		if (rewards.empty()) AddLog("Search: nothing useful was found.");
-	} else {
-		AddLog(area.IsFullySearched() ? "Search: the room is fully investigated." : "Search: nothing useful found.");
-	}
+	progression_.CheckLevelUp(player_);
+	SyncProgressionRewards();
+	if (!player_.isAlive()) ShowDefeatRecovery();
 }
 
 void Win32UI::PerformCombatAction(CombatAction action) {
@@ -1343,7 +1202,7 @@ void Win32UI::PerformCombatAction(CombatAction action) {
 		loot.enemyId = defeatedName;
 		loot.enemyTier = defeatedTier;
 		loot.bossFirstClear = firstBossClear;
-		for (const auto& item : GenerateLoot(loot, RoomSeed(defeatedName) + static_cast<unsigned>(defeatedLevel * 17 + area.GetSearchCount()))) {
+		for (const auto& item : GenerateLoot(loot, area.NextInvestigationSeed() + static_cast<unsigned>(defeatedLevel * 17 + area.GetSearchCount()))) {
 			player_.AddItem(std::make_unique<Item>(item));
 			Item droppedItem(item);
 			AddLootLog(droppedItem);

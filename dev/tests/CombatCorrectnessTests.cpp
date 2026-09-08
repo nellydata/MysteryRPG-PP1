@@ -3,6 +3,8 @@
 #include "EnemyCatalog.h"
 #include "ContentCatalog.h"
 #include "ProgressionManager.h"
+#include "EncounterManager.h"
+#include "Area.h"
 #include <cassert>
 
 namespace {
@@ -99,6 +101,59 @@ int main() {
 		}
 		assert(bandages > rations);
 		assert(CalculateInvestigationXP(10, 3) > CalculateInvestigationXP(1, 1));
+	}
+
+	{
+		Area room("Storage Room");
+		room.AddInteractable("Supply shelf");
+		room.SetSpawnCondition(EnemySpawnCondition::None);
+		room.SetClues(false);
+		room.SetItems(false);
+		Player player("Test", 100, 10);
+		ProgressionManager progression;
+		EncounterManager encounters;
+		const InvestigationResult first = encounters.ResolveInvestigation(room, player, progression);
+		const InvestigationResult second = encounters.ResolveInvestigation(room, player, progression);
+		assert(first.primaryResolved);
+		assert(second.primaryResolved);
+		assert(room.GetSearchCount() == 2);
+		assert(first.type != InvestigationEventType::FountainDiscovery);
+	}
+
+	{
+		Area fountain("Fountain");
+		fountain.AddInteractable("The restorative cathedral fountain");
+		fountain.SetHealingRoom(true);
+		Player player("Test", 100, 10);
+		ProgressionManager progression;
+		EncounterManager encounters;
+		const InvestigationResult result = encounters.ResolveInvestigation(fountain, player, progression);
+		assert(result.type == InvestigationEventType::FountainDiscovery);
+		assert(result.spawnedEnemy != nullptr);
+		assert(!fountain.IsHealingUnlocked());
+	}
+
+	{
+		Area room("Chapel");
+		room.AddInteractable("Altar");
+		room.SetSpawnCondition(EnemySpawnCondition::None);
+		room.SetClues(false);
+		room.SetItems(false);
+		Player player("Test", 100, 10);
+		ProgressionManager progression;
+		EncounterManager encounters;
+		bool sawHazard = false;
+		for (int attempt = 0; attempt < 100 && player.isAlive(); ++attempt) {
+			const int before = player.getHP();
+			const InvestigationResult result = encounters.ResolveInvestigation(room, player, progression);
+			assert(result.primaryResolved);
+			if (result.type == InvestigationEventType::Hazard) {
+				sawHazard = true;
+				assert(before - player.getHP() <= player.getMaxHP() * 12 / 100);
+				assert(player.getHP() >= 1);
+			}
+		}
+		assert(sawHazard);
 	}
 
 	return 0;

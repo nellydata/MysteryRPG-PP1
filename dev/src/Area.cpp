@@ -4,7 +4,7 @@
 
 Area::Area(const std::string& name)
     : name_(name), hasNPC_(false),
-      spawnCondition_(EnemySpawnCondition::None), unlocked_(false), searchCount_(0),
+      spawnCondition_(EnemySpawnCondition::None), unlocked_(false), searchCount_(0), investigationSeed_(2166136261u),
       discoveredNPC_(false), bossDefeated_(false), bossEncountered_(false), healingUnlocked_(false), healingRoom_(false) {}
 
 Area::~Area() = default;
@@ -23,6 +23,11 @@ bool Area::IsUnlocked() const { return unlocked_; }
 void Area::SetUnlocked(bool unlocked) { unlocked_ = unlocked; }
 int Area::GetSearchCount() const { return searchCount_; }
 void Area::RecordSearch() { ++searchCount_; }
+unsigned Area::NextInvestigationSeed() {
+    investigationSeed_ ^= static_cast<unsigned>(searchCount_ + 1) * 747796405u;
+    investigationSeed_ = investigationSeed_ * 1664525u + 1013904223u;
+    return investigationSeed_;
+}
 
 bool Area::RevealNextInteractable() {
     if (visibleInteractables_.size() >= interactables_.size()) return false;

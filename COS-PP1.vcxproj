@@ -145,6 +145,7 @@
   <ItemGroup>
     <None Include=".gitignore" />
     <None Include="docs\Micare-System-Design.md" />
+    <None Include="InvestigationHarness.vcxproj" />
     <None Include="README.md" />
   </ItemGroup>
   <ItemGroup>

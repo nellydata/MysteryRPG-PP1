@@ -4,6 +4,7 @@
 #include "MapManager.h"
 #include "Player.h"
 #include "ProgressionManager.h"
+#include "EncounterManager.h"
 #include <windows.h>
 #include <memory>
 #include <string>
@@ -109,6 +110,7 @@ private:
 	MapManager mapManager_;
 	CombatManager combat_;
 	ProgressionManager progression_;
+	EncounterManager investigation_;
 	Enemy* activeEnemy_;
 	std::vector<std::string> log_;
 	std::vector<Rarity> logRarities_;

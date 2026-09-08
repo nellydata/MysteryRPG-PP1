@@ -49,6 +49,7 @@ public:
     void SetUnlocked(bool unlocked);
     int GetSearchCount() const;
     void RecordSearch();
+    unsigned NextInvestigationSeed();
     bool RevealNextInteractable();
     const std::vector<std::string>& GetVisibleInteractables() const;
     bool IsFullySearched() const;
@@ -93,6 +94,7 @@ private:
     EnemySpawnCondition spawnCondition_;
     bool unlocked_;
     int searchCount_;
+    unsigned investigationSeed_;
     std::vector<std::string> visibleInteractables_;
     bool discoveredNPC_;
     bool bossDefeated_;

@@ -13,7 +13,8 @@ int ScaleStat(int base, double growth, int level, int cap) {
 	// through the early progression window (levels 1-10) while preserving the
 	// intended tier identity at higher levels.
 	const double levelScale = 0.35 * (1.0 + 0.5 * relativeLevel);
-	const int scaled = static_cast<int>(std::lround(base * levelScale * std::pow(growth, relativeLevel / 25.0)));
+	const int scaled = static_cast<int>(std::lround((std::clamp)(
+        base * levelScale * std::pow(growth, relativeLevel / 25.0), 1.0, static_cast<double>(cap))));
 	return (std::max)(1, (std::min)(cap, scaled));
 }
 
@@ -21,15 +22,15 @@ int NormalizeSpeed(int legacySpeed, EnemyFaction faction) {
 	const int factionAdjustment = faction == EnemyFaction::Automata ? 5 :
 		faction == EnemyFaction::Devotee ? -3 : 0;
 	return (std::max)(CombatMath::Balance::MinimumEnemySpeed,
-		(std::min)(CombatMath::Balance::MaximumEnemySpeed, 75 + legacySpeed * 35 / 100 + factionAdjustment));
+		(std::min)(CombatMath::Balance::MaximumEnemySpeed, CombatMath::Saturate(
+            75LL + static_cast<std::int64_t>(legacySpeed) * 35 / 100 + factionAdjustment)));
 }
 
 }
 
 void Enemy::heal(int amount) {
-	if (amount <= 0) return;
-	for (const auto& status : statuses_) if (status.type == StatusType::HealResistance) amount = amount * (100 - status.potency) / 100;
-	hp_ = (std::min)(maxHp_, hp_ + amount);
+    lastHealResult_ = StatusRules::Heal(hp_, maxHp_, amount, SumStatusBonus(StatusType::HealResistance),
+        SumStatusBonus(StatusType::HealingPotencyUp), 0);
 }
 
 std::vector<std::pair<StatusType, int>>& Enemy::EmptyDamageEvents() {
@@ -65,82 +66,62 @@ const std::vector<StatusEffect>& Enemy::GetStatuses() const { return statuses_; 
 Enemy::~Enemy() = default;
 
 void Enemy::takeDamage(int amount) {
-	lastDamageResult_ = {};
-	lastDamageResult_.requestedDamage = (std::max)(0, amount);
-	lastDamageResult_.remainingHP = hp_;
-	if (amount <= 0) return;
-	for (auto status = statuses_.begin(); status != statuses_.end() && amount > 0;) {
-		if (status->type != StatusType::Barrier) {
-			++status;
-			continue;
-		}
-		const int absorbed = (std::min)(status->potency, amount);
-		status->potency -= absorbed;
-		amount -= absorbed;
-		lastDamageResult_.barrierAbsorbed += absorbed;
-		if (status->potency <= 0) {
-			lastDamageResult_.barrierBroken = true;
-			status = statuses_.erase(status);
-		}
-		else ++status;
-	}
-	if (amount <= 0) return;
-	lastDamageResult_.hpDamage = (std::min)(hp_, amount);
-	hp_ -= amount;
-	if (hp_ < 0) hp_ = 0;
-	lastDamageResult_.remainingHP = hp_;
+    lastDamageResult_ = StatusRules::Damage(hp_, statuses_, amount, 0,
+        (std::min)(CombatMath::Balance::MaximumDamageReduction, SumStatusBonus(StatusType::DamageReduction)));
 }
-
+const DamageResolution& Enemy::ApplyDirectDamage(int rawDamage, bool ignoreDefense) {
+    const int requested = (std::max)(0, rawDamage);
+    const int afterDefense = ignoreDefense ? requested : CombatMath::Mitigate(requested, getDefense());
+    takeDamage(afterDefense);
+    if (lastDamageResult_.hpDamage || lastDamageResult_.barrierAbsorbed || isAlive())
+        lastDamageResult_.mitigatedDamage += requested - afterDefense;
+    lastDamageResult_.requestedDamage = requested;
+    return lastDamageResult_;
+}
+int Enemy::ApplyDamageOverTime(int amount) {
+    lastDamageResult_ = StatusRules::Damage(hp_, statuses_, amount, 0,
+        (std::min)(75, SumStatusBonus(StatusType::DotReduction)));
+    return lastDamageResult_.hpDamage;
+}
+void Enemy::BeginStatusTurn(std::vector<std::pair<StatusType, int>>& damageEvents, int& healing) {
+    if (statusTurnOpen_) return;
+    statusTurnOpen_ = true;
+    statusTurnSnapshot_.clear();
+    statusDamageResults_.clear();
+    damageEvents.clear();
+    healing = 0;
+    const auto active = statuses_;
+    for (const auto& status : active) if (status.turns > 0) statusTurnSnapshot_.push_back(status.applicationId);
+    for (const auto& status : active) {
+        if (!isAlive()) break;
+        const int damage = StatusRules::DotDamage(status, maxHp_, active);
+        if (damage > 0) {
+            ApplyDamageOverTime(damage);
+            statusDamageResults_.push_back({status.type, lastDamageResult_, status.source, status.sourceId});
+            damageEvents.emplace_back(status.type, lastDamageResult_.hpDamage);
+        }
+        if (status.type == StatusType::HealOverTime) healing = CombatMath::Saturate(static_cast<std::int64_t>(healing) + status.potency);
+    }
+    heal(healing);
+    healing = lastHealResult_.hpRestored;
+}
+void Enemy::EndStatusTurn() {
+    if (!statusTurnOpen_) return;
+    StatusRules::FinishTurn(statuses_, statusTurnSnapshot_);
+    statusTurnOpen_ = false;
+}
 void Enemy::ProcessStatuses(std::vector<std::pair<StatusType, int>>& damageEvents, int& healing) {
-	healing = 0;
-	damageEvents.clear();
-	statusDamageResults_.clear();
-	std::vector<std::pair<StatusType, int>> pendingDamage;
-	for (auto& status : statuses_) {
-		int damage = 0;
-		const int dotReduction = (std::min)(75, SumStatusBonus(StatusType::DotReduction));
-		const int dotUp = SumStatusBonus(StatusType::DotUp);
-		if (status.type == StatusType::Bleed) {
-			damage = status.sourceAttack * 30 / 100;
-			damage = damage * (100 + status.dotPotency + dotUp) / 100;
-			damage = damage * (100 - dotReduction) / 100;
-		} else if (status.type == StatusType::Burn) {
-			damage = status.sourceAttack * 60 / 100;
-			damage = damage * (100 + status.dotPotency + dotUp) / 100;
-			damage = damage * (100 - dotReduction) / 100;
-		} else if (status.type == StatusType::Poison) {
-			damage = maxHp_ * 5 / 100;
-			damage = damage * (100 + status.dotPotency + dotUp) / 100;
-			damage = damage * (100 - dotReduction) / 100;
-		}
-		if (status.type == StatusType::HealOverTime) healing += status.potency;
-		if (damage > 0) pendingDamage.emplace_back(status.type, damage);
-		--status.turns;
-	}
-	statuses_.erase(std::remove_if(statuses_.begin(), statuses_.end(), [](const StatusEffect& status) {
-		return status.turns <= 0;
-	}), statuses_.end());
-	for (const auto& tick : pendingDamage) {
-		if (!isAlive()) break;
-		takeDamage(tick.second);
-		statusDamageResults_.push_back({tick.first, lastDamageResult_});
-		damageEvents.emplace_back(tick.first, lastDamageResult_.hpDamage);
-	}
-	const int beforeHealing = hp_;
-	if (healing > 0 && isAlive()) heal(healing);
-	healing = hp_ - beforeHealing;
+    BeginStatusTurn(damageEvents, healing);
+    EndStatusTurn();
 }
-
 bool Enemy::isAlive() const { return hp_ > 0; }
 const std::string& Enemy::getName() const { return name_; }
 int Enemy::getHP() const { return hp_; }
 int Enemy::getMaxHP() const { return maxHp_; }
 int Enemy::SumStatusBonus(StatusType type) const {
-	int bonus = 0;
-	for (const auto& status : statuses_) if (status.type == type) bonus += status.potency;
-	return bonus;
+    return StatusRules::Sum(statuses_, type);
 }
-int Enemy::getAtk() const { return (std::max)(1, atk_ * (100 + SumStatusBonus(StatusType::AttackUp) - SumStatusBonus(StatusType::AttackDown)) / 100); }
+int Enemy::getAtk() const { return (std::max)(1, CombatMath::Scale(atk_, CombatMath::Saturate(100LL + SumStatusBonus(StatusType::AttackUp) - SumStatusBonus(StatusType::AttackDown)))); }
 std::int64_t Enemy::getXPReward() const { return xpReward_; }
 bool Enemy::CanReceiveDefeatRewards() const { return !isAlive() && !rewardsForfeited_; }
 bool Enemy::HasClaimedXPReward() const { return xpRewardClaimed_; }
@@ -161,18 +142,18 @@ bool Enemy::IsFarmBoss() const { return farmBoss_; }
 const DamageResolution& Enemy::GetLastDamageResult() const { return lastDamageResult_; }
 const std::vector<StatusDamageResolution>& Enemy::GetStatusDamageResults() const { return statusDamageResults_; }
 const std::vector<StatusApplicationResolution>& Enemy::GetStatusApplications() const { return statusApplications_; }
-int Enemy::getDefense() const { return (std::max)(0, defense_ * (100 + SumStatusBonus(StatusType::DefenseUp) - SumStatusBonus(StatusType::DefenseDown)) / 100); }
+int Enemy::getDefense() const { return CombatMath::Scale(defense_, CombatMath::Saturate(100LL + SumStatusBonus(StatusType::DefenseUp) - SumStatusBonus(StatusType::DefenseDown))); }
 int Enemy::getSpeed() const {
 	const int slow = SumStatusBonus(StatusType::Slow);
-	return (std::max)(1, speed_ * (100 + SumStatusBonus(StatusType::SpeedUp) - (std::min)(75, slow)) / 100);
+    return (std::max)(1, CombatMath::Scale(speed_, CombatMath::Saturate(100LL + SumStatusBonus(StatusType::SpeedUp) - (std::min)(75, slow))));
 }
 int Enemy::getLevel() const { return level_; }
 int Enemy::getResistance() const { return resistance_; }
-int Enemy::getCritRate() const { return critRate_; }
-int Enemy::getCritDamage() const { return critDamage_; }
+int Enemy::getCritRate() const { return (std::min)(100, CombatMath::Saturate(static_cast<std::int64_t>(critRate_) + SumStatusBonus(StatusType::CritUp))); }
+int Enemy::getCritDamage() const { return CombatMath::Saturate(static_cast<std::int64_t>(critDamage_) + SumStatusBonus(StatusType::CritDamageUp)); }
 int Enemy::getAccuracy() const {
 	const int bonus = SumStatusBonus(StatusType::AccuracyUp) - SumStatusBonus(StatusType::AccuracyDown);
-	return (std::max)(0, accuracy_ + bonus);
+	return CombatMath::Saturate(static_cast<std::int64_t>(accuracy_) + bonus);
 }
 int Enemy::getEvasion() const { return evasion_; }
 EnemyFaction Enemy::getFaction() const { return faction_; }
@@ -181,7 +162,7 @@ const std::vector<EnemySkillDefinition>& Enemy::GetSkills() const { return skill
 int Enemy::GetSkillCooldown(std::size_t index) const {
 	return index < skillCooldowns_.size() ? skillCooldowns_[index] : 0;
 }
-bool Enemy::IsSkillReady(std::size_t index) const { return GetSkillCooldown(index) == 0; }
+bool Enemy::IsSkillReady(std::size_t index) const { return index < skills_.size() && GetSkillCooldown(index) == 0; }
 void Enemy::StartSkillCooldown(std::size_t index) {
 	if (index < skillCooldowns_.size() && index < skills_.size()) skillCooldowns_[index] = skills_[index].cooldown;
 }
@@ -190,7 +171,7 @@ void Enemy::TickSkillCooldowns() {
 }
 int Enemy::GetPhase() const { return phase_; }
 bool Enemy::UpdatePhase() {
-	if (tier_ != EnemyTier::Boss) return false;
+	if (!isAlive() || tier_ != EnemyTier::Boss) return false;
 	const int healthPercent = maxHp_ > 0 ? hp_ * 100 / maxHp_ : 0;
 	const int newPhase = healthPercent <= 30 ? 3 : healthPercent <= 70 ? 2 : 1;
 	if (newPhase <= phase_) return false;
@@ -208,38 +189,12 @@ bool Enemy::HasStatus(StatusType type) const {
 }
 
 bool Enemy::ApplyStatus(const StatusEffect& status, int accuracy) {
-	const unsigned roll = static_cast<unsigned>((hp_ * 17 + level_ * 31 + static_cast<int>(status.type) * 13) % 100);
-	if (GetStatusStackPolicy(status.type) != StackPolicy::IndependentStacks) {
-		const int hitChance = CombatMath::AccuracyChance(100, accuracy, resistance_);
-		if (roll >= static_cast<unsigned>(hitChance)) {
-			statusApplications_.push_back({status, false});
-			return false;
-		}
-	}
-	if (status.type != StatusType::HealOverTime &&
-		GetStatusStackPolicy(status.type) != StackPolicy::IndependentStacks) {
-		for (auto& existing : statuses_) {
-			if (existing.type == status.type) {
-				existing = status;
-				statusApplications_.push_back({status, true});
-				return true;
-			}
-		}
-	}
-	statuses_.push_back(status);
-	statusApplications_.push_back({status, true});
-	return true;
+    return StatusRules::Apply(statuses_, statusApplications_, status, isAlive(), accuracy,
+        getResistance(), 0, statusRandom_);
 }
-
-int Enemy::CleanseNegativeStatuses() {
-	const auto oldSize = statuses_.size();
-	statuses_.erase(std::remove_if(statuses_.begin(), statuses_.end(), [](const StatusEffect& status) {
-		return status.type == StatusType::Stun || status.type == StatusType::Bleed || status.type == StatusType::Burn ||
-			status.type == StatusType::Poison || status.type == StatusType::Slow || status.type == StatusType::VerdigrisMark ||
-			status.type == StatusType::AttackDown || status.type == StatusType::DefenseDown || status.type == StatusType::AccuracyDown ||
-			status.type == StatusType::HealResistance || status.type == StatusType::DotReduction;
-	}), statuses_.end());
-	return static_cast<int>(oldSize - statuses_.size());
+int Enemy::CleanseNegativeStatuses() { return StatusRules::Cleanse(statuses_); }
+void Enemy::ClearStatuses() {
+    statuses_.clear();
+    statusTurnSnapshot_.clear();
+    statusTurnOpen_ = false;
 }
-
-void Enemy::ClearStatuses() { statuses_.clear(); }

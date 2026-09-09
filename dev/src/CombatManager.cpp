@@ -55,17 +55,31 @@ const char* StatusDisplayName(StatusType type) {
 void AccumulateGaugesUntilReady(int& playerGauge, int& enemyGauge,
                                 int playerSpeed, int enemySpeed) {
     for (int step = 0; step < 10000 && playerGauge < 1000 && enemyGauge < 1000; ++step) {
-        playerGauge += (std::max)(1, playerSpeed);
-        enemyGauge += (std::max)(1, enemySpeed);
+        playerGauge = CombatMath::Saturate(static_cast<std::int64_t>(playerGauge) + (std::max)(1, playerSpeed));
+        enemyGauge = CombatMath::Saturate(static_cast<std::int64_t>(enemyGauge) + (std::max)(1, enemySpeed));
     }
 }
 }
 
 void CombatManager::AdvanceTurn(Player& player, Enemy& enemy) {
-    if (groupEnemyTurn_ || !player.isAlive() || !enemy.isAlive()) return;
+    if (groupEnemyTurn_ || !player.isAlive()) return;
+    if (!currentEnemyParty_.empty()) {
+        PrepareGroupTurn(player, currentEnemyParty_);
+        return;
+    }
+    if (!enemy.isAlive()) return;
     AccumulateGaugesUntilReady(playerGauge_, enemyGauge_, player.getSpeed(), enemy.getSpeed());
     playerTurn_ = playerGauge_ >= 1000;
-    if (playerTurn_) StartPlayerTurn(player);
+    if (playerTurn_ && !playerActionStarted_) StartPlayerTurn(player);
+}
+
+void CombatManager::FinishPlayerAction(Player& player, Enemy& enemy) {
+    player.EndStatusTurn();
+    playerActionStarted_ = false;
+    ++turnNumber_;
+    playerGauge_ = (std::max)(0, playerGauge_ - 1000);
+    playerTurn_ = false;
+    AdvanceTurn(player, enemy);
 }
 
 std::int64_t CombatManager::DeliverDefeatXP(Player& player, Enemy& enemy, ProgressionManager& progression) {
@@ -100,13 +114,14 @@ void CombatManager::ForfeitEncounterRewards() {
 }
 
 void CombatManager::StartPlayerTurn(Player& player) {
-    if (!player.isAlive()) return;
+    if (!player.isAlive() || playerActionStarted_) return;
+    playerActionStarted_ = true;
     consumableUsedThisTurn_ = false;
     for (auto& cooldown : shimmerCooldowns_) if (cooldown.second > 0) --cooldown.second;
     if (defaultSkill_ != nullptr) defaultSkill_->TickCooldown();
     if (player.HasActiveSet("Verdigris Matron")) {
         const int before = player.getHP();
-        player.heal(player.getMaxHP() * 25 / 100);
+        player.heal(CombatMath::Scale(player.getMaxHP(), 25));
         const int amount = player.getHP() - before;
         if (amount > 0) AddEvent(CombatEvent::Kind::Heal, player.getName() + " restores " + std::to_string(amount) + " HP from Verdigris Matron.", amount);
     }
@@ -115,9 +130,9 @@ void CombatManager::StartPlayerTurn(Player& player) {
     const bool stunned = player.HasStatus(StatusType::Stun);
     std::vector<std::pair<StatusType, int>> playerDamageEvents;
     int playerHealing = 0;
-    player.ProcessStatuses(playerDamageEvents, playerHealing);
+    player.BeginStatusTurn(playerDamageEvents, playerHealing);
     for (const auto& tick : player.GetStatusDamageResults())
-        RecordDamage(StatusDisplayName(tick.type), player.getName(), StatusDisplayName(tick.type), tick.damage, CombatEvent::Kind::DotTick);
+        RecordDamage(tick.source.empty() ? StatusDisplayName(tick.type) : tick.source, player.getName(), StatusDisplayName(tick.type), tick.damage, CombatEvent::Kind::DotTick);
     if (playerHealing > 0) AddEvent(CombatEvent::Kind::Heal, player.getName() + " heals " + std::to_string(playerHealing) + " HP from Heal-over-time.", playerHealing);
     if (!player.isAlive()) {
         ForfeitEncounterRewards();
@@ -127,18 +142,25 @@ void CombatManager::StartPlayerTurn(Player& player) {
         AddEvent(CombatEvent::Kind::Info, player.getName() + " loses the turn to Stun.");
         playerGauge_ -= 1000;
         playerTurn_ = false;
+        player.EndStatusTurn();
+        playerActionStarted_ = false;
+        ++turnNumber_;
         return;
     }
 }
 
-CombatManager::CombatManager()
+CombatManager::CombatManager(unsigned seed)
     : blocked_(false), weaknessExposed_(false),
       turnNumber_(0), playerTurn_(true), activeEnemy_(nullptr),
-      playerGauge_(0), enemyGauge_(0),
+      playerGauge_(0), enemyGauge_(0), random_(seed),
       consumableUsedThisTurn_(false),
       defaultSkill_(ShimmerSkill::Create("Pulsus Luminis")) {}
 
 CombatManager::~CombatManager() = default;
+void CombatManager::SetSeed(unsigned seed) {
+    if (activeEnemy_ != nullptr) return;
+    random_.Seed(seed);
+}
 
 const ShimmerSkill* CombatManager::GetDefaultSkill() const { return defaultSkill_.get(); }
 
@@ -146,6 +168,9 @@ const std::vector<CombatManager::CombatEvent>& CombatManager::GetEvents() const 
 void CombatManager::ClearEvents() { if (activeEnemy_ == nullptr) events_.clear(); }
 void CombatManager::ResetEncounter() {
     activeEnemy_ = nullptr;
+    activePlayer_ = nullptr;
+    playerActionStarted_ = false;
+    nextEnemyBonus_ = false;
     blocked_ = false;
     weaknessExposed_ = false;
     turnNumber_ = 0;
@@ -156,6 +181,7 @@ void CombatManager::ResetEncounter() {
     battleStartEffectsApplied_ = false;
     groupEnemyTurn_ = false;
     currentEnemyParty_.clear();
+    seededEnemies_.clear();
     shimmerCooldowns_.clear();
     nextPartyEnemy_ = 0;
 }
@@ -196,12 +222,15 @@ void CombatManager::RecordDamage(const std::string& actor, const std::string& ta
                                 const std::string& skill, const DamageResolution& result,
                                 CombatEvent::Kind kind) {
     auto& event = AddEvent(kind, actor + " -> " + target + ": " + std::to_string(result.requestedDamage) +
-        " requested damage; barrier absorbs " + std::to_string(result.barrierAbsorbed) + "; " +
+        " requested damage; mitigated " + std::to_string(result.mitigatedDamage) +
+        "; barrier absorbs " + std::to_string(result.barrierAbsorbed) + "; " +
         std::to_string(result.hpDamage) + " actual HP damage. HP: " + std::to_string(result.remainingHP) + ".", result.hpDamage);
     event.actor = actor;
     event.target = target;
     event.skill = skill;
     event.requestedDamage = result.requestedDamage;
+    event.mitigatedDamage = result.mitigatedDamage;
+    event.overkillDamage = result.overkillDamage;
     event.barrierAbsorbed = result.barrierAbsorbed;
     event.hpDamage = result.hpDamage;
     event.remainingHP = result.remainingHP;
@@ -211,7 +240,10 @@ void CombatManager::RecordDamage(const std::string& actor, const std::string& ta
 }
 
 void CombatManager::PrepareTurn(Player& player, Enemy& enemy) {
-    if (!enemy.isAlive()) return;
+    if (activeEnemy_ == nullptr) BeginEncounter(enemy);
+    if (activeEnemy_ != &enemy || encounterCompleted_ || !player.isAlive() || !enemy.isAlive()) return;
+    if (activePlayer_ != nullptr && activePlayer_ != &player) return;
+    if (activePlayer_ == nullptr) { activePlayer_ = &player; player.SetStatusSeed(random_.Next()); }
     if (!battleStartEffectsApplied_) {
         const int before = player.GetBarrier();
         player.StartBattleEffects();
@@ -220,18 +252,17 @@ void CombatManager::PrepareTurn(Player& player, Enemy& enemy) {
         if (gained > 0) AddEvent(CombatEvent::Kind::Shield, player.getName() + " gains " + std::to_string(gained) + " barrier at battle start.", gained);
     }
     if (playerGauge_ == 0 && enemyGauge_ == 0 && !playerTurn_) {
-        AccumulateGaugesUntilReady(playerGauge_, enemyGauge_, player.getSpeed(), enemy.getSpeed());
-        playerTurn_ = playerGauge_ >= 1000;
-        if (playerTurn_) StartPlayerTurn(player);
+        AdvanceTurn(player, enemy);
     }
     if (playerTurn_ && player.isAlive()) AddEvent(CombatEvent::Kind::Info, "Waiting for " + player.getName() + " to choose an action.");
 }
 
 void CombatManager::ResumeAfterRespawn(Player& player, Enemy& enemy) {
-    if (!enemy.isAlive()) return;
+    if (!player.isAlive() || !enemy.isAlive() || encounterCompleted_ || activePlayer_ != &player || activeEnemy_ != &enemy) return;
     playerGauge_ = 1000;
     enemyGauge_ = 0;
     playerTurn_ = true;
+    playerActionStarted_ = false;
     consumableUsedThisTurn_ = false;
     StartPlayerTurn(player);
     AddEvent(CombatEvent::Kind::Info, player.getName() + " returns from the fountain and may act.");
@@ -240,6 +271,12 @@ void CombatManager::ResumeAfterRespawn(Player& player, Enemy& enemy) {
 void CombatManager::BeginEncounter(Enemy& enemy) {
     if (activeEnemy_ == &enemy) return;
     activeEnemy_ = &enemy;
+    nextEnemyBonus_ = false;
+    activePlayer_ = nullptr;
+    playerActionStarted_ = false;
+    enemy.SetStatusSeed(random_.Next());
+    seededEnemies_.clear();
+    seededEnemies_.insert(&enemy);
     blocked_ = false;
     turnNumber_ = 0;
     playerGauge_ = 0;
@@ -261,7 +298,10 @@ void CombatManager::BeginEncounter(Enemy& enemy) {
 }
 
 void CombatManager::BeginEncounter(Player& player, Enemy& enemy, int playerLevel) {
+    if (activeEnemy_ == &enemy && activePlayer_ == &player) return;
     BeginEncounter(enemy);
+    activePlayer_ = &player;
+    player.SetStatusSeed(random_.Next());
     auto& participants = AddEvent(CombatEvent::Kind::EncounterStart,
         player.getName() + " (level " + std::to_string(playerLevel) + ", HP " + std::to_string(player.getHP()) + ") faces " + enemy.getName() + ".");
     participants.actor = player.getName();
@@ -272,7 +312,10 @@ void CombatManager::BeginEncounter(Player& player, Enemy& enemy, int playerLevel
 }
 
 void CombatManager::ContinueEncounter(Enemy& enemy) {
+    if (activeEnemy_ == &enemy || !enemy.isAlive() || encounterCompleted_) return;
     activeEnemy_ = &enemy;
+    if (seededEnemies_.insert(&enemy).second) enemy.SetStatusSeed(random_.Next());
+    playerActionStarted_ = false;
     playerGauge_ = 0;
     enemyGauge_ = 0;
     playerTurn_ = false;
@@ -282,12 +325,11 @@ void CombatManager::ContinueEncounter(Enemy& enemy) {
 
 bool CombatManager::resolve(CombatAction action, Player& player, Enemy& enemy,
                             ShimmerSkill* skill, ProgressionManager* progression) {
-    if (activeEnemy_ == nullptr) BeginEncounter(enemy);
+    if (activeEnemy_ == nullptr) BeginEncounter(player, enemy, progression ? progression->GetLevel() : 1);
+    if (activePlayer_ != nullptr && activePlayer_ != &player) return false;
+    if (activeEnemy_ != &enemy && std::find(currentEnemyParty_.begin(), currentEnemyParty_.end(), &enemy) == currentEnemyParty_.end()) return false;
     blocked_ = false;
-    if (turnNumber_ == 0 && playerGauge_ == 0 && enemyGauge_ == 0) {
-        AccumulateGaugesUntilReady(playerGauge_, enemyGauge_, player.getSpeed(), enemy.getSpeed());
-        playerTurn_ = playerGauge_ >= 1000;
-    }
+    PrepareTurn(player, enemy);
 
     if (!player.isAlive()) {
         enemy.ForfeitRewards();
@@ -296,38 +338,32 @@ bool CombatManager::resolve(CombatAction action, Player& player, Enemy& enemy,
     }
     if (encounterCompleted_ || !enemy.isAlive()) return false;
     if (!playerTurn_) return false;
-    ++turnNumber_;
 
     switch (action) {
     case CombatAction::Attack: {
         AddEvent(CombatEvent::Kind::Attack, player.getName() + " uses Attack on " + enemy.getName() + ".");
-        const unsigned hitRoll = static_cast<unsigned>(turnNumber_ * 37 + player.getAttack() * 11 + enemy.getHP()) % 100;
         int accuracyFloor = 0;
         for (const auto& status : player.GetStatuses()) {
-            if (status.type == StatusType::AccuracyFloor) accuracyFloor += status.potency;
+            if (status.type == StatusType::AccuracyFloor) accuracyFloor = (std::max)(accuracyFloor, status.potency);
         }
         const int hitChance = (std::max)(CombatMath::AccuracyChance(100, player.getAccuracy(), enemy.getEvasion()), accuracyFloor);
-        if (hitRoll >= static_cast<unsigned>(hitChance)) {
+        if (!random_.RollPercent(hitChance)) {
             AddEvent(CombatEvent::Kind::Miss, player.getName() + " attacks " + enemy.getName() + ", but the strike is evaded.");
-            playerGauge_ -= 1000;
-            playerTurn_ = false;
-            AdvanceTurn(player, enemy);
+            FinishPlayerAction(player, enemy);
             return true;
         }
-        const unsigned critRoll = static_cast<unsigned>(turnNumber_ * 53 + player.getAttack() * 7 + enemy.getHP() * 3) % 100;
         const bool critical = player.HasStatus(StatusType::GuaranteedCrit) ||
-            critRoll < static_cast<unsigned>((std::min)(100, player.getCritRate()));
+            random_.RollPercent(player.getCritRate());
         const int rawDamage = critical
-            ? player.getAttack() * player.getCritDamage() / 100
+            ? CombatMath::Scale(player.getAttack(), player.getCritDamage())
             : player.getAttack();
-        const int damage = CombatMath::Mitigate(rawDamage, enemy.getDefense()) + (weaknessExposed_ ? 2 : 0);
         AddEvent(critical ? CombatEvent::Kind::Critical : CombatEvent::Kind::Hit,
             player.getName() + (critical ? " critically hits " : " hits ") + enemy.getName() + ".");
-        enemy.takeDamage(damage);
+        enemy.ApplyDirectDamage(rawDamage);
         const int actualDamage = enemy.GetLastDamageResult().hpDamage;
         RecordDamage(player.getName(), enemy.getName(), "Attack", enemy.GetLastDamageResult());
         if (player.getLifesteal() > 0) {
-            const int recovery = actualDamage * (std::min)(CombatMath::Balance::MaximumLifesteal, player.getLifesteal()) / 100;
+            const int recovery = CombatMath::Scale(actualDamage, player.getLifesteal());
             if (recovery > 0) {
                 const int beforeHeal = player.getHP();
                 player.heal(recovery);
@@ -343,9 +379,7 @@ bool CombatManager::resolve(CombatAction action, Player& player, Enemy& enemy,
             AddEvent(CombatEvent::Kind::Death, enemy.getName() + " has been defeated.");
             ResolveDefeatReward(player, enemy, progression);
         }
-        playerGauge_ -= 1000;
-        playerTurn_ = false;
-        AdvanceTurn(player, enemy);
+        FinishPlayerAction(player, enemy);
         return true;
     }
     case CombatAction::Shimmer:
@@ -355,7 +389,7 @@ bool CombatManager::resolve(CombatAction action, Player& player, Enemy& enemy,
             return false;
         }
         const std::string effect = skill->getEffect();
-        const int remainingCooldown = shimmerCooldowns_[skill->getName()];
+        const int remainingCooldown = GetSkillCooldown(skill->getName());
         if (remainingCooldown > 0) {
             AddEvent(CombatEvent::Kind::Info, skill->getName() + " is recharging for " + std::to_string(remainingCooldown) + (remainingCooldown == 1 ? " turn." : " turns."));
             return false;
@@ -374,13 +408,15 @@ bool CombatManager::resolve(CombatAction action, Player& player, Enemy& enemy,
             hit.actor = player.getName(); hit.target = enemy.getName(); hit.skill = skill->getName();
             RecordDamage(player.getName(), enemy.getName(), skill->getName(), enemy.GetLastDamageResult());
             if (player.HasActiveSet("Shimmer Ascendant") && enemy.GetLastDamageResult().hpDamage > 0)
-                player.heal(player.getMaxHP() * 5 / 100);
+                player.heal(CombatMath::Scale(player.getMaxHP(), 5));
         }
         const auto recordStatuses = [&](const std::vector<StatusApplicationResolution>& applications, std::size_t first, const std::string& target) {
             for (std::size_t index = first; index < applications.size(); ++index) {
                 const auto& application = applications[index];
-                auto& statusEvent = AddEvent(application.applied ? CombatEvent::Kind::Status : CombatEvent::Kind::Resistance,
-                    target + (application.applied ? " receives " : " resists ") + StatusDisplayName(application.status.type) + " from " + skill->getName() + ".");
+                auto& statusEvent = AddEvent(application.applied ? CombatEvent::Kind::Status :
+                    application.resisted ? CombatEvent::Kind::Resistance : CombatEvent::Kind::Info,
+                    target + (application.applied ? " receives " : application.resisted ? " resists " : " does not receive ") +
+                    StatusDisplayName(application.status.type) + " from " + skill->getName() + ".");
                 statusEvent.actor = player.getName(); statusEvent.target = target; statusEvent.skill = skill->getName();
             }
         };
@@ -398,9 +434,7 @@ bool CombatManager::resolve(CombatAction action, Player& player, Enemy& enemy,
             AddEvent(CombatEvent::Kind::Death, enemy.getName() + " has been defeated.");
             ResolveDefeatReward(player, enemy, progression);
         }
-        playerGauge_ -= 1000;
-        playerTurn_ = false;
-        AdvanceTurn(player, enemy);
+        FinishPlayerAction(player, enemy);
         return true;
     }
     case CombatAction::Item: {
@@ -412,6 +446,8 @@ bool CombatManager::resolve(CombatAction action, Player& player, Enemy& enemy,
         return false;
     }
     case CombatAction::Flee:
+        player.EndStatusTurn();
+        playerActionStarted_ = false;
         enemy.ForfeitRewards();
         AddEvent(CombatEvent::Kind::Info, player.getName() + " retreats from the encounter.");
         CompleteEncounter("fled");
@@ -431,7 +467,7 @@ bool CombatManager::UseConsumable(const std::string& itemName, Player& player, E
 }
 
 bool CombatManager::CanUseConsumableNow(const Player& player, const Enemy* target) const {
-    if (encounterCompleted_ || !player.isAlive() || !playerTurn_ || consumableUsedThisTurn_ ||
+    if (activePlayer_ != &player || encounterCompleted_ || !player.isAlive() || !playerTurn_ || consumableUsedThisTurn_ ||
         activeEnemy_ == nullptr || !activeEnemy_->isAlive()) return false;
     if (target == nullptr) return true;
     if (!target->isAlive()) return false;
@@ -497,8 +533,9 @@ bool CombatManager::UseConsumable(unsigned long long instanceId, Player& player,
     const auto recordApplications = [&](const std::vector<StatusApplicationResolution>& applications, std::size_t first, const std::string& targetName) {
         for (std::size_t index = first; index < applications.size(); ++index) {
             const auto& result = applications[index];
-            auto& event = AddEvent(result.applied ? CombatEvent::Kind::Status : CombatEvent::Kind::Resistance,
-                targetName + (result.applied ? " receives " : " resists ") + StatusDisplayName(result.status.type) +
+            auto& event = AddEvent(result.applied ? CombatEvent::Kind::Status :
+                result.resisted ? CombatEvent::Kind::Resistance : CombatEvent::Kind::Info,
+                targetName + (result.applied ? " receives " : result.resisted ? " resists " : " does not receive ") + StatusDisplayName(result.status.type) +
                 (result.applied ? " (" + std::to_string(result.status.turns) + " turns, potency " + std::to_string(result.status.potency) + ")" : "") + " from " + itemName + ".");
             event.actor = player.getName(); event.target = targetName; event.skill = itemName;
         }
@@ -512,88 +549,99 @@ bool CombatManager::UseConsumable(unsigned long long instanceId, Player& player,
     if (cooldownAfter < cooldownBefore) AddEvent(CombatEvent::Kind::Info, itemName + " removes " + std::to_string(cooldownBefore - cooldownAfter) + " total Shimmer cooldown turns.", cooldownBefore - cooldownAfter);
     if (!enemy.isAlive()) AddEvent(CombatEvent::Kind::Death, enemy.getName() + " has been defeated.");
     ResolveDefeatReward(player, enemy, progression);
-    playerGauge_ -= 1000;
-    playerTurn_ = false;
-    AdvanceTurn(player, enemy);
+    FinishPlayerAction(player, enemy);
     return true;
 }
 
 void CombatManager::enemyTurn(Player& player, Enemy& enemy, ProgressionManager* progression) {
+    if (activeEnemy_ == nullptr) { BeginEncounter(player, enemy, progression ? progression->GetLevel() : 1); PrepareTurn(player, enemy); }
+    if (activePlayer_ != &player ||
+        (activeEnemy_ != &enemy && std::find(currentEnemyParty_.begin(), currentEnemyParty_.end(), &enemy) == currentEnemyParty_.end())) return;
+    if (groupEnemyTurn_ && (nextPartyEnemy_ >= currentEnemyParty_.size() ||
+        currentEnemyParty_[nextPartyEnemy_] != &enemy)) return;
     if (!player.isAlive()) {
         enemy.ForfeitRewards();
         ForfeitEncounterRewards();
         return;
     }
     if (encounterCompleted_) return;
+    if (playerTurn_ && !groupEnemyTurn_) return;
     if (!enemy.isAlive()) {
         ResolveDefeatReward(player, enemy, progression);
         return;
     }
     if (enemyGauge_ < 1000) {
-        AccumulateGaugesUntilReady(playerGauge_, enemyGauge_, player.getSpeed(), enemy.getSpeed());
-        playerTurn_ = playerGauge_ >= 1000;
-        if (playerTurn_ && !groupEnemyTurn_) return;
+        AdvanceTurn(player, enemy);
+        if (playerTurn_ || enemyGauge_ < 1000 || !player.isAlive()) return;
     }
-    enemy.TickSkillCooldowns();
+    const bool bonusAction = nextEnemyBonus_;
+    nextEnemyBonus_ = false;
+    if (!bonusAction) enemy.TickSkillCooldowns();
     auto& turn = AddEvent(CombatEvent::Kind::Turn, enemy.getName() + "'s action begins (gauge " + std::to_string(enemyGauge_) + ").");
     turn.actor = enemy.getName();
     const bool stunned = enemy.HasStatus(StatusType::Stun);
     std::vector<std::pair<StatusType, int>> damageEvents;
     int healing = 0;
-    enemy.ProcessStatuses(damageEvents, healing);
-    for (const auto& tick : enemy.GetStatusDamageResults())
-        RecordDamage(StatusDisplayName(tick.type), enemy.getName(), StatusDisplayName(tick.type), tick.damage, CombatEvent::Kind::DotTick);
+    if (!bonusAction) {
+        enemy.BeginStatusTurn(damageEvents, healing);
+        for (const auto& tick : enemy.GetStatusDamageResults())
+            RecordDamage(tick.source.empty() ? StatusDisplayName(tick.type) : tick.source, enemy.getName(), StatusDisplayName(tick.type), tick.damage, CombatEvent::Kind::DotTick);
+    }
     if (healing > 0) AddEvent(CombatEvent::Kind::Heal, enemy.getName() + " heals " + std::to_string(healing) + " HP from Heal-over-time.", healing);
     if (!enemy.isAlive()) {
         AddEvent(CombatEvent::Kind::Death, enemy.getName() + " has been defeated by a status effect.");
         ResolveDefeatReward(player, enemy, progression);
         enemyGauge_ = 0;
+        enemy.EndStatusTurn();
         return;
     }
     if (stunned) {
         AddEvent(CombatEvent::Kind::Status, enemy.getName() + " loses its turn to Stun.");
         enemyGauge_ -= 1000;
+        if (!bonusAction) enemy.EndStatusTurn();
         playerTurn_ = false;
         AdvanceTurn(player, enemy);
         return;
     }
     const auto finishAction = [&](bool extraTurn = false) {
+        if (!bonusAction) enemy.EndStatusTurn();
         if (!player.isAlive()) {
             enemy.ForfeitRewards();
             ForfeitEncounterRewards();
             AddEvent(CombatEvent::Kind::Death, player.getName() + " has been defeated.");
         }
         enemyGauge_ -= 1000;
-        if (extraTurn) enemyGauge_ = 1000;
+        if (extraTurn && !bonusAction) { enemyGauge_ = 1000; nextEnemyBonus_ = true; }
         playerTurn_ = false;
-        AdvanceTurn(player, enemy);
+        if (!nextEnemyBonus_) AdvanceTurn(player, enemy);
     };
     const auto damagePlayer = [&](int requested, const std::string& skillName, bool guaranteedCritical = false) {
-        const int hitRoll = (turnNumber_ * 41 + enemy.getAtk() * 7 + player.getHP()) % 100;
-        const int hitChance = CombatMath::AccuracyChance(100, enemy.getAccuracy(), player.getEvasion());
-        if (hitRoll >= hitChance) {
+        int accuracyFloor = 0;
+        for (const auto& status : enemy.GetStatuses()) if (status.type == StatusType::AccuracyFloor)
+            accuracyFloor = (std::max)(accuracyFloor, status.potency);
+        const int hitChance = (std::max)(accuracyFloor, CombatMath::AccuracyChance(100, enemy.getAccuracy(), player.getEvasion()));
+        if (!random_.RollPercent(hitChance)) {
             auto& miss = AddEvent(CombatEvent::Kind::Miss, enemy.getName() + " misses " + player.getName() + ".");
             miss.actor = enemy.getName(); miss.target = player.getName(); miss.skill = skillName;
             return false;
         }
-        const unsigned critRoll = static_cast<unsigned>((turnNumber_ * 53 + enemy.getAtk() * 7 + player.getHP() * 3) % 100);
         const bool critical = guaranteedCritical || enemy.HasStatus(StatusType::GuaranteedCrit) ||
-            critRoll < static_cast<unsigned>((std::min)(100, enemy.getCritRate() + (enemy.HasStatus(StatusType::CritUp) ? 20 : 0)));
-        const int rawDamage = critical ? requested * (enemy.getCritDamage() + (enemy.HasStatus(StatusType::CritDamageUp) ? 50 : 0)) / 100 : requested;
+            random_.RollPercent(enemy.getCritRate());
+        const int rawDamage = critical ? CombatMath::Scale(requested, enemy.getCritDamage()) : requested;
         auto& hit = AddEvent(critical ? CombatEvent::Kind::Critical : CombatEvent::Kind::Hit,
             enemy.getName() + (critical ? " critically hits " : " hits ") + player.getName() + ".");
         hit.actor = enemy.getName(); hit.target = player.getName(); hit.skill = skillName;
-        // Player::takeDamage applies reductions/barriers, but does not apply DEF.
-        player.takeDamage(CombatMath::Mitigate(rawDamage, player.getDefense()));
+        player.ApplyDirectDamage(rawDamage);
         RecordDamage(enemy.getName(), player.getName(), skillName, player.GetLastDamageResult());
         return true;
     };
     const auto applyDebuff = [&](StatusType type, const EnemySkillDefinition& skill) {
         const int duration = skill.duration > 0 ? skill.duration : 2;
-        const bool applied = player.ApplyStatus({type, duration, skill.statusPotency, enemy.getAtk(), 0, enemy.getDefense(), skill.name}, enemy.getAccuracy());
+        const bool applied = player.ApplyStatus({type, duration, skill.statusPotency, enemy.getAtk(),
+            enemy.getDotPotency(), enemy.getDefense(), enemy.getName(), enemy.GetCombatantId()}, enemy.getAccuracy());
         const auto& result = player.GetStatusApplications().back();
-        auto& event = AddEvent(applied ? CombatEvent::Kind::Debuff : CombatEvent::Kind::Resistance,
-            player.getName() + (applied ? " receives " : " resists ") + StatusDisplayName(type) +
+        auto& event = AddEvent(applied ? CombatEvent::Kind::Debuff : result.resisted ? CombatEvent::Kind::Resistance : CombatEvent::Kind::Info,
+            player.getName() + (applied ? " receives " : result.resisted ? " resists " : " does not receive ") + StatusDisplayName(type) +
             (applied ? " (" + std::to_string(result.status.turns) + " turns, potency " + std::to_string(result.status.potency) + ")" : "") + " from " + skill.name + ".");
         event.actor = enemy.getName(); event.target = player.getName(); event.skill = skill.name;
     };
@@ -614,10 +662,10 @@ void CombatManager::enemyTurn(Player& player, Enemy& enemy, ProgressionManager* 
         const std::string target = ally != nullptr ? ally->getName() : offensive ? player.getName() : enemy.getName();
         auto& action = AddEvent(CombatEvent::Kind::Skill, enemy.getName() + " uses " + skill.name + " on " + target + ".");
         action.actor = enemy.getName(); action.target = target; action.skill = skill.name;
-        const bool landed = skill.multiplier <= 0 || damagePlayer((std::max)(1, enemy.getAtk() * skill.multiplier / 100), skill.name, skill.effect == "guaranteed_crit");
+        const bool landed = skill.multiplier <= 0 || damagePlayer((std::max)(1, CombatMath::Scale(enemy.getAtk(), skill.multiplier)), skill.name, skill.effect == "guaranteed_crit");
         if (ally != nullptr && skill.effect.find("heal") != std::string::npos) {
             const int before = ally->getHP();
-            ally->heal((std::max)(1, ally->getMaxHP() * 15 / 100));
+            ally->heal((std::max)(1, CombatMath::Scale(ally->getMaxHP(), 15)));
             AddEvent(CombatEvent::Kind::Heal, ally->getName() + " heals " + std::to_string(ally->getHP() - before) + " HP.", ally->getHP() - before);
         }
         if (landed && player.isAlive()) {
@@ -631,7 +679,7 @@ void CombatManager::enemyTurn(Player& player, Enemy& enemy, ProgressionManager* 
         }
         if (skill.effect == "heal_self" || skill.effect == "heal_cleanse") {
             const int before = enemy.getHP();
-            enemy.heal((std::max)(1, enemy.getMaxHP() * 15 / 100));
+            enemy.heal((std::max)(1, CombatMath::Scale(enemy.getMaxHP(), 15)));
             AddEvent(CombatEvent::Kind::Heal, enemy.getName() + " heals " + std::to_string(enemy.getHP() - before) + " HP.", enemy.getHP() - before);
         }
         if (skill.effect == "cleanse_self" || skill.effect == "heal_cleanse") {
@@ -651,16 +699,17 @@ void CombatManager::enemyTurn(Player& player, Enemy& enemy, ProgressionManager* 
             else if (skill.effect == "crit_damage_up") buffs.push_back(StatusType::CritDamageUp);
             else if (skill.effect == "guaranteed_crit") buffs.push_back(StatusType::GuaranteedCrit);
             else if (skill.effect == "dot_up") buffs.push_back(StatusType::DotUp);
-            else if (skill.effect == "heal_resistance") buffs.push_back(StatusType::HealResistance);
+            else if (skill.effect == "heal_resistance" && player.isAlive()) applyDebuff(StatusType::HealResistance, skill);
             else if (skill.effect == "accuracy_floor") buffs.push_back(StatusType::AccuracyFloor);
             else if (skill.effect == "dot_reduction") buffs.push_back(StatusType::DotReduction);
             else if (skill.effect == "accuracy_crit_up") buffs = {StatusType::AccuracyUp, StatusType::CritUp};
             for (StatusType type : buffs) {
                 const bool applied = enemy.ApplyStatus({type, skill.duration > 0 ? skill.duration : 2, skill.statusPotency});
-                AddEvent(applied ? CombatEvent::Kind::Buff : CombatEvent::Kind::Resistance, enemy.getName() + (applied ? " gains " : " resists ") + StatusDisplayName(type) + ".");
+                AddEvent(applied ? CombatEvent::Kind::Buff : CombatEvent::Kind::Info, enemy.getName() +
+                    (applied ? " gains " : " keeps its existing ") + StatusDisplayName(type) + ".");
             }
         }
-        const bool extraTurn = skill.effect == "extra_turn";
+        const bool extraTurn = skill.effect == "extra_turn" && !bonusAction;
         if (extraTurn) AddEvent(CombatEvent::Kind::ExtraTurn, enemy.getName() + " gains an extra turn.");
         enemy.StartSkillCooldown(index);
         finishAction(extraTurn);
@@ -673,21 +722,39 @@ void CombatManager::enemyTurn(Player& player, Enemy& enemy, ProgressionManager* 
 }
 
 void CombatManager::PrepareGroupTurn(Player& player, const std::vector<Enemy*>& enemies) {
+    // Compatibility party battles use one speed-ordered enemy round followed
+    // by one player action. Preparation cannot restart a round or steal input.
+    if (!player.isAlive() || (encounterCompleted_ && activeEnemy_ != nullptr) || groupEnemyTurn_ || playerActionStarted_) return;
+    if (activePlayer_ != nullptr && activePlayer_ != &player) return;
+    const auto candidates = enemies; // AdvanceTurn may pass our own party.
+    if (activeEnemy_ == nullptr) {
+        for (Enemy* enemy : candidates) if (enemy && enemy->isAlive()) {
+            BeginEncounter(player, *enemy, 1); break;
+        }
+    }
+    if (activeEnemy_ == nullptr) return;
+    if (activePlayer_ == nullptr) { activePlayer_ = &player; player.SetStatusSeed(random_.Next()); }
     currentEnemyParty_.clear();
-    for (Enemy* enemy : enemies) if (enemy != nullptr && enemy->isAlive()) currentEnemyParty_.push_back(enemy);
+    for (Enemy* enemy : candidates) if (enemy != nullptr && enemy->isAlive() &&
+        std::find(currentEnemyParty_.begin(), currentEnemyParty_.end(), enemy) == currentEnemyParty_.end()) {
+        currentEnemyParty_.push_back(enemy);
+        if (seededEnemies_.insert(enemy).second) enemy->SetStatusSeed(random_.Next());
+    }
     std::stable_sort(currentEnemyParty_.begin(), currentEnemyParty_.end(), [](const Enemy* left, const Enemy* right) {
         if (left->getSpeed() != right->getSpeed()) return left->getSpeed() > right->getSpeed();
         return left->getName() < right->getName();
     });
     nextPartyEnemy_ = 0;
     groupEnemyTurn_ = !currentEnemyParty_.empty();
-    playerTurn_ = !groupEnemyTurn_;
+    playerTurn_ = false;
     enemyGauge_ = groupEnemyTurn_ ? 1000 : 0;
+    if (groupEnemyTurn_) PrepareTurn(player, *activeEnemy_);
 }
 
 bool CombatManager::StepEnemyPartyTurn(Player& player, const std::vector<Enemy*>& enemies, ProgressionManager* progression) {
-    if (encounterCompleted_) return false;
+    if (encounterCompleted_ || (activePlayer_ != nullptr && activePlayer_ != &player) || playerActionStarted_) return false;
     if (!groupEnemyTurn_) PrepareGroupTurn(player, enemies);
+    if (!groupEnemyTurn_) return false;
     if (!player.isAlive()) ForfeitEncounterRewards();
     while (nextPartyEnemy_ < currentEnemyParty_.size() && !currentEnemyParty_[nextPartyEnemy_]->isAlive()) ++nextPartyEnemy_;
     if (player.isAlive() && nextPartyEnemy_ < currentEnemyParty_.size()) {
@@ -700,7 +767,8 @@ bool CombatManager::StepEnemyPartyTurn(Player& player, const std::vector<Enemy*>
     groupEnemyTurn_ = false;
     enemyGauge_ = 0;
     playerGauge_ = 1000;
-    playerTurn_ = player.isAlive();
+    playerTurn_ = player.isAlive() && std::any_of(currentEnemyParty_.begin(), currentEnemyParty_.end(),
+        [](const Enemy* enemy) { return enemy->isAlive(); });
     if (playerTurn_) StartPlayerTurn(player);
     return false;
 }

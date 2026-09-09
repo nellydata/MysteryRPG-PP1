@@ -69,13 +69,7 @@ bool ValidateConsumableEffects(const std::vector<ItemDefinition>& definitions, s
 }
 
 bool IsNegativeConsumableStatus(StatusType type) {
-    switch (type) {
-    case StatusType::Stun: case StatusType::Bleed: case StatusType::Burn:
-    case StatusType::Poison: case StatusType::Slow: case StatusType::VerdigrisMark:
-    case StatusType::AttackDown: case StatusType::DefenseDown: case StatusType::AccuracyDown:
-    case StatusType::HealResistance: return true;
-    default: return false;
-    }
+    return StatusRules::Negative(type);
 }
 
 bool Player::UseConsumable(const std::string& itemName, Enemy* target, CombatManager* combat, Area* area) {
@@ -145,7 +139,7 @@ bool Player::UseConsumable(unsigned long long instanceId, Enemy* target, CombatM
     case ConsumableEffectKind::CleanseBurnPoison:
         cleanse([](const StatusEffect& status) { return status.type == StatusType::Burn || status.type == StatusType::Poison; }); break;
     case ConsumableEffectKind::ApplyBurn:
-        target->ApplyStatus({StatusType::Burn, effect->duration, 0, getAttack(), getDotPotency(), getDefense(), getName()}, getAccuracy()); break;
+        target->ApplyStatus({StatusType::Burn, effect->duration, 0, getAttack(), getDotPotency(), getDefense(), getName(), GetCombatantId()}, getAccuracy()); break;
     case ConsumableEffectKind::FlatDamage:
         target->takeDamage(effect->magnitude); break;
     case ConsumableEffectKind::Illuminate:

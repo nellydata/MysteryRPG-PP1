@@ -1,9 +1,9 @@
 [CmdletBinding()]
-param()
+param([ValidatePattern('^phase-[0-9]+$')][string]$CaptureName = 'phase-2')
 $ErrorActionPreference = 'Stop'
 $developmentRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $executable = Join-Path $developmentRoot 'bin\x64\Debug\COS-PP1.exe'
-$transcriptPath = Join-Path $developmentRoot 'validation\phase-2-console.txt'
+$transcriptPath = Join-Path $developmentRoot ('validation\' + $CaptureName + '-console.txt')
 if (-not (Test-Path -LiteralPath $executable)) { throw 'Build Debug x64 before the console smoke test.' }
 
 # Only the real executable's stdin/stdout are used. These are numbered

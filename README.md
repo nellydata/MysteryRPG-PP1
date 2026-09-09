@@ -5,9 +5,9 @@ Micare is a standard C++17 console RPG for the course deliverable. Open [dev/COS
 The complete Visual Studio solution, both standalone test projects, all source/header files, and build outputs are inside `dev`. The application uses keyboard input and console output; it has no GUI or Python dependency.
 
 - [Build instructions and keyboard controls](dev/README.md)
-- [Course conversion report](dev/validation/course-conversion.md)
-- [Actual console smoke transcript](dev/validation/console-smoke.txt)
-- [Automated validation results](dev/validation/progression-validation.txt)
+- [Gameplay audit and console compliance evidence](dev/validation/gameplay-audit.md)
+- [Actual console smoke transcript](dev/validation/phase-3-console.txt)
+- [Automated validation results](dev/validation/phase-3-tests.txt)
 - [Shared gameplay architecture](docs/Micare-System-Design.md)
 
 The gameplay loop includes Fountain recovery, room navigation, weighted investigations, items and equipment, ordinary combat, XP and level-up rewards, Shimmer loadouts, fixed first-clear bosses, room unlocks, and farming in cleared rooms. Combat events and defeat history remain reviewable in the console.

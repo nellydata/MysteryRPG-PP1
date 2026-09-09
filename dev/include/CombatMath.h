@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <cmath>
 #include <random>
+#include <limits>
 
 namespace CombatMath {
 namespace Balance {
@@ -27,14 +28,24 @@ inline int ClampPercent(int value) {
 	return (std::max)(0, (std::min)(100, value));
 }
 
+// Saturation protects the representable state; it is not a gameplay damage cap.
+inline int Saturate(std::int64_t value) {
+    return static_cast<int>((std::max)(std::int64_t{0},
+        (std::min)(static_cast<std::int64_t>((std::numeric_limits<int>::max)()), value)));
+}
+inline int Scale(int value, int percent) {
+    return Saturate(static_cast<std::int64_t>((std::max)(0, value)) * (std::max)(0, percent) / 100);
+}
 inline int ApplyPercent(int value, int percent) {
-	return static_cast<int>(std::lround(value * (1.0 + percent / 100.0)));
+    const auto numerator = static_cast<std::int64_t>((std::max)(0, value)) *
+        (std::max)(std::int64_t{0}, 100LL + percent);
+    return Saturate((numerator + 50) / 100);
 }
 
 inline int Mitigate(int damage, int defense) {
-	const double factor = static_cast<double>(Balance::DefenseConstant) /
-		((std::max)(0, defense) + Balance::DefenseConstant);
-	return (std::max)(1, static_cast<int>(std::lround(damage * factor)));
+    if (damage <= 0) return 0;
+    const std::int64_t denominator = static_cast<std::int64_t>((std::max)(0, defense)) + Balance::DefenseConstant;
+    return (std::max)(1, Saturate((static_cast<std::int64_t>(damage) * Balance::DefenseConstant + denominator / 2) / denominator));
 }
 
 inline std::pair<int, int> SubstatRange(ItemStat stat, Rarity rarity) {
@@ -66,7 +77,9 @@ inline int SubstatRoll(ItemStat stat, Rarity rarity, unsigned seed) {
 }
 
 inline int AccuracyChance(int baseChance, int accuracy, int resistance) {
-	const int adjusted = static_cast<int>(std::lround(baseChance * (1.0 + (accuracy - resistance) / 100.0)));
+    const auto difference = static_cast<std::int64_t>(accuracy) - resistance;
+    const int bounded = static_cast<int>((std::clamp)(difference, -100LL, 100LL));
+    const int adjusted = ApplyPercent(baseChance, bounded);
 	return (std::max)(15, (std::min)(100, adjusted));
 }
 }

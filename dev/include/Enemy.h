@@ -5,14 +5,24 @@
 #include <cstdint>
 #include "GameplayTypes.h"
 #include "CombatResolution.h"
+#include "StatusRules.h"
 
 class Enemy {
 public:
     Enemy(const EnemyDefinition& definition, int level, bool firstClearBoss = false,
           bool farmBoss = false, std::int64_t xpOverride = -1);
     virtual ~Enemy();
+    Enemy(const Enemy&) = delete;
+    Enemy& operator=(const Enemy&) = delete;
 
     virtual void takeDamage(int amount);
+    const DamageResolution& ApplyDirectDamage(int rawDamage, bool ignoreDefense = false);
+    int ApplyDamageOverTime(int amount);
+    const HealResolution& GetLastHealResult() const { return lastHealResult_; }
+    int GetBarrier() const { return StatusRules::Barriers(statuses_); }
+    std::uint64_t GetCombatantId() const { return combatantId_; }
+    void SetStatusSeed(unsigned seed) { statusRandom_.Seed(seed); }
+    std::uint64_t GetStatusRandomDrawCount() const { return statusRandom_.DrawCount(); }
     void heal(int amount);
     bool isAlive() const;
     const std::string& getName() const;
@@ -36,6 +46,7 @@ public:
     int getCritRate() const;
     int getCritDamage() const;
     int getAccuracy() const;
+    int getDotPotency() const { return (std::min)(CombatMath::Balance::MaximumDotPotency, SumStatusBonus(StatusType::DotUp)); }
     int getEvasion() const;
     EnemyFaction getFaction() const;
     EnemyTier getTier() const;
@@ -51,6 +62,8 @@ public:
     bool ApplyStatus(const StatusEffect& status, int accuracy = 100);
     void ProcessStatuses(std::vector<std::pair<StatusType, int>>& damageEvents = EmptyDamageEvents(),
                          int& healing = EmptyHealing());
+    void BeginStatusTurn(std::vector<std::pair<StatusType, int>>& damageEvents = EmptyDamageEvents(), int& healing = EmptyHealing());
+    void EndStatusTurn();
     int CleanseNegativeStatuses();
     void ClearStatuses();
 
@@ -83,6 +96,11 @@ protected:
     bool firstClearBoss_;
     bool farmBoss_;
     DamageResolution lastDamageResult_;
+    HealResolution lastHealResult_;
+    const std::uint64_t combatantId_ = StatusRules::NextIdentity();
+    RandomStream statusRandom_;
+    std::vector<std::uint64_t> statusTurnSnapshot_;
+    bool statusTurnOpen_ = false;
     std::vector<StatusDamageResolution> statusDamageResults_;
     std::vector<StatusApplicationResolution> statusApplications_;
 

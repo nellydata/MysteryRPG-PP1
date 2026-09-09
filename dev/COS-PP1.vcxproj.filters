@@ -27,6 +27,12 @@
     <ClInclude Include="include\EquipmentStats.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="include\RandomService.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\StatusRules.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="include\CombatMath.h">
       <Filter>Header Files</Filter>
     </ClInclude>

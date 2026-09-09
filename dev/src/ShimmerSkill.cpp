@@ -3,8 +3,17 @@
 #include "Player.h"
 #include "CombatMath.h"
 #include <algorithm>
+#include <cstdint>
 
 namespace {
+int DirectShimmerDamage(const Player& player, int powerPercent) {
+	// Catalogue powers and the set multiplier are bounded; promote before all
+	// multiplication and round only once, after both percentage modifiers.
+	const std::int64_t raw = static_cast<std::int64_t>(player.getAttack()) * powerPercent *
+		player.GetShimmerDamageMultiplierPercent() / 10000;
+	return (std::max)(1, CombatMath::Saturate(raw));
+}
+
 class DefinedShimmerSkill final : public ShimmerSkill {
 public:
 	DefinedShimmerSkill(const std::string& name, int equipCost, int cooldown, const std::string& description,
@@ -12,47 +21,56 @@ public:
 		: ShimmerSkill(name, equipCost, cooldown, description, effect, powerPercent, duration) {}
 
 	void apply(Player& player, Enemy& enemy) override {
+		if (!player.isAlive() || (targetType_ != TargetType::Self && !enemy.isAlive())) return;
+		const auto selfStatus = [&](StatusType type, int duration, int potency) {
+			player.ApplyStatus({type, duration, potency, player.getAttack(), player.getDotPotency(),
+				player.getDefense(), player.getName(), player.GetCombatantId()});
+		};
+		const auto enemyStatus = [&](StatusType type, int duration, int potency, int authoredDotPotency = 0) {
+			if (!enemy.isAlive()) return;
+			enemy.ApplyStatus({type, duration, potency, player.getAttack(),
+				CombatMath::Saturate(static_cast<std::int64_t>(authoredDotPotency) + player.getDotPotency()),
+				player.getDefense(), player.getName(), player.GetCombatantId()}, player.getAccuracy());
+		};
 		if (effect_ == "barrier") {
-			player.AddBarrier(player.getMaxHP() * powerPercent_ / 100, duration_);
+			player.AddBarrier(CombatMath::Scale(player.getMaxHP(), powerPercent_), duration_);
 		} else if (effect_ == "heal_hot") {
-			player.heal(player.getMaxHP() * powerPercent_ / 100);
-			player.ApplyStatus({StatusType::HealOverTime, duration_, player.getMaxHP() * powerPercent_ / 500, 0});
+			player.heal(CombatMath::Scale(player.getMaxHP(), powerPercent_));
+			selfStatus(StatusType::HealOverTime, duration_, CombatMath::Saturate(static_cast<std::int64_t>(player.getMaxHP()) * powerPercent_ / 500));
 		} else if (effect_ == "cleanse_resist") {
 			player.CleanseNegativeStatuses();
-			player.ApplyStatus({StatusType::DamageReduction, duration_, 30, 0});
+			selfStatus(StatusType::DamageReduction, duration_, 30);
 		} else if (effect_ == "defensive_buff") {
-			player.AddBarrier(player.getMaxHP() * powerPercent_ / 100, duration_);
-			player.ApplyStatus({StatusType::DamageReduction, duration_, (std::max)(20, powerPercent_ / 100), 0});
+			player.AddBarrier(CombatMath::Scale(player.getMaxHP(), powerPercent_), duration_);
+			selfStatus(StatusType::DamageReduction, duration_, (std::max)(20, powerPercent_ / 100));
 		} else if (effect_ == "damage_ignore") {
-			enemy.takeDamage((std::max)(1, player.getAttack() * powerPercent_ * player.GetShimmerDamageMultiplierPercent() / 10000));
+			enemy.ApplyDirectDamage(DirectShimmerDamage(player, powerPercent_), true);
 		} else if (effect_ == "damage_burn") {
-			enemy.takeDamage(CombatMath::Mitigate((std::max)(1, player.getAttack() * powerPercent_ * player.GetShimmerDamageMultiplierPercent() / 10000), enemy.getDefense()));
-				enemy.ApplyStatus({StatusType::Burn, duration_, 0, player.getAttack(), 50, player.getDefense()}, player.getAccuracy());
+			enemy.ApplyDirectDamage(DirectShimmerDamage(player, powerPercent_));
+			enemyStatus(StatusType::Burn, duration_, 0, 50);
 		} else if (effect_ == "damage_stun") {
-			enemy.takeDamage(CombatMath::Mitigate((std::max)(1, player.getAttack() * powerPercent_ * player.GetShimmerDamageMultiplierPercent() / 10000), enemy.getDefense()));
-			enemy.ApplyStatus({StatusType::Stun, duration_ > 0 ? duration_ : 1, 0, player.getAttack()}, player.getAccuracy());
+			enemy.ApplyDirectDamage(DirectShimmerDamage(player, powerPercent_));
+			enemyStatus(StatusType::Stun, duration_ > 0 ? duration_ : 1, 0);
 		} else if (effect_ == "damage_tridot") {
-			enemy.takeDamage(CombatMath::Mitigate((std::max)(1, player.getAttack() * powerPercent_ * player.GetShimmerDamageMultiplierPercent() / 10000), enemy.getDefense()));
+			enemy.ApplyDirectDamage(DirectShimmerDamage(player, powerPercent_));
 			for (StatusType type : {StatusType::Burn, StatusType::Bleed, StatusType::Poison})
-				enemy.ApplyStatus({type, duration_, 0, player.getAttack(), 40, player.getDefense()}, player.getAccuracy());
+				enemyStatus(type, duration_, 0, 40);
 		} else if (effect_ == "damage_lifesteal") {
-			const int damage = CombatMath::Mitigate((std::max)(1, player.getAttack() * powerPercent_ * player.GetShimmerDamageMultiplierPercent() / 10000), enemy.getDefense());
-			const int healthBefore = enemy.getHP();
-			enemy.takeDamage(damage);
-			player.heal((healthBefore - enemy.getHP()) * 25 / 100);
+			enemy.ApplyDirectDamage(DirectShimmerDamage(player, powerPercent_));
+			player.heal(CombatMath::Scale(enemy.GetLastDamageResult().hpDamage, 25));
 		} else if (effect_ == "damage_defdown") {
-			enemy.takeDamage(CombatMath::Mitigate((std::max)(1, player.getAttack() * powerPercent_ * player.GetShimmerDamageMultiplierPercent() / 10000), enemy.getDefense()));
-			enemy.ApplyStatus({StatusType::DefenseDown, duration_, (std::max)(20, powerPercent_ / 10), player.getAttack()}, player.getAccuracy());
+			enemy.ApplyDirectDamage(DirectShimmerDamage(player, powerPercent_));
+			enemyStatus(StatusType::DefenseDown, duration_, (std::max)(20, powerPercent_ / 10));
 		} else if (effect_ == "stat_boost") {
 			const int duration = duration_ > 0 ? duration_ : 2;
-			player.ApplyStatus({StatusType::AttackUp, duration, 25});
-			player.ApplyStatus({StatusType::DefenseUp, duration, 25});
-			player.ApplyStatus({StatusType::SpeedUp, duration, 25});
-			player.ApplyStatus({StatusType::CritUp, duration, 15});
-			player.ApplyStatus({StatusType::CritDamageUp, duration, 25});
-			player.ApplyStatus({StatusType::DamageReduction, duration, 15});
+			selfStatus(StatusType::AttackUp, duration, 25);
+			selfStatus(StatusType::DefenseUp, duration, 25);
+			selfStatus(StatusType::SpeedUp, duration, 25);
+			selfStatus(StatusType::CritUp, duration, 15);
+			selfStatus(StatusType::CritDamageUp, duration, 25);
+			selfStatus(StatusType::DamageReduction, duration, 15);
 		} else if (effect_ == "revive") {
-			player.AddBarrier(player.getMaxHP() * powerPercent_ / 100, 1);
+			player.AddBarrier(CombatMath::Scale(player.getMaxHP(), powerPercent_), 1);
 		}
 	}
 

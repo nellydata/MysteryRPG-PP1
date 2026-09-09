@@ -28,6 +28,9 @@
     <ClInclude Include="tests\InventoryCorrectnessTests.h" />
     <ClInclude Include="tests\ConsumableCorrectnessTests.h" />
     <ClInclude Include="tests\LootEconomyTests.h" />
+    <ClInclude Include="tests\StatusResolutionTests.h" />
+    <ClInclude Include="tests\ShimmerDamageTests.h" />
+    <ClInclude Include="tests\CombatActionTests.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>

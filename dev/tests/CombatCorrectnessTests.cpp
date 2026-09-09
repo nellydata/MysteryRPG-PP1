@@ -15,6 +15,9 @@
 #include "InventoryCorrectnessTests.h"
 #include "ConsumableCorrectnessTests.h"
 #include "LootEconomyTests.h"
+#include "StatusResolutionTests.h"
+#include "ShimmerDamageTests.h"
+#include "CombatActionTests.h"
 
 namespace {
 class ConstructorContractSkill final : public ShimmerSkill {
@@ -60,6 +63,9 @@ void EquipSyntheticSet(Player& player, const std::string& setName) {
 }
 
 int main() {
+    RunStatusResolutionTests();
+    RunShimmerDamageTests();
+    RunCombatActionTests();
 	ConstructorContractSkill constructorContract;
 	assert(constructorContract.getCost() == 2 && constructorContract.getCooldown() == 3);
 	assert(constructorContract.getPowerPercent() == 100 && constructorContract.IsReady());

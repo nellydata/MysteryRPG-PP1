@@ -97,6 +97,8 @@ $construction = @{
     'Player.h' = 'Player player;'
     'ProgressionManager.h' = 'ProgressionManager progression;'
     'ShimmerSkill.h' = 'auto skill = ShimmerSkill::Create("Pulsus Luminis");'
+    'RandomService.h' = 'RandomStream random(1); auto roll = random.RollPercent(50);'
+    'StatusRules.h' = 'auto id = StatusRules::NextIdentity();'
 }
 $summary = New-Object 'System.Collections.Generic.List[string]'
 $summary.Add('MSVC C++17 isolated header checks: ' + [DateTime]::UtcNow.ToString('u'))

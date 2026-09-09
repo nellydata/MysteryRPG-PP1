@@ -1,0 +1,29 @@
+Microsoft (R) COFF/PE Dumper Version 14.51.36256.0
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+Dump of file dev\bin\x64\Debug\COS-PP1.exe
+
+File Type: EXECUTABLE IMAGE
+
+  Image has the following dependencies:
+
+    MSVCP140D.dll
+    VCRUNTIME140D.dll
+    VCRUNTIME140_1D.dll
+    ucrtbased.dll
+    KERNEL32.dll
+
+  Summary
+
+        1000 .00cfg
+        6000 .data
+        3000 .idata
+        1000 .msvcjmc
+       19000 .pdata
+       48000 .rdata
+        3000 .reloc
+        1000 .rsrc
+      19B000 .text
+       C3000 .textbss
+        1000 .tls

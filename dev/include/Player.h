@@ -7,6 +7,7 @@
 #include "CombatResolution.h"
 #include "Item.h"
 #include "Inventory.h"
+#include "StatusRules.h"
 
 class CombatManager;
 class Area;
@@ -15,8 +16,15 @@ class Player {
 public:
     Player(const std::string& name = "Adelaide", int maxHp = 100, int maxSp = 10);
     ~Player();
+    Player(const Player&) = delete;
+    Player& operator=(const Player&) = delete;
 
     void takeDamage(int amount);
+    const DamageResolution& ApplyDirectDamage(int rawDamage, bool ignoreDefense = false);
+    const HealResolution& GetLastHealResult() const { return lastHealResult_; }
+    std::uint64_t GetCombatantId() const { return combatantId_; }
+    void SetStatusSeed(unsigned seed) { statusRandom_.Seed(seed); }
+    std::uint64_t GetStatusRandomDrawCount() const { return statusRandom_.DrawCount(); }
     const DamageResolution& GetLastDamageResult() const;
     const std::vector<StatusDamageResolution>& GetStatusDamageResults() const;
     const std::vector<StatusApplicationResolution>& GetStatusApplications() const;
@@ -75,6 +83,8 @@ public:
     bool HasStatus(StatusType type) const;
     bool ApplyStatus(const StatusEffect& status, int accuracy = 100);
     void ProcessStatuses();
+    void BeginStatusTurn(std::vector<std::pair<StatusType, int>>& damageEvents = EmptyDamageEvents(), int& healing = EmptyHealing());
+    void EndStatusTurn();
     void ProcessStatuses(std::vector<std::pair<StatusType, int>>& damageEvents, int& healing);
     void ClearStatuses();
     int CleanseNegativeStatuses();
@@ -92,6 +102,11 @@ public:
 
 private:
     DamageResolution lastDamageResult_;
+    HealResolution lastHealResult_;
+    const std::uint64_t combatantId_ = StatusRules::NextIdentity();
+    RandomStream statusRandom_;
+    std::vector<std::uint64_t> statusTurnSnapshot_;
+    bool statusTurnOpen_ = false;
     std::vector<StatusDamageResolution> statusDamageResults_;
     std::vector<StatusApplicationResolution> statusApplications_;
     std::string name_;

@@ -68,6 +68,8 @@ struct StatusEffect {
 	int dotPotency = 0;
 	int sourceDefense = 0;
 	std::string source;
+    std::uint64_t sourceId = 0;
+    std::uint64_t applicationId = 0;
 };
 
 enum class StackPolicy {
@@ -75,7 +77,8 @@ enum class StackPolicy {
 	RefreshDuration,
 	ExtendDuration,
 	ReplaceIfStronger,
-	Unique
+	Unique,
+    UniquePerSource
 };
 
 inline StackPolicy GetStatusStackPolicy(StatusType type) {
@@ -83,13 +86,15 @@ inline StackPolicy GetStatusStackPolicy(StatusType type) {
 	case StatusType::Burn:
 	case StatusType::Bleed:
 	case StatusType::Poison:
+    case StatusType::HealOverTime:
+    case StatusType::Barrier:
 		return StackPolicy::IndependentStacks;
-	case StatusType::HealOverTime:
+    case StatusType::VerdigrisMark:
+        return StackPolicy::UniquePerSource;
 	case StatusType::Stun:
+        return StackPolicy::RefreshDuration;
 	case StatusType::Slow:
-	case StatusType::VerdigrisMark:
 	case StatusType::DamageReduction:
-	case StatusType::Barrier:
 	case StatusType::AttackUp:
 	case StatusType::AttackDown:
 	case StatusType::DefenseUp:
@@ -103,7 +108,9 @@ inline StackPolicy GetStatusStackPolicy(StatusType type) {
 	case StatusType::HealingPotencyUp:
 	case StatusType::HealResistance:
 	case StatusType::AccuracyFloor:
-		return StackPolicy::RefreshDuration;
+    case StatusType::SpeedUp:
+    case StatusType::DotReduction:
+		return StackPolicy::ReplaceIfStronger;
 	}
 	return StackPolicy::Unique;
 }

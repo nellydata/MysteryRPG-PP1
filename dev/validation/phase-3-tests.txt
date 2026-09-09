@@ -1,0 +1,86 @@
+Status resolution passed: conservation, overkill, no revival, safe extremes, final-turn barriers, source Mark, stacks, cleanse and seeded resistance.
+Shimmer damage passed: all offensive catalogue paths at large ATK, dead casters, actual-damage Siphon and DOT source identity.
+Combat actions passed: seeded replay/variation, invalid selection immutability, actor ownership, Stun skips, cooldown rejection, bounded bonus actions, DOT death and group rounds.
+TRACE tier=Basic enemy=Verdigris Thrall level=1 source=catalogue ordinary
+TRACE tier=Basic enemy=Automata Unit-01 level=1 source=catalogue ordinary
+TRACE tier=Basic enemy=Automata Unit-01 level=1 source=catalogue ordinary
+TRACE tier=Basic enemy=Verdigris Thrall level=1 source=catalogue ordinary
+TRACE tier=Basic enemy=Automata Unit-01 level=1 source=catalogue ordinary
+TRACE tier=Basic enemy=Devotee Acolyte level=1 source=catalogue ordinary
+TRACE tier=Basic enemy=Verdigris Thrall level=1 source=catalogue ordinary
+TIERS level=1 samples=100000 Basic=90.033 Rare=9.967 Epic=0.000 Elite=0.000
+TIERS level=5 samples=100000 Basic=80.048 Rare=18.005 Epic=1.947 Elite=0.000
+TIERS level=10 samples=100000 Basic=65.020 Rare=28.018 Epic=6.962 Elite=0.000
+TIERS level=20 samples=100000 Basic=44.747 Rare=35.157 Epic=17.074 Elite=3.022
+TIERS level=40 samples=100000 Basic=25.095 Rare=34.887 Epic=30.000 Elite=10.018
+TIERS level=70 samples=100000 Basic=10.106 Rare=25.053 Epic=39.885 Elite=24.956
+TIERS level=100 samples=100000 Basic=4.899 Rare=15.013 Epic=39.998 Elite=40.090
+INVESTIGATION repeat=0 samples=20000 event0=0.000 event1=25.420 event2=35.135 event3=17.185 event4=12.285 event5=5.985 event6=3.990 event7=0.000 consumable=69.987
+INVESTIGATION repeat=1 samples=20000 event0=0.000 event1=30.190 event2=41.990 event3=19.735 event4=0.000 event5=3.955 event6=4.130 event7=0.000 consumable=79.960
+FIGHT level=1 playerHP=108 playerATK=20 playerDEF=10 enemy=Devotee Acolyte hp=54 atk=8 def=6 xp=10 actions=4 enemyActions=3 damage=16 maxHit=8 win=1
+FIGHT level=1 playerHP=108 playerATK=20 playerDEF=10 enemy=Automata Unit-01 hp=58 atk=9 def=10 xp=10 actions=3 enemyActions=3 damage=20 maxHit=11 win=1
+FIGHT level=1 playerHP=108 playerATK=20 playerDEF=10 enemy=Devotee Penitent hp=81 atk=11 def=8 xp=14 actions=4 enemyActions=3 damage=32 maxHit=16 win=1
+FIGHT level=1 playerHP=108 playerATK=20 playerDEF=10 enemy=Devotee Flagellant hp=88 atk=11 def=11 xp=14 actions=5 enemyActions=4 damage=53 maxHit=16 win=1
+FIGHT level=5 playerHP=216 playerATK=80 playerDEF=50 enemy=Devotee Acolyte hp=169 atk=26 def=19 xp=15 actions=3 enemyActions=2 damage=25 maxHit=25 win=1
+FIGHT level=5 playerHP=216 playerATK=80 playerDEF=50 enemy=Automata Unit-01 hp=180 atk=28 def=30 xp=15 actions=3 enemyActions=3 damage=60 maxHit=33 win=1
+FIGHT level=5 playerHP=216 playerATK=80 playerDEF=50 enemy=Devotee Penitent hp=250 atk=32 def=24 xp=20 actions=4 enemyActions=3 damage=92 maxHit=47 win=1
+FIGHT level=5 playerHP=216 playerATK=80 playerDEF=50 enemy=Devotee Flagellant hp=272 atk=34 def=32 xp=20 actions=4 enemyActions=3 damage=120 maxHit=49 win=1
+FIGHT level=10 playerHP=351 playerATK=155 playerDEF=100 enemy=Devotee Acolyte hp=323 atk=48 def=36 xp=24 actions=3 enemyActions=2 damage=44 maxHit=44 win=1
+FIGHT level=10 playerHP=351 playerATK=155 playerDEF=100 enemy=Automata Unit-01 hp=344 atk=52 def=57 xp=24 actions=3 enemyActions=3 damage=106 maxHit=59 win=1
+FIGHT level=10 playerHP=351 playerATK=155 playerDEF=100 enemy=Devotee Penitent hp=480 atk=61 def=44 xp=33 actions=4 enemyActions=3 damage=171 maxHit=87 win=1
+FIGHT level=10 playerHP=351 playerATK=155 playerDEF=100 enemy=Devotee Flagellant hp=522 atk=65 def=61 xp=33 actions=4 enemyActions=3 damage=219 maxHit=88 win=1
+BOSS id=Matron of the Catacombs fixedLevel=8 hp=524 atk=25 def=37 speed=94 firstXP=200
+BOSS_ELIGIBILITY samples=10000 firstClearPercent=50.230
+FARM hpLevel1=105 hpLevel20=1462
+RUN 0 finalLevel=10 investigations=310 ordinaryEncounters=44 victories=44 defeats=0 bossWithdrawals=144 itemEvents=64 xpEvents=43 clueEvents=2 hazardEvents=6 beneficialEvents=8 recoveries=5 actions=109 xpExploration=632 xpClues=32 xpEnemies=703 equipmentAcquired=111 equipmentEquipped=4
+RUN 1 finalLevel=10 investigations=333 ordinaryEncounters=55 victories=54 defeats=1 bossWithdrawals=165 itemEvents=66 xpEvents=29 clueEvents=2 hazardEvents=7 beneficialEvents=10 recoveries=9 actions=147 xpExploration=449 xpClues=32 xpEnemies=876 equipmentAcquired=137 equipmentEquipped=4
+RUN 2 finalLevel=10 investigations=379 ordinaryEncounters=53 victories=52 defeats=1 bossWithdrawals=188 itemEvents=94 xpEvents=33 clueEvents=2 hazardEvents=6 beneficialEvents=4 recoveries=11 actions=140 xpExploration=477 xpClues=32 xpEnemies=852 equipmentAcquired=161 equipmentEquipped=4
+RUN 3 finalLevel=10 investigations=315 ordinaryEncounters=55 victories=54 defeats=1 bossWithdrawals=142 itemEvents=69 xpEvents=30 clueEvents=2 hazardEvents=9 beneficialEvents=9 recoveries=8 actions=148 xpExploration=435 xpClues=32 xpEnemies=884 equipmentAcquired=139 equipmentEquipped=4
+RUN 4 finalLevel=10 investigations=315 ordinaryEncounters=52 victories=51 defeats=1 bossWithdrawals=139 itemEvents=72 xpEvents=32 clueEvents=2 hazardEvents=11 beneficialEvents=8 recoveries=8 actions=140 xpExploration=469 xpClues=32 xpEnemies=863 equipmentAcquired=135 equipmentEquipped=4
+RUN 5 finalLevel=10 investigations=311 ordinaryEncounters=48 victories=48 defeats=0 bossWithdrawals=156 itemEvents=60 xpEvents=35 clueEvents=2 hazardEvents=4 beneficialEvents=7 recoveries=6 actions=125 xpExploration=470 xpClues=32 xpEnemies=859 equipmentAcquired=119 equipmentEquipped=4
+RUN 6 finalLevel=10 investigations=321 ordinaryEncounters=50 victories=49 defeats=1 bossWithdrawals=142 itemEvents=83 xpEvents=34 clueEvents=2 hazardEvents=6 beneficialEvents=5 recoveries=13 actions=141 xpExploration=495 xpClues=32 xpEnemies=838 equipmentAcquired=139 equipmentEquipped=4
+RUN 7 finalLevel=10 investigations=311 ordinaryEncounters=51 victories=50 defeats=1 bossWithdrawals=131 itemEvents=75 xpEvents=36 clueEvents=2 hazardEvents=10 beneficialEvents=7 recoveries=9 actions=135 xpExploration=513 xpClues=32 xpEnemies=825 equipmentAcquired=132 equipmentEquipped=4
+RUN 8 finalLevel=10 investigations=350 ordinaryEncounters=54 victories=54 defeats=0 bossWithdrawals=171 itemEvents=82 xpEvents=30 clueEvents=2 hazardEvents=5 beneficialEvents=7 recoveries=7 actions=144 xpExploration=411 xpClues=32 xpEnemies=922 equipmentAcquired=146 equipmentEquipped=4
+RUN 9 finalLevel=10 investigations=286 ordinaryEncounters=45 victories=44 defeats=1 bossWithdrawals=124 itemEvents=60 xpEvents=38 clueEvents=2 hazardEvents=7 beneficialEvents=11 recoveries=10 actions=125 xpExploration=584 xpClues=32 xpEnemies=737 equipmentAcquired=115 equipmentEquipped=4
+RUN 10 finalLevel=10 investigations=303 ordinaryEncounters=49 victories=49 defeats=0 bossWithdrawals=132 itemEvents=74 xpEvents=34 clueEvents=2 hazardEvents=6 beneficialEvents=7 recoveries=6 actions=124 xpExploration=485 xpClues=32 xpEnemies=835 equipmentAcquired=134 equipmentEquipped=4
+RUN 11 finalLevel=10 investigations=303 ordinaryEncounters=49 victories=48 defeats=1 bossWithdrawals=155 itemEvents=50 xpEvents=36 clueEvents=2 hazardEvents=6 beneficialEvents=6 recoveries=8 actions=126 xpExploration=528 xpClues=32 xpEnemies=789 equipmentAcquired=105 equipmentEquipped=4
+RUN 12 finalLevel=10 investigations=286 ordinaryEncounters=53 victories=52 defeats=1 bossWithdrawals=139 itemEvents=54 xpEvents=33 clueEvents=2 hazardEvents=3 beneficialEvents=3 recoveries=8 actions=145 xpExploration=510 xpClues=32 xpEnemies=830 equipmentAcquired=120 equipmentEquipped=4
+RUN 13 finalLevel=10 investigations=321 ordinaryEncounters=56 victories=56 defeats=0 bossWithdrawals=150 itemEvents=70 xpEvents=26 clueEvents=2 hazardEvents=11 beneficialEvents=7 recoveries=13 actions=161 xpExploration=420 xpClues=32 xpEnemies=915 equipmentAcquired=145 equipmentEquipped=4
+RUN 14 finalLevel=10 investigations=309 ordinaryEncounters=58 victories=58 defeats=0 bossWithdrawals=154 itemEvents=60 xpEvents=26 clueEvents=2 hazardEvents=5 beneficialEvents=5 recoveries=8 actions=148 xpExploration=366 xpClues=32 xpEnemies=966 equipmentAcquired=138 equipmentEquipped=4
+RUN 15 finalLevel=10 investigations=345 ordinaryEncounters=52 victories=52 defeats=0 bossWithdrawals=161 itemEvents=77 xpEvents=34 clueEvents=2 hazardEvents=9 beneficialEvents=11 recoveries=6 actions=130 xpExploration=519 xpClues=32 xpEnemies=800 equipmentAcquired=137 equipmentEquipped=4
+RUN 16 finalLevel=10 investigations=281 ordinaryEncounters=52 victories=51 defeats=1 bossWithdrawals=122 itemEvents=55 xpEvents=36 clueEvents=2 hazardEvents=11 beneficialEvents=4 recoveries=8 actions=136 xpExploration=508 xpClues=32 xpEnemies=828 equipmentAcquired=114 equipmentEquipped=4
+RUN 17 finalLevel=10 investigations=336 ordinaryEncounters=51 victories=50 defeats=1 bossWithdrawals=165 itemEvents=71 xpEvents=36 clueEvents=2 hazardEvents=6 beneficialEvents=6 recoveries=9 actions=138 xpExploration=540 xpClues=32 xpEnemies=791 equipmentAcquired=133 equipmentEquipped=4
+RUN 18 finalLevel=10 investigations=353 ordinaryEncounters=48 victories=47 defeats=1 bossWithdrawals=178 itemEvents=72 xpEvents=37 clueEvents=2 hazardEvents=6 beneficialEvents=11 recoveries=7 actions=121 xpExploration=560 xpClues=32 xpEnemies=776 equipmentAcquired=136 equipmentEquipped=4
+RUN 19 finalLevel=10 investigations=359 ordinaryEncounters=51 victories=50 defeats=1 bossWithdrawals=175 itemEvents=74 xpEvents=33 clueEvents=2 hazardEvents=15 beneficialEvents=10 recoveries=9 actions=137 xpExploration=491 xpClues=34 xpEnemies=837 equipmentAcquired=139 equipmentEquipped=4
+RUN 20 finalLevel=10 investigations=309 ordinaryEncounters=44 victories=44 defeats=0 bossWithdrawals=151 itemEvents=64 xpEvents=40 clueEvents=2 hazardEvents=5 beneficialEvents=4 recoveries=6 actions=117 xpExploration=578 xpClues=32 xpEnemies=748 equipmentAcquired=119 equipmentEquipped=4
+RUN 21 finalLevel=10 investigations=274 ordinaryEncounters=50 victories=50 defeats=0 bossWithdrawals=134 itemEvents=48 xpEvents=36 clueEvents=2 hazardEvents=1 beneficialEvents=4 recoveries=8 actions=141 xpExploration=518 xpClues=32 xpEnemies=814 equipmentAcquired=106 equipmentEquipped=4
+RUN 22 finalLevel=10 investigations=300 ordinaryEncounters=45 victories=44 defeats=1 bossWithdrawals=139 itemEvents=64 xpEvents=41 clueEvents=2 hazardEvents=6 beneficialEvents=4 recoveries=11 actions=125 xpExploration=610 xpClues=32 xpEnemies=713 equipmentAcquired=120 equipmentEquipped=4
+RUN 23 finalLevel=10 investigations=384 ordinaryEncounters=56 victories=55 defeats=1 bossWithdrawals=210 itemEvents=70 xpEvents=29 clueEvents=2 hazardEvents=9 beneficialEvents=9 recoveries=8 actions=142 xpExploration=433 xpClues=32 xpEnemies=886 equipmentAcquired=141 equipmentEquipped=4
+RUN 24 finalLevel=10 investigations=344 ordinaryEncounters=54 victories=53 defeats=1 bossWithdrawals=173 itemEvents=72 xpEvents=31 clueEvents=2 hazardEvents=7 beneficialEvents=6 recoveries=7 actions=138 xpExploration=490 xpClues=32 xpEnemies=853 equipmentAcquired=147 equipmentEquipped=4
+RUN 25 finalLevel=10 investigations=266 ordinaryEncounters=48 victories=46 defeats=2 bossWithdrawals=120 itemEvents=48 xpEvents=39 clueEvents=2 hazardEvents=5 beneficialEvents=5 recoveries=13 actions=131 xpExploration=588 xpClues=32 xpEnemies=742 equipmentAcquired=103 equipmentEquipped=4
+RUN 26 finalLevel=10 investigations=313 ordinaryEncounters=55 victories=55 defeats=0 bossWithdrawals=140 itemEvents=69 xpEvents=28 clueEvents=2 hazardEvents=6 beneficialEvents=14 recoveries=7 actions=147 xpExploration=419 xpClues=32 xpEnemies=898 equipmentAcquired=137 equipmentEquipped=4
+RUN 27 finalLevel=10 investigations=340 ordinaryEncounters=53 victories=53 defeats=0 bossWithdrawals=171 itemEvents=63 xpEvents=32 clueEvents=2 hazardEvents=11 beneficialEvents=9 recoveries=8 actions=138 xpExploration=459 xpClues=32 xpEnemies=877 equipmentAcquired=129 equipmentEquipped=4
+RUN 28 finalLevel=10 investigations=330 ordinaryEncounters=49 victories=49 defeats=0 bossWithdrawals=149 itemEvents=79 xpEvents=38 clueEvents=2 hazardEvents=8 beneficialEvents=6 recoveries=5 actions=124 xpExploration=496 xpClues=32 xpEnemies=825 equipmentAcquired=144 equipmentEquipped=4
+RUN 29 finalLevel=10 investigations=389 ordinaryEncounters=52 victories=52 defeats=0 bossWithdrawals=217 itemEvents=73 xpEvents=33 clueEvents=2 hazardEvents=8 beneficialEvents=5 recoveries=8 actions=137 xpExploration=489 xpClues=32 xpEnemies=837 equipmentAcquired=142 equipmentEquipped=4
+RUN 30 finalLevel=10 investigations=326 ordinaryEncounters=48 victories=45 defeats=3 bossWithdrawals=154 itemEvents=70 xpEvents=40 clueEvents=2 hazardEvents=6 beneficialEvents=7 recoveries=8 actions=133 xpExploration=587 xpClues=32 xpEnemies=732 equipmentAcquired=126 equipmentEquipped=4
+RUN 31 finalLevel=10 investigations=312 ordinaryEncounters=54 victories=53 defeats=1 bossWithdrawals=160 itemEvents=48 xpEvents=33 clueEvents=2 hazardEvents=8 beneficialEvents=8 recoveries=7 actions=143 xpExploration=477 xpClues=32 xpEnemies=862 equipmentAcquired=109 equipmentEquipped=4
+PROGRESSION runs=32 target=2 investigations=21.469 ordinaryBattles=4.469 wins=4.469 itemEvents=5.281 xpEvents=2.750 defeats=0.000 fountainRecoveries=0.938 playerActions=16.750 bossWithdrawals=6.594
+PROGRESSION runs=32 target=5 investigations=137.531 ordinaryBattles=22.031 wins=22.031 itemEvents=29.125 xpEvents=14.906 defeats=0.000 fountainRecoveries=4.219 playerActions=67.219 bossWithdrawals=64.062
+PROGRESSION runs=32 target=10 investigations=322.312 ordinaryBattles=51.062 wins=50.375 itemEvents=67.188 xpEvents=34.094 defeats=0.688 fountainRecoveries=8.250 playerActions=135.500 bossWithdrawals=154.719
+READY_BOSS level=10 victories=32/32
+Progression repair validation passed.
+Console conversion regressions passed.
+Progression ownership regressions passed.
+Reward ownership tests passed: eight combat/fallback kill paths, duplicate guards, defeat/flee/retry and level cap.
+Inventory correctness regressions passed.
+Consumable tests passed: all 12 catalogue effects, exact-instance ownership, contexts, invalid-use atomicity and actual combat events.
+LOOT tier=Basic level=1 seededVictories=100000 meanGear=0.851 extraPercent=85.128 consumablePercent=30.041 jointPercent=25.637 Rare=0.000 Epic=0.000 Legendary=0.000 Artifact=0.000
+LOOT tier=Basic level=15 seededVictories=100000 meanGear=0.922 extraPercent=92.218 consumablePercent=30.024 jointPercent=27.664 Rare=80.044 Epic=0.000 Legendary=0.000 Artifact=0.000
+LOOT tier=Basic level=30 seededVictories=100000 meanGear=1.000 extraPercent=100.000 consumablePercent=29.722 jointPercent=29.722 Rare=35.133 Epic=45.110 Legendary=0.000 Artifact=0.000
+LOOT tier=Rare level=30 seededVictories=100000 meanGear=1.200 extraPercent=20.003 consumablePercent=40.000 jointPercent=7.987 Rare=34.905 Epic=44.940 Legendary=0.000 Artifact=0.000
+LOOT tier=Epic level=30 seededVictories=100000 meanGear=1.500 extraPercent=50.042 consumablePercent=50.011 jointPercent=25.189 Rare=35.097 Epic=44.853 Legendary=0.000 Artifact=0.000
+LOOT tier=Elite level=30 seededVictories=100000 meanGear=2.349 extraPercent=34.913 consumablePercent=65.065 jointPercent=22.675 Rare=19.990 Epic=74.960 Legendary=0.000 Artifact=0.000
+LOOT tier=Boss level=70 seededVictories=100000 meanGear=3.496 extraPercent=49.562 consumablePercent=100.000 jointPercent=49.562 Rare=5.016 Epic=65.002 Legendary=28.977 Artifact=1.004
+LOOT tier=Boss level=80 seededVictories=100000 meanGear=3.502 extraPercent=50.186 consumablePercent=100.000 jointPercent=50.186 Rare=4.985 Epic=65.035 Legendary=27.996 Artifact=1.984
+LOOT tier=Boss level=100 seededVictories=100000 meanGear=3.502 extraPercent=50.161 consumablePercent=100.000 jointPercent=50.161 Rare=5.027 Epic=65.112 Legendary=24.877 Artifact=4.984
+Loot economy regressions passed.

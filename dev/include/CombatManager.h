@@ -5,7 +5,9 @@
 #include <vector>
 #include <map>
 #include <cstdint>
+#include <set>
 #include "CombatResolution.h"
+#include "RandomService.h"
 
 class Player;
 class Enemy;
@@ -36,6 +38,8 @@ public:
         std::string target;
         std::string skill;
         int requestedDamage = 0;
+        int mitigatedDamage = 0;
+        int overkillDamage = 0;
         int barrierAbsorbed = 0;
         int hpDamage = 0;
         int remainingHP = -1;
@@ -45,7 +49,9 @@ public:
         int enemyGauge = 0;
         EnemyTier enemyTier = EnemyTier::Basic;
     };
-    CombatManager();
+    explicit CombatManager(unsigned seed = 0);
+    void SetSeed(unsigned seed);
+    std::uint64_t GetRandomDrawCount() const { return random_.DrawCount(); }
     ~CombatManager();
 
     void BeginEncounter(Enemy& enemy);
@@ -92,6 +98,10 @@ private:
     int playerGauge_;
     int enemyGauge_;
     Enemy* activeEnemy_;
+    Player* activePlayer_ = nullptr;
+    RandomStream random_;
+    bool playerActionStarted_ = false;
+    bool nextEnemyBonus_ = false;
     std::unique_ptr<ShimmerSkill> defaultSkill_;
     std::vector<CombatEvent> events_;
     std::uint64_t nextEventSequence_ = 1;
@@ -102,6 +112,7 @@ private:
     bool groupEnemyTurn_ = false;
     std::map<std::string, int> shimmerCooldowns_;
     std::vector<Enemy*> currentEnemyParty_;
+    std::set<Enemy*> seededEnemies_;
 
     CombatEvent& AddEvent(CombatEvent::Kind kind, const std::string& message, int value = 0);
     void RecordDamage(const std::string& actor, const std::string& target,
@@ -109,6 +120,7 @@ private:
                       CombatEvent::Kind kind = CombatEvent::Kind::Damage);
     void StartPlayerTurn(Player& player);
     void AdvanceTurn(Player& player, Enemy& enemy);
+    void FinishPlayerAction(Player& player, Enemy& enemy);
     void ResolveDefeatReward(Player& player, Enemy& enemy, ProgressionManager* progression);
     void ForfeitEncounterRewards();
 };

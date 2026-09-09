@@ -52,14 +52,15 @@ Enter a character name, or press Enter for Adelaide. Every numbered choice requi
 
 Combat events are printed once as actions resolve, with stable sequence IDs and an explicit full-log review. Output is never cleared between actions or room transitions. Normal presentation pauses 300 ms at action messages; `--fast` or combat option 6 removes that delay without changing combat calculations. The last encounter remains reviewable until another encounter starts.
 
-## Current validation checkpoint (2026-09-08)
+## Current validation checkpoint (2026-09-09)
 
 - Visual Studio MSBuild Debug x64: game and both standalone targets built successfully.
 - EquipmentV2Tests, InvestigationHarness, and content validation: exit code 0.
+- Combat regressions cover damage/mitigation/barrier/overkill conservation, dead-entity healing rejection, safe large multipliers, source-specific DOT/Mark, duration ownership, seeded replay, invalid actions, Stun, cooldowns, bounded enemy bonus actions, and group-round ownership. Header checks passed 46/46.
 - The harness checks 700,000 seeded ordinary enemy selections, 40,000 investigations with actual inventory/XP mutation, 900,000 loot selections, Basic gear pity, first-clear and farm boss rules, early fights, and 32 fresh progression simulations. Equipment tests validate 9,664 rolls, percentage/fixed aggregation, and unchanged state during previews. All 12 consumable definitions have runtime regression coverage.
 - The repeatable keyboard smoke test starts a fresh character, locks/unlocks and attempts a locked consumable, equips gear, uses a consumable in combat, purifies the Fountain, checks the guaranteed Common drop and its actual stat comparison, protects equipped items from discard, heals, changes the Shimmer loadout, enters Entrance Hall, and exits.
 - The tested executable has PE subsystem 3 (console), no USER32/GDI/Python dependencies, and had a zero GUI window handle during the running smoke test. Only the terminal was used.
 
-Evidence and phase boundaries: [gameplay audit](validation/gameplay-audit.md), [automated results](validation/phase-2-tests.txt), [equipment tests](validation/phase-2-equipment.txt), and [actual console transcript](validation/phase-2-console.txt).
+Evidence and phase boundaries: [gameplay audit](validation/gameplay-audit.md), [automated results](validation/phase-3-tests.txt), [equipment tests](validation/phase-3-equipment.txt), and [actual console transcript](validation/phase-3-console.txt). To capture this checkpoint separately, run `tests/ConsoleEconomySmoke.ps1 -CaptureName phase-3`.
 
-There are no known course-compliance blockers in the tested Debug x64 configuration. Progress is retained during the running session; the existing game has no disk-save system. This is a functional audit checkpoint, not certification of every gameplay system. Status/action/RNG mechanics, full ability and set/Artifact behavior, discovery consistency, final balance, and the full console progression smoke remain for later phases. Earlier conversion-era balance results predate the percentage equipment repair.
+There are no known course-compliance blockers in the tested Debug x64 configuration. Progress is retained during the running session; the existing game has no disk-save system. This is a functional audit checkpoint, not certification of every gameplay system. The full ability catalogue, approved set/Artifact triggers and their action exceptions, discovery consistency, final balance, and the full console progression smoke remain for later phases. Earlier conversion-era balance results predate the percentage equipment repair.

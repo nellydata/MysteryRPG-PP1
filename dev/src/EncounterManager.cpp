@@ -138,7 +138,7 @@ InvestigationResult EncounterManager::ResolveInvestigation(Area& area, Player& p
 }
 
 VictoryResult EncounterManager::ResolveVictory(Area& area, Player& player, ProgressionManager& progression,
-                                               MapManager& map, Enemy& enemy) {
+                                               MapManager& map, Enemy& enemy, std::optional<unsigned> seed) {
     VictoryResult result;
     if (!player.isAlive()) {
         enemy.ForfeitRewards();
@@ -152,14 +152,16 @@ VictoryResult EncounterManager::ResolveVictory(Area& area, Player& player, Progr
     if (acceptedXP > 0) result.messages.push_back("XP gained: +" + std::to_string(acceptedXP) + ".");
 
     LootContext context;
-    context.playerLevel = result.firstClear ? room->intendedProgressionLevel : progression.GetLevel();
+    context.playerLevel = progression.GetLevel();
     context.roomId = area.getName();
     context.enemyId = enemy.getName();
     context.faction = enemy.getFaction();
     context.enemyTier = enemy.getTier();
     context.bossFirstClear = result.firstClear;
     context.bossFarmEcho = enemy.IsFarmBoss();
-    result.items = GenerateLoot(context, area.NextInvestigationSeed());
+    context.fountainFirstClear = area.IsHealingRoom() && !area.IsHealingUnlocked();
+    context.guaranteedBasicGear = enemy.getTier() == EnemyTier::Basic && basicGearMisses_ >= 2;
+    result.items = GenerateLoot(context, seed ? *seed : area.NextInvestigationSeed());
     std::vector<std::unique_ptr<Item>> pendingItems;
     pendingItems.reserve(result.items.size());
     for (const auto& item : result.items) pendingItems.push_back(std::make_unique<Item>(item));
@@ -179,6 +181,12 @@ VictoryResult EncounterManager::ResolveVictory(Area& area, Player& player, Progr
     // Empty loot is also a successfully resolved roll. Commit only after every
     // generated item arrived; first-clear flags and unlocks follow delivery.
     enemy.ClaimLootReward();
+    if (enemy.getTier() == EnemyTier::Basic) {
+        const bool gear = std::any_of(result.items.begin(), result.items.end(), [](const ItemDefinition& item) {
+            return item.category == ItemCategory::Equippable;
+        });
+        basicGearMisses_ = gear ? 0 : (std::min)(2, basicGearMisses_ + 1);
+    }
     result.resolved = true;
     bool unlockNext = false;
     if (area.IsHealingRoom() && !area.IsHealingUnlocked() && !area.hasEnemies()) {
@@ -240,14 +248,16 @@ bool EncounterManager::Explore(Area& area, Player& player, ProgressionManager& p
                     continue;
                 }
                 if (choice == 2) {
-                    std::vector<std::string> consumables;
+                    std::vector<unsigned long long> consumables;
                     for (const auto& entry : player.GetInventory().GetItems())
                         if (entry->getCategory() == ItemCategory::Consumable && entry.quantity > 0)
-                            consumables.push_back(entry->getName());
+                            consumables.push_back(entry->getInstanceId());
                     if (consumables.empty()) { ui.ShowMessage("No consumables available."); continue; }
                     for (std::size_t index = 0; index < consumables.size(); ++index)
-                        ui.ShowMessage(std::to_string(index + 1) + ". " + consumables[index] + " x" +
-                            std::to_string(player.GetInventory().GetQuantity(consumables[index])));
+                        ui.ShowMessage(std::to_string(index + 1) + ". " +
+                            player.GetInventory().FindItem(consumables[index])->getName() + " x" +
+                            std::to_string(player.GetInventory().GetQuantity(consumables[index])) +
+                            (player.GetInventory().IsLocked(consumables[index]) ? " [LOCKED]" : ""));
                     const int selected = ui.Prompt("Choose consumable, 0 cancel:", 0, static_cast<int>(consumables.size()));
                     if (!selected) continue;
                     combat.UseConsumable(consumables[selected - 1], player, *enemy, &progression);
@@ -286,7 +296,7 @@ bool EncounterManager::Explore(Area& area, Player& player, ProgressionManager& p
         const int maximum = area.IsHealingRoom() && area.IsHealingUnlocked() ? 7 : 6;
         const int choice = ui.Prompt("Room action:", 0, maximum);
         if (!std::cin || choice == 0) return true;
-        if (choice == 3) { ui.ManageInventory(player); continue; }
+        if (choice == 3) { ui.ManageInventory(player, nullptr, &area); continue; }
         if (choice == 4) { ui.ShowMap(activeMap.GetRooms()); continue; }
         if (choice == 5) { ui.ManageShimmerSkills(progression); continue; }
         if (choice == 6) { ui.ShowBattleHistory(combat); continue; }

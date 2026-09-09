@@ -5,6 +5,9 @@
 #include "CombatMath.h"
 #include "EnemyCatalog.h"
 #include "MapManager.h"
+#include "EquipmentStats.h"
+#include "ConsumableEffects.h"
+#include <set>
 
 namespace {
 EquipmentFamily FamilyForName(const std::string& name) {
@@ -46,107 +49,43 @@ void SetSlotRules(ItemDefinition& item, EquipSlot slot, const std::string& mainS
 			if (!item.setName.empty()) item.theme = item.setName + ": " + item.theme;
 }
 
-int PercentMainStatValue(Rarity rarity) {
-	switch (rarity) {
-	case Rarity::Common: return 5;
-	case Rarity::Uncommon: return 10;
-	case Rarity::Rare: return 15;
-	case Rarity::Epic: return 20;
-	case Rarity::Legendary: return 25;
-	case Rarity::Artifact: return 30;
-	}
-	return 5;
+unsigned TemplateSeed(const std::string& name) {
+	unsigned seed = 2166136261u;
+	for (unsigned char character : name) seed = (seed ^ character) * 16777619u;
+	return seed;
 }
 
-int MainHPValue(Rarity rarity) {
-	switch (rarity) {
-	case Rarity::Common: return 1000;
-	case Rarity::Uncommon: return 1500;
-	case Rarity::Rare: return 2000;
-	case Rarity::Epic: return 3000;
-	case Rarity::Legendary: return 4000;
-	case Rarity::Artifact: return 5000;
-	}
-	return 1000;
+bool AllowedSubstat(EquipSlot slot, ItemStat stat) {
+	static const auto pools = []() {
+		std::array<std::vector<ItemStat>, 5> result;
+		for (int index = 0; index < 5; ++index) {
+			ItemDefinition rules;
+			SetSlotRules(rules, static_cast<EquipSlot>(index), "");
+			result[index] = rules.allowedSubstats;
+		}
+		return result;
+	}();
+	const int index = static_cast<int>(slot);
+	return index >= 0 && index < 5 && std::find(pools[index].begin(), pools[index].end(), stat) != pools[index].end();
 }
 
-int MainDEFValue(Rarity rarity) {
-	switch (rarity) {
-	case Rarity::Common: return 75;
-	case Rarity::Uncommon: return 100;
-	case Rarity::Rare: return 150;
-	case Rarity::Epic: return 200;
-	case Rarity::Legendary: return 250;
-	case Rarity::Artifact: return 300;
-	}
-	return 75;
-}
-
-int MainStatValue(Rarity rarity, int value) {
-	(void)value;
-	switch (rarity) {
-	case Rarity::Common: return 100;
-	case Rarity::Uncommon: return 150;
-	case Rarity::Rare: return 200;
-	case Rarity::Epic: return 300;
-	case Rarity::Legendary: return 400;
-	case Rarity::Artifact: return 500;
-	}
-	return 100;
-}
-
-int SubstatCount(Rarity rarity) {
-	switch (rarity) {
-	case Rarity::Uncommon: return 1;
-	case Rarity::Rare: return 2;
-	case Rarity::Epic: return 3;
-	case Rarity::Legendary: return 4;
-	case Rarity::Artifact: return 4;
-	default: return 0;
-	}
-}
-
-std::pair<int, int> MainStatRange(const std::string& mainStat, EquipSlot slot, Rarity rarity) {
-	const int tier = static_cast<int>(rarity);
-	if (slot == EquipSlot::Boots || mainStat == "spd") {
-		static const std::pair<int, int> ranges[] = {{5, 5}, {8, 8}, {12, 12}, {12, 16}, {16, 20}, {20, 25}};
-		return ranges[tier];
-	}
-	if (mainStat == "hp") {
-		static const std::pair<int, int> ranges[] = {{5, 5}, {10, 15}, {15, 20}, {20, 25}, {25, 30}, {30, 35}};
-		return ranges[tier];
-	}
-	if (mainStat == "acc" || mainStat == "res") {
-		static const std::pair<int, int> ranges[] = {{5, 5}, {8, 12}, {12, 18}, {18, 24}, {24, 30}, {30, 36}};
-		return ranges[tier];
-	}
-	if (mainStat == "def") {
-		static const std::pair<int, int> ranges[] = {{60, 90}, {80, 120}, {120, 180}, {160, 240}, {200, 300}, {240, 360}};
-		return ranges[tier];
-	}
-	static const std::pair<int, int> ranges[] = {{80, 120}, {120, 180}, {160, 240}, {240, 360}, {320, 480}, {400, 600}};
-	return ranges[tier];
-}
-
-void AddSubstat(ItemDefinition& item, ItemStat stat, int value) {
-	item.substats.emplace_back(stat, value);
-}
-
-int SpeedMainStatValue(Rarity rarity, int value) {
-	(void)value;
-	switch (rarity) {
-	case Rarity::Common: return 5;
-	case Rarity::Uncommon: return 8;
-	case Rarity::Rare: return 12;
-	case Rarity::Epic: return 16;
-	case Rarity::Legendary: return 20;
-	case Rarity::Artifact: return 25;
-	}
-	return 20;
+bool AllowedMain(EquipSlot slot, const std::string& key) {
+	const auto rule = EquipmentStats::ForMain(key);
+	if (!rule.flat || slot == EquipSlot::None || static_cast<int>(slot) < 0 || static_cast<int>(slot) >= 5) return false;
+	if (slot == EquipSlot::Accessory) return rule.flat != &Stats::spd;
+	if (rule.flat == &Stats::hp) return slot == EquipSlot::Head || slot == EquipSlot::Torso;
+	if (rule.flat == &Stats::def) return slot == EquipSlot::Torso;
+	if (rule.flat == &Stats::atk) return slot == EquipSlot::Hand;
+	if (rule.flat == &Stats::spd || rule.flat == &Stats::evasion) return slot == EquipSlot::Boots;
+	if (rule.flat == &Stats::acc) return slot == EquipSlot::Head || slot == EquipSlot::Hand;
+	if (rule.flat == &Stats::res) return slot == EquipSlot::Head || slot == EquipSlot::Torso;
+	if (rule.flat == &Stats::critRate || rule.flat == &Stats::critDamage) return slot == EquipSlot::Head || slot == EquipSlot::Hand;
+	return false;
 }
 
 void AddEquippables(std::vector<ItemDefinition>& result, EquipSlot slot, const char* const* names,
 					int count, Rarity rarity, const std::string& mainStat, int value) {
+	(void)value; // Legacy catalogue call-site parameter; ranges are authoritative.
 	for (int i = 0; i < count; ++i) {
 		ItemDefinition item;
 		const std::string name = names[i];
@@ -165,24 +104,6 @@ void AddEquippables(std::vector<ItemDefinition>& result, EquipSlot slot, const c
 		item.slot = slot;
 		item.mainStat = resolvedMainStat;
 		SetSlotRules(item, slot, resolvedMainStat);
-		const int mainStatValue = slot == EquipSlot::Boots ? SpeedMainStatValue(rarity, value)
-			: resolvedMainStat == "hp" ? MainHPValue(rarity)
-			: resolvedMainStat == "def" ? MainDEFValue(rarity)
-			: MainStatValue(rarity, value);
-		if (slot == EquipSlot::Boots) {
-			item.mainStatValue = mainStatValue;
-		}
-
-		else if (resolvedMainStat == "acc" || resolvedMainStat == "res") item.mainStatPercent = PercentMainStatValue(rarity);
-		else if (resolvedMainStat == "hp") item.mainStatPercent = static_cast<int>(rarity) * 5 + 5;
-		else item.mainStatValue = mainStatValue;
-		const int substatCount = SubstatCount(rarity);
-		for (int roll = 0; roll < substatCount && !item.allowedSubstats.empty(); ++roll) {
-			std::size_t familyOffset = static_cast<std::size_t>(item.family) * 2;
-			const ItemStat stat = item.allowedSubstats[(familyOffset + static_cast<std::size_t>(i + roll * 3)) % item.allowedSubstats.size()];
-			AddSubstat(item, stat, CombatMath::SubstatRoll(stat, rarity,
-				static_cast<unsigned>(i * 17 + roll * 31 + static_cast<int>(rarity) * 13)));
-		}
 		if (rarity == Rarity::Artifact) {
 			if (slot == EquipSlot::Head) { item.passive = "Critical hits reveal enemies and restore 8% HP"; item.stats.critRate += 8; item.stats.critDamage += 20; }
 			else if (slot == EquipSlot::Torso) { item.passive = "Reduce incoming damage by 12% and gain a barrier after taking damage"; item.stats.res += 10; item.stats.barrierPotency += 18; }
@@ -196,9 +117,63 @@ void AddEquippables(std::vector<ItemDefinition>& result, EquipSlot slot, const c
 			else if (slot == EquipSlot::Boots) { item.passive = "Accuracy +18%"; item.stats.acc += 18; }
 			else if (slot == EquipSlot::Accessory) { item.passive = "Accuracy +18%"; item.stats.acc += 18; }
 		}
-		result.push_back(item);
+		result.push_back(RollLootInstance(item, TemplateSeed(name)));
 	}
 }
+}
+
+int GetEquipmentSubstatCount(Rarity rarity) {
+	const int tier = static_cast<int>(rarity);
+	if (tier < 0 || tier > 5) throw std::invalid_argument("Unknown equipment rarity");
+	return (std::min)(4, tier);
+}
+
+std::pair<int, int> GetEquipmentMainStatRange(const std::string& mainStat, Rarity rarity) {
+	const int tier = static_cast<int>(rarity);
+	const auto rule = EquipmentStats::ForMain(mainStat);
+	if (tier < 0 || tier > 5 || !rule.flat) throw std::invalid_argument("Unknown equipment main stat or rarity");
+	static const std::pair<int, int> core[] = {{8, 12}, {12, 16}, {16, 22}, {22, 28}, {28, 34}, {34, 40}};
+	static const std::pair<int, int> speed[] = {{3, 5}, {5, 8}, {8, 12}, {12, 16}, {16, 20}, {20, 25}};
+	static const std::pair<int, int> crit[] = {{2, 4}, {4, 6}, {6, 9}, {9, 12}, {12, 15}, {15, 18}};
+	static const std::pair<int, int> critDamage[] = {{5, 8}, {8, 12}, {12, 18}, {18, 25}, {25, 32}, {32, 40}};
+	static const std::pair<int, int> accuracy[] = {{5, 8}, {8, 12}, {12, 18}, {18, 24}, {24, 30}, {30, 36}};
+	static const std::pair<int, int> potency[] = {{8, 12}, {12, 18}, {18, 25}, {25, 32}, {32, 40}, {40, 50}};
+	if (rule.corePercentRoll) return core[tier];
+	if (rule.flat == &Stats::spd) return speed[tier];
+	if (rule.flat == &Stats::critRate || rule.flat == &Stats::evasion) return crit[tier];
+	if (rule.flat == &Stats::critDamage) return critDamage[tier];
+	if (rule.flat == &Stats::acc || rule.flat == &Stats::res) return accuracy[tier];
+	return potency[tier];
+}
+
+bool ValidateEquipmentDefinition(const ItemDefinition& item, std::string* error) {
+	const auto fail = [&](const std::string& reason) {
+		if (error) *error = item.name + ": " + reason;
+		return false;
+	};
+	if (item.name.empty() || item.category != ItemCategory::Equippable || !AllowedMain(item.slot, item.mainStat))
+		return fail("invalid equipment name, slot, or main stat");
+	if (static_cast<int>(item.rarity) < 0 || static_cast<int>(item.rarity) > 5) return fail("invalid rarity");
+	const auto main = EquipmentStats::ForMain(item.mainStat);
+	const auto range = GetEquipmentMainStatRange(item.mainStat, item.rarity);
+	const int mainValue = main.corePercentRoll ? item.mainStatPercent : item.mainStatValue;
+	if (mainValue < range.first || mainValue > range.second ||
+		(main.corePercentRoll ? item.mainStatValue != 0 : item.mainStatPercent != 0)) return fail("main stat has invalid units or range");
+	if (item.substats.size() != static_cast<std::size_t>(GetEquipmentSubstatCount(item.rarity))) return fail("incorrect substat count");
+	std::set<ItemStat> seen;
+	for (const auto& substat : item.substats) {
+		const auto subRange = CombatMath::SubstatRange(substat.first, item.rarity);
+		if (!AllowedSubstat(item.slot, substat.first) ||
+			std::find(item.allowedSubstats.begin(), item.allowedSubstats.end(), substat.first) == item.allowedSubstats.end() ||
+			!seen.insert(substat.first).second || substat.second < subRange.first || substat.second > subRange.second)
+			return fail("illegal, duplicate, or out-of-range substat");
+	}
+	for (ItemStat forbidden : item.forbiddenStats) {
+		if (EquipmentStats::HasStat(item.stats, forbidden) ||
+			EquipmentStats::ForStat(forbidden).flat == main.flat || seen.count(forbidden)) return fail("forbidden stat is present");
+	}
+	if (item.rarity == Rarity::Artifact && item.uniqueEffect.empty()) return fail("Artifact requires an authored unique effect");
+	return true;
 }
 
 std::vector<ItemDefinition> GenerateInvestigationLoot(ConsumableProfile profile, int playerLevel,
@@ -287,63 +262,98 @@ ItemDefinition BuildInvestigationConsumable(ConsumableProfile profile, int playe
 	return {};
 }
 
+double BossArtifactChance(int playerLevel) {
+	if (playerLevel < 70) return 0.0;
+	if (playerLevel < 80) return 1.0 + (playerLevel - 70) * .1;
+	return 2.0 + ((std::min)(100, playerLevel) - 80) * .15;
+}
+
 std::vector<ItemDefinition> GenerateLoot(const LootContext& context, unsigned seed) {
 	std::vector<ItemDefinition> result;
 	std::mt19937 rng(seed);
-	std::uniform_int_distribution<int> percent(0, 99);
 	static const auto equipment = BuildEquippableCatalog();
+	static const auto pools = [] {
+		std::array<std::vector<const ItemDefinition*>, 6> result;
+		for (const auto& item : equipment) result[static_cast<int>(item.rarity)].push_back(&item);
+		return result;
+	}();
+	static const auto consumables = BuildConsumableCatalog();
 	const bool boss = context.enemyTier == EnemyTier::Boss;
 	const bool elite = context.enemyTier == EnemyTier::Elite;
-	const bool rareEnemy = context.enemyTier == EnemyTier::Rare || context.enemyTier == EnemyTier::Epic;
 	const int level = (std::max)(1, context.playerLevel);
-	const int count = boss ? (context.bossFirstClear ? 4 : 3) : elite ? 2 : rareEnemy ? 1 : 1;
-	const int equipmentChance = boss || elite || rareEnemy ? 100 : (std::min)(100, 85 + level / 10);
-	for (int drop = 0; drop < count; ++drop) {
-		const unsigned instanceSeed = rng();
-		if (percent(rng) >= equipmentChance) continue;
-		const int rarityRoll = percent(rng);
-		Rarity rarity = Rarity::Common;
-		const bool rareUnlocked = level >= 10;
-		const bool epicUnlocked = level >= 20;
-		const bool legendaryUnlocked = boss && level >= 40;
-		const bool artifactUnlocked = boss && level >= 70;
-		if (boss && artifactUnlocked && rarityRoll < 5) rarity = Rarity::Artifact;
-		else if (boss && legendaryUnlocked && rarityRoll < 30) rarity = Rarity::Legendary;
-		else if (epicUnlocked && rarityRoll < (boss ? 95 : elite ? 75 : 45)) rarity = Rarity::Epic;
-		else if (rareUnlocked && rarityRoll < (boss ? 100 : elite ? 95 : 80)) rarity = Rarity::Rare;
-		else rarity = level >= 5 ? Rarity::Uncommon : Rarity::Common;
-		std::vector<ItemDefinition> candidates;
-		for (const auto& item : equipment) if (item.rarity == rarity) candidates.push_back(item);
-		if (!candidates.empty()) result.push_back(RollLootInstance(candidates[std::uniform_int_distribution<std::size_t>(0, candidates.size() - 1)(rng)], instanceSeed));
+	int guaranteed = 0;
+	double extraChance = 0;
+	double consumableChance = 0;
+	switch (context.enemyTier) {
+	case EnemyTier::Basic:
+		extraChance = .85 + .15 * ((std::min)(30, level) - 1) / 29.0;
+		consumableChance = .30; break;
+	case EnemyTier::Rare: guaranteed = 1; extraChance = .20; consumableChance = .40; break;
+	case EnemyTier::Epic: guaranteed = 1; extraChance = .50; consumableChance = .50; break;
+	case EnemyTier::Elite: guaranteed = 2; extraChance = .35; consumableChance = .65; break;
+	case EnemyTier::Boss: guaranteed = 3; extraChance = .50; consumableChance = 1.0; break;
+	default: throw std::invalid_argument("Unknown enemy loot tier");
 	}
-	const int consumableChance = boss ? 100 : elite ? 65 : context.enemyTier == EnemyTier::Epic ? 50 : rareEnemy ? 40 : 30;
-	const auto consumables = BuildConsumableCatalog();
-	if (!consumables.empty() && (boss || percent(rng) < consumableChance)) {
+	// These decisions have their own draws, independent of one another and of
+	// all rarity/template/stat draws. Pity never changes the consumable draw.
+	const bool extra = std::bernoulli_distribution(extraChance)(rng);
+	const bool consumable = std::bernoulli_distribution(consumableChance)(rng);
+	int count = guaranteed + (extra ? 1 : 0);
+	if (context.fountainFirstClear) count = 1;
+	else if (context.enemyTier == EnemyTier::Basic && context.guaranteedBasicGear) count = 1;
+	for (int drop = 0; drop < count; ++drop) {
+		const double rarityRoll = std::uniform_real_distribution<double>(0.0, 100.0)(rng);
+		Rarity rarity = Rarity::Common;
+		// Reported interpolation: Artifact replaces Legendary within their
+		// existing combined 30% bucket (1% at 70, 2% at 80, 5% at 100).
+		const double artifactChance = BossArtifactChance(level);
+		if (!context.fountainFirstClear) {
+			if (boss && level >= 70 && rarityRoll < artifactChance) rarity = Rarity::Artifact;
+			else if (boss && level >= 40 && rarityRoll < 30) rarity = Rarity::Legendary;
+			else if (level >= 20 && rarityRoll < (boss ? 95 : elite ? 75 : 45)) rarity = Rarity::Epic;
+			else if (level >= 10 && rarityRoll < (boss ? 100 : elite ? 95 : 80)) rarity = Rarity::Rare;
+			else rarity = level >= 5 ? Rarity::Uncommon : Rarity::Common;
+		}
+		const auto& candidates = pools[static_cast<int>(rarity)];
+		if (candidates.empty()) throw std::logic_error("Missing eligible enemy loot equipment");
+		const auto* item = candidates[std::uniform_int_distribution<std::size_t>(0, candidates.size() - 1)(rng)];
+		result.push_back(RollLootInstance(*item, rng()));
+	}
+	if (consumable) {
+		if (consumables.empty()) throw std::logic_error("Missing enemy loot consumables");
 		result.push_back(consumables[std::uniform_int_distribution<std::size_t>(0, consumables.size() - 1)(rng)]);
 	}
 	return result;
 }
 
 ItemDefinition RollLootInstance(ItemDefinition item, unsigned seed) {
-	if (item.category != ItemCategory::Equippable || item.slot == EquipSlot::None) return item;
-	const auto range = MainStatRange(item.mainStat, item.slot, item.rarity);
-	const int mainRoll = range.first + static_cast<int>(seed % static_cast<unsigned>(range.second - range.first + 1));
+	if (item.category != ItemCategory::Equippable) return item;
+	if (!AllowedMain(item.slot, item.mainStat)) throw std::invalid_argument("Invalid equipment main stat: " + item.name);
+	const auto range = GetEquipmentMainStatRange(item.mainStat, item.rarity);
+	std::mt19937 rng(seed);
+	const int mainRoll = std::uniform_int_distribution<int>(range.first, range.second)(rng);
 	item.mainStatValue = 0;
 	item.mainStatPercent = 0;
-	item.stats.hp = item.stats.def = item.stats.spd = item.stats.atk = 0;
-	if (item.mainStat == "hp") item.mainStatPercent = mainRoll;
-	else if (item.mainStat == "acc") item.mainStatPercent = mainRoll;
-	else if (item.mainStat == "res") item.mainStatPercent = mainRoll;
-	else if (item.mainStat == "def") item.mainStatValue = mainRoll;
-	else if (item.mainStat == "spd") item.mainStatValue = mainRoll;
+	const auto main = EquipmentStats::ForMain(item.mainStat);
+	if (main.corePercentRoll) item.mainStatPercent = mainRoll;
 	else item.mainStatValue = mainRoll;
 	item.substats.clear();
-	std::vector<ItemStat> selected;
-	for (std::size_t index = 0; index < item.allowedSubstats.size() && index < static_cast<std::size_t>(SubstatCount(item.rarity)); ++index) {
-		const ItemStat stat = item.allowedSubstats[(index + seed) % item.allowedSubstats.size()];
-		if (std::find(selected.begin(), selected.end(), stat) != selected.end()) continue;
-		selected.push_back(stat);
-		AddSubstat(item, stat, CombatMath::SubstatRoll(stat, item.rarity, seed + static_cast<unsigned>(index * 37)));
+	std::vector<ItemStat> eligible;
+	for (ItemStat stat : item.forbiddenStats) {
+		if (EquipmentStats::HasStat(item.stats, stat) || EquipmentStats::ForStat(stat).flat == main.flat)
+			throw std::invalid_argument("Forbidden fixed or main stat: " + item.name);
+	}
+	for (ItemStat stat : item.allowedSubstats) {
+		if (AllowedSubstat(item.slot, stat) &&
+			std::find(item.forbiddenStats.begin(), item.forbiddenStats.end(), stat) == item.forbiddenStats.end() &&
+			std::find(eligible.begin(), eligible.end(), stat) == eligible.end()) eligible.push_back(stat);
+	}
+	const int count = GetEquipmentSubstatCount(item.rarity);
+	if (eligible.size() < static_cast<std::size_t>(count)) throw std::invalid_argument("Too few legal substats: " + item.name);
+	std::shuffle(eligible.begin(), eligible.end(), rng);
+	for (int index = 0; index < count; ++index) {
+		const auto subRange = CombatMath::SubstatRange(eligible[index], item.rarity);
+		item.substats.emplace_back(eligible[index], std::uniform_int_distribution<int>(subRange.first, subRange.second)(rng));
 	}
 	return item;
 }
@@ -357,6 +367,8 @@ bool ValidateContentCatalog(std::string* error) {
 		if (error) *error = "Content catalogue contains an unnamed item.";
 		return false;
 	}
+	for (const auto& item : BuildEquippableCatalog()) if (!ValidateEquipmentDefinition(item, error)) return false;
+	if (!ValidateConsumableEffects(BuildConsumableCatalog(), error)) return false;
 	return true;
 }
 
@@ -445,23 +457,7 @@ std::vector<ItemDefinition> BuildEquippableCatalog() {
 		if (item.rarity != Rarity::Artifact) continue;
 		const std::string artifactMainStat = item.slot == EquipSlot::Boots ? "spd" : item.slot == EquipSlot::Torso ? "def" : item.slot == EquipSlot::Head ? "hp" : item.slot == EquipSlot::Accessory ? "hp" : "atk";
 		SetSlotRules(item, item.slot, artifactMainStat);
-		item.stats = {};
-		item.mainStatValue = 0;
-		item.mainStatPercent = 0;
-		item.substats.clear();
-		item.mainStat = artifactMainStat;
-		const int artifactMain = artifactMainStat == "spd" ? SpeedMainStatValue(Rarity::Artifact, 0)
-			: artifactMainStat == "def" ? MainDEFValue(Rarity::Artifact)
-			: artifactMainStat == "hp" ? PercentMainStatValue(Rarity::Artifact) : MainStatValue(Rarity::Artifact, 0);
-		if (artifactMainStat == "hp") item.mainStatPercent = artifactMain;
-		else item.mainStatValue = artifactMain;
-		for (int roll = 0; roll < SubstatCount(Rarity::Artifact); ++roll) {
-			if (!item.allowedSubstats.empty()) {
-				const ItemStat stat = item.allowedSubstats[static_cast<std::size_t>(roll % item.allowedSubstats.size())];
-				AddSubstat(item, stat, CombatMath::SubstatRoll(stat, Rarity::Artifact,
-					static_cast<unsigned>(roll * 31 + static_cast<int>(item.slot) * 17)));
-			}
-		}
+		item = RollLootInstance(item, TemplateSeed(item.name));
 		if (item.name.find("verdigris") != std::string::npos) item.setName = "Verdigris Matron";
 		else if (item.name.find("choir") != std::string::npos) item.setName = "Shimmer Reliquary";
 		else if (item.name.find("first_light") != std::string::npos) item.setName = "Oracle Automaton";

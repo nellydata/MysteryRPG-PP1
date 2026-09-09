@@ -54,6 +54,11 @@ void ConsoleUI::RenderRoom(const Area& area, const Player& player, const Progres
     std::cout << "\n=== ROOM: " << area.getName() << " ===\n";
     PrintPlayerPanel(player, progression);
     for (const auto& object : area.GetVisibleInteractables()) std::cout << "  Discovered: " << object << '\n';
+    if (area.IsIlluminated()) {
+        std::cout << "The room is illuminated by your lumen capsule. Objects in view:\n";
+        for (const auto& object : area.GetInteractables()) std::cout << "  " << object << '\n';
+    }
+    if (area.IsRustedLockUnlocked()) std::cout << "The cabinet's rusted lock is open.\n";
     if (area.HasBossBeenDefeated()) std::cout << "First clear complete. Repeat rewards and farming encounters are available.\n";
     else if (area.HasAllClues() && area.AreAllRequiredInteractablesRevealed() && !area.IsHealingRoom()) {
         for (const auto& room : MapManager::GetFloor1Definitions()) if (room.id == area.getName())
@@ -114,11 +119,11 @@ void ConsoleUI::ShowDefeat(const Player& player, const CombatManager& combat) co
     }
 }
 
-void ConsoleUI::ManageInventory(Player& player) const {
+void ConsoleUI::ManageInventory(Player& player, CombatManager* combat, Area* area) const {
     std::size_t page = 0;
     InventorySort sort = InventorySort::RecentlyObtained;
     while (std::cin) {
-        auto items = player.GetInventory().GetSortedItems(sort);
+        auto items = player.GetInventory().GetSortedItems(sort, ItemStat::ATK, player.GetEffectiveStats());
         if (items.empty()) { ShowMessage("Inventory is empty."); return; }
         page = (std::min)(page, (items.size() - 1) / 12);
         const std::size_t first = page * 12;
@@ -132,8 +137,9 @@ void ConsoleUI::ManageInventory(Player& player) const {
                           << (item.getMainStatPercent() ? item.getMainStatPercent() : item.getMainStatValue())
                           << (item.getMainStatPercent() ? "%" : "") << " instance=" << item.getInstanceId();
                 if (player.GetEquipped(item.getSlot()) == &item) std::cout << " [EQUIPPED]";
-            } else std::cout << " x" << player.GetInventory().GetQuantity(item.getName());
-            if (player.GetInventory().IsLocked(item.getName())) std::cout << " [LOCKED]";
+            } else std::cout << " x" << player.GetInventory().GetQuantity(item.getInstanceId());
+            if (player.GetInventory().IsLocked(item.getInstanceId())) std::cout << " [LOCKED]";
+            if (item.getCategory() == ItemCategory::Clue || item.getCategory() == ItemCategory::Crux) std::cout << " [STORY]";
             std::cout << '\n';
         }
         const int choice = Prompt("Inventory: select item; 13 next, 14 previous, 15 sort (newest/rarity/name), 0 return.", 0, 15);
@@ -148,22 +154,35 @@ void ConsoleUI::ManageInventory(Player& player) const {
         if (choice > static_cast<int>(count)) { ShowMessage("That item is not on this page."); continue; }
         Item& item = *items[first + choice - 1];
         ShowMessage(item.getName() + ": " + item.getDescription());
-        const auto& stats = item.getStats();
-        std::cout << "Stats: ATK+" << stats.atk << " HP+" << stats.hp << " DEF+" << stats.def << " SPD+" << stats.spd
-                  << " ATK%+" << stats.atkPercent << " HP%+" << stats.hpPercent << " DEF%+" << stats.defPercent
-                  << " CRIT+" << stats.critRate << " ACC+" << stats.acc << '\n';
+        for (const auto& line : item.GetStatLines()) ShowMessage(line);
+        if (item.isEquippable()) {
+            const Stats before = player.GetEffectiveStats();
+            const Stats after = player.GetEquipped(item.getSlot()) == &item ?
+                player.PreviewUnequip(item.getSlot()) : player.PreviewEquipment(item);
+            std::cout << "After equip/unequip: HP " << before.hp << " -> " << after.hp
+                      << ", ATK " << before.atk << " -> " << after.atk
+                      << ", DEF " << before.def << " -> " << after.def
+                      << ", SPD " << before.spd << " -> " << after.spd
+                      << "\nACC " << before.acc << " -> " << after.acc
+                      << ", RES " << before.res << " -> " << after.res
+                      << ", Crit " << before.critRate << "% -> " << after.critRate << "%\n";
+        }
+        if (!item.getUniqueEffect().empty()) ShowMessage("Unique effect: " + item.getUniqueEffect());
         if (!item.getPassive().empty()) ShowMessage(item.getPassive());
         if (!item.getSetPassive().empty()) ShowMessage(item.getSetName() + ": " + item.getSetPassive());
-        const int action = Prompt("Item action: 1 equip/unequip or use, 2 lock/unlock name, 3 discard instance, 0 cancel.", 0, 3);
+        const int action = Prompt("Item action: 1 equip/unequip or use, 2 lock/unlock this instance, 3 discard this instance/stack, 0 cancel.", 0, 3);
         const std::string name = item.getName();
+        const auto instanceId = item.getInstanceId();
         if (action == 1) {
             if (item.isEquippable()) ShowMessage(player.ToggleEquip(item) ? "Equipment updated: " + name : "Cannot equip this item.");
-            else if (item.getCategory() == ItemCategory::Consumable) ShowMessage(player.UseConsumable(name) ? "Used " + name : "This item needs a combat target.");
+            else if (item.getCategory() == ItemCategory::Consumable)
+                ShowMessage(player.UseConsumable(instanceId, nullptr, combat, area) ? "Used " + name :
+                    "Cannot use this item here: check its effect, lock, and required target or room.");
             else ShowMessage(item.getDescription());
         } else if (action == 2) {
-            player.GetInventory().SetLocked(name, !player.GetInventory().IsLocked(name));
+            player.GetInventory().SetLocked(instanceId, !player.GetInventory().IsLocked(instanceId));
         } else if (action == 3) {
-            ShowMessage(player.GetInventory().DiscardItem(item.getInstanceId()) ? "Discarded " + name : "Equipped or locked items cannot be discarded.");
+            ShowMessage(player.GetInventory().DiscardItem(instanceId) ? "Discarded " + name : "Equipped, locked, or story items cannot be discarded.");
         }
     }
 }

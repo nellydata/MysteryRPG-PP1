@@ -59,6 +59,11 @@ public:
                  ProgressionManager* progression = nullptr);
     bool UseConsumable(const std::string& itemName, Player& player, Enemy& enemy,
                        ProgressionManager* progression = nullptr);
+    bool UseConsumable(unsigned long long instanceId, Player& player, Enemy& enemy,
+                       ProgressionManager* progression = nullptr);
+    bool CanUseConsumableNow(const Player& player, const Enemy* target = nullptr) const;
+    bool HasActiveShimmerCooldowns() const;
+    int ReduceShimmerCooldowns(int turns);
     void enemyTurn(Player& player, Enemy& enemy, ProgressionManager* progression = nullptr);
     void enemyTurn(Player& player, Enemy& enemy, const std::vector<Enemy*>& enemies,
                    ProgressionManager* progression = nullptr);

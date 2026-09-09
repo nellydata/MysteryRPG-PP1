@@ -4,6 +4,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <chrono>
 
 enum class EnemySpawnCondition {
     None,
@@ -53,6 +54,13 @@ public:
     void RecordDiscoveryAttempt(bool success) { discoveryFailures_ = success ? 0 : discoveryFailures_ + 1; }
     unsigned NextInvestigationSeed();
     bool RevealNextInteractable();
+    bool RevealInteractable(const std::string& name);
+    bool CanBeIlluminated() const;
+    bool IsIlluminated() const;
+    void IlluminateFor(std::chrono::seconds duration);
+    bool HasRustedLock() const;
+    bool IsRustedLockUnlocked() const;
+    bool UnlockRustedLock();
     const std::vector<std::string>& GetVisibleInteractables() const;
     bool IsFullySearched() const;
     bool AreAllRequiredInteractablesRevealed() const;
@@ -106,4 +114,6 @@ private:
     bool healingRoom_;
     ResourcePool cluePool_;
     ResourcePool itemPool_;
+    std::chrono::steady_clock::time_point illuminatedUntil_{};
+    bool rustedLockUnlocked_ = false;
 };

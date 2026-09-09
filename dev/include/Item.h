@@ -7,6 +7,10 @@ class Item {
 public:
     Item(const std::string& name = "", const std::string& description = "");
     explicit Item(const ItemDefinition& definition);
+    Item(const Item&) = delete;
+    Item& operator=(const Item&) = delete;
+    Item(Item&&) = delete;
+    Item& operator=(Item&&) = delete;
     ~Item();
 
     const std::string& getName() const;
@@ -15,6 +19,9 @@ public:
     Rarity getRarity() const;
     EquipSlot getSlot() const;
     const Stats& getStats() const;
+    Stats GetStatBonuses() const;
+    std::vector<std::string> GetStatLines() const;
+    int GetStatContribution(ItemStat stat, const Stats& referenceStats) const;
     const std::string& getEffect() const;
     const std::string& getUniqueEffect() const;
     const std::string& getTheme() const;

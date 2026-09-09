@@ -5,6 +5,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <optional>
 
 class Area;
 class CombatManager;
@@ -46,11 +47,14 @@ public:
     InvestigationResult ResolveInvestigation(Area& area, Player& player,
                                               ProgressionManager& progression, unsigned seed);
     VictoryResult ResolveVictory(Area& area, Player& player, ProgressionManager& progression,
-                                MapManager& map, Enemy& enemy);
+                                MapManager& map, Enemy& enemy, std::optional<unsigned> seed = std::nullopt);
+    int GetBasicGearMisses() const { return basicGearMisses_; }
 
     bool Explore(Area& area, Player& player, ProgressionManager& progression,
                  CombatManager& combat, MapManager* map = nullptr);
     bool Explore(Area& area, Player& player, ProgressionManager& progression);
     bool explore(Area& area, Player& player, CombatManager& combat,
                  ProgressionManager& progression);
+private:
+    int basicGearMisses_ = 0;
 };

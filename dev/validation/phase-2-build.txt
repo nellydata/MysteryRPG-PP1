@@ -1,0 +1,54 @@
+
+  CombatCorrectnessTests.cpp
+  EquipmentV2Tests.cpp
+  ContentCatalog.cpp
+  Area.cpp
+  ConsumableEffects.cpp
+  ConsumableEffects.cpp
+  Clue.cpp
+  ContentCatalog.cpp
+  ConsoleUI.cpp
+  Area.cpp
+  CombatManager.cpp
+  ConsumableEffects.cpp
+  Area.cpp
+  Clue.cpp
+  CombatManager.cpp
+  ConsoleUI.cpp
+  CombatManager.cpp
+  Enemy.cpp
+  ContentCatalog.cpp
+  EncounterManager.cpp
+  EnemyCatalog.cpp
+  EncounterManager.cpp
+  Enemy.cpp
+  Inventory.cpp
+  EnemyCatalog.cpp
+  Enemy.cpp
+  Item.cpp
+  MapManager.cpp
+  EnemyCatalog.cpp
+  GameManager.cpp
+  Player.cpp
+  InteractionManager.cpp
+  Inventory.cpp
+  Inventory.cpp
+  Item.cpp
+  ProgressionManager.cpp
+  Item.cpp
+  MapManager.cpp
+  ShimmerSkill.cpp
+  main.cpp
+  Player.cpp
+  MapManager.cpp
+  Generating Code...
+  ProgressionManager.cpp
+  Player.cpp
+  ShimmerSkill.cpp
+  EquipmentV2Tests.vcxproj -> C:\Users\WorkPc\Desktop\COS-PP1\dev\bin\x64\Debug\EquipmentV2Tests.exe
+  ProgressionManager.cpp
+  Generating Code...
+  ShimmerSkill.cpp
+  Generating Code...
+  InvestigationHarness.vcxproj -> C:\Users\WorkPc\Desktop\COS-PP1\dev\bin\x64\Debug\InvestigationHarness.exe
+  COS-PP1.vcxproj -> C:\Users\WorkPc\Desktop\COS-PP1\dev\bin\x64\Debug\COS-PP1.exe

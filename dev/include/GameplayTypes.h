@@ -149,6 +149,8 @@ struct LootContext {
 	EnemyTier enemyTier = EnemyTier::Basic;
 	bool bossFirstClear = false;
 	bool bossFarmEcho = false;
+	bool guaranteedBasicGear = false;
+	bool fountainFirstClear = false;
 };
 
 struct DropProfile {

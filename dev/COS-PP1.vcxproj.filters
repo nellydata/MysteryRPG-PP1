@@ -21,6 +21,12 @@
     <ClInclude Include="include\ContentCatalog.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="include\ConsumableEffects.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\EquipmentStats.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="include\CombatMath.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -78,6 +84,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\ContentCatalog.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ConsumableEffects.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\ConsoleUI.cpp">

@@ -30,8 +30,32 @@ unsigned Area::NextInvestigationSeed() {
 }
 
 bool Area::RevealNextInteractable() {
-    if (visibleInteractables_.size() >= interactables_.size()) return false;
-    visibleInteractables_.push_back(interactables_[visibleInteractables_.size()]);
+    for (const auto& name : interactables_)
+        if (RevealInteractable(name)) return true;
+    return false;
+}
+
+bool Area::RevealInteractable(const std::string& name) {
+    if (std::find(interactables_.begin(), interactables_.end(), name) == interactables_.end() ||
+        std::find(visibleInteractables_.begin(), visibleInteractables_.end(), name) != visibleInteractables_.end()) return false;
+    visibleInteractables_.push_back(name);
+    return true;
+}
+
+bool Area::CanBeIlluminated() const { return name_ == "Archive Room" || name_ == "Chapel"; }
+bool Area::IsIlluminated() const { return std::chrono::steady_clock::now() < illuminatedUntil_; }
+void Area::IlluminateFor(std::chrono::seconds duration) {
+    if (CanBeIlluminated() && duration.count() > 0)
+        illuminatedUntil_ = std::chrono::steady_clock::now() + duration;
+}
+bool Area::HasRustedLock() const {
+    return !rustedLockUnlocked_ && name_ == "Archive Room" &&
+        std::find(interactables_.begin(), interactables_.end(), "Locked cabinet") != interactables_.end();
+}
+bool Area::IsRustedLockUnlocked() const { return rustedLockUnlocked_; }
+bool Area::UnlockRustedLock() {
+    if (!HasRustedLock()) return false;
+    rustedLockUnlocked_ = true;
     return true;
 }
 

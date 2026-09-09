@@ -3,6 +3,7 @@
 #include "GameplayTypes.h"
 #include <algorithm>
 #include <cmath>
+#include <random>
 
 namespace CombatMath {
 namespace Balance {
@@ -36,7 +37,7 @@ inline int Mitigate(int damage, int defense) {
 	return (std::max)(1, static_cast<int>(std::lround(damage * factor)));
 }
 
-inline int SubstatRoll(ItemStat stat, Rarity rarity, unsigned seed) {
+inline std::pair<int, int> SubstatRange(ItemStat stat, Rarity rarity) {
 	int minimum = 0;
 	int maximum = 0;
 	switch (rarity) {
@@ -45,7 +46,7 @@ inline int SubstatRoll(ItemStat stat, Rarity rarity, unsigned seed) {
 	case Rarity::Epic: minimum = 5; maximum = 8; break;
 	case Rarity::Legendary: minimum = 7; maximum = 12; break;
 	case Rarity::Artifact: minimum = 9; maximum = 18; break;
-	default: return 0;
+	default: return {0, 0};
 	}
 	if (stat == ItemStat::SPD) {
 		minimum = rarity == Rarity::Uncommon ? 2 : rarity == Rarity::Rare ? 3 : rarity == Rarity::Epic ? 4 : rarity == Rarity::Legendary ? 5 : 7;
@@ -55,7 +56,13 @@ inline int SubstatRoll(ItemStat stat, Rarity rarity, unsigned seed) {
 		minimum *= 2;
 		maximum *= 2;
 	}
-	return minimum + static_cast<int>(seed % static_cast<unsigned>(maximum - minimum + 1));
+	return {minimum, maximum};
+}
+
+inline int SubstatRoll(ItemStat stat, Rarity rarity, unsigned seed) {
+	const auto range = SubstatRange(stat, rarity);
+	std::mt19937 rng(seed);
+	return std::uniform_int_distribution<int>(range.first, range.second)(rng);
 }
 
 inline int AccuracyChance(int baseChance, int accuracy, int resistance) {

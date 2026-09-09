@@ -12,6 +12,9 @@
 #include "ConsoleConversionTests.h"
 #include "ProgressionOwnershipTests.h"
 #include "RewardOwnershipTests.h"
+#include "InventoryCorrectnessTests.h"
+#include "ConsumableCorrectnessTests.h"
+#include "LootEconomyTests.h"
 
 namespace {
 class ConstructorContractSkill final : public ShimmerSkill {
@@ -370,5 +373,8 @@ int main() {
 	TestConsoleConversion();
 	TestProgressionOwnership();
 	RunRewardOwnershipTests();
+	TestInventoryCorrectness();
+	RunConsumableCorrectnessTests();
+	RunLootEconomyTests();
 	return 0;
 }

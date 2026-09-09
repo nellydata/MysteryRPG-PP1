@@ -14,5 +14,9 @@ ItemDefinition BuildInvestigationConsumable(ConsumableProfile profile, int playe
 std::vector<ItemDefinition> GenerateInvestigationLoot(ConsumableProfile profile, int playerLevel, const std::string& roomId, unsigned seed, bool repeat = false);
 std::vector<ItemDefinition> GenerateLoot(const LootContext& context, unsigned seed);
 ItemDefinition RollLootInstance(ItemDefinition item, unsigned seed);
+std::pair<int, int> GetEquipmentMainStatRange(const std::string& mainStat, Rarity rarity);
+int GetEquipmentSubstatCount(Rarity rarity);
+bool ValidateEquipmentDefinition(const ItemDefinition& item, std::string* error = nullptr);
+double BossArtifactChance(int playerLevel); // Percentage, from 0 through 5.
 bool ValidateContentCatalog(std::string* error = nullptr);
 bool ValidateMicareContent(std::string* error = nullptr);

@@ -43,6 +43,8 @@
     <ClCompile Include="src\Area.cpp" />
     <ClCompile Include="src\Clue.cpp" />
     <ClCompile Include="src\ContentCatalog.cpp" />
+    <ClCompile Include="src\ConsumableEffects.cpp" />
+    <ClCompile Include="src\CombatManager.cpp" />
     <ClCompile Include="src\Enemy.cpp" />
     <ClCompile Include="src\EnemyCatalog.cpp" />
     <ClCompile Include="src\Inventory.cpp" />
@@ -51,6 +53,9 @@
     <ClCompile Include="src\Player.cpp" />
     <ClCompile Include="src\ProgressionManager.cpp" />
     <ClCompile Include="src\ShimmerSkill.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="tests\EquipmentEconomyTests.h" />
   </ItemGroup>
   <PropertyGroup>
     <OutDir>$(ProjectDir)bin\$(Platform)\$(Configuration)\</OutDir>

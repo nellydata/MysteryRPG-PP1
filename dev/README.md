@@ -30,6 +30,8 @@ msbuild COS-PP1.slnx /m /p:Configuration=Debug /p:Platform=x64
 .\bin\x64\Debug\EquipmentV2Tests.exe
 .\bin\x64\Debug\InvestigationHarness.exe
 .\bin\x64\Debug\COS-PP1.exe --validate
+.\tests\CheckHeaders.ps1
+.\tests\ConsoleEconomySmoke.ps1
 .\bin\x64\Debug\COS-PP1.exe
 ```
 
@@ -44,20 +46,20 @@ Enter a character name, or press Enter for Adelaide. Every numbered choice requi
 - Dashboard: rooms 1-5, inventory 6, Shimmer loadout 7, map 8, last encounter log 9, quit 0.
 - Room: investigate 1 or 2, inventory 3, map 4, skills 5, last encounter log 6, leave 0. The purified Fountain offers healing with 7.
 - Combat: attack 1, consumable 2, equipped Shimmer 3, flee 4, full log 5, toggle presentation speed 6. The actual gauge determines who acts first.
-- Inventory: choose an item to inspect and equip/unequip, use, lock/unlock, or discard. Paging and sorting retain separate rolled equipment instances. Equipped and locked items are protected from discard.
+- Inventory: choose an item to inspect its main/substats, fixed bonuses, and effective equipment comparison. Equip/unequip, use, lock/unlock, and discard apply to the selected instance. Discard removes its whole stack; using a consumable removes one unit. Equipped, locked, and story items are protected from discard.
 - Skills: choose each earned level-up reward, then equip/unequip unlocked skills within the 12-point loadout. A deferred reward remains available from the skills menu.
 - Defeat: review recent events and the final damage source, optionally open the complete encounter, then acknowledge with 0 to recover at the Fountain. Room progress survives death and fleeing.
 
 Combat events are printed once as actions resolve, with stable sequence IDs and an explicit full-log review. Output is never cleared between actions or room transitions. Normal presentation pauses 300 ms at action messages; `--fast` or combat option 6 removes that delay without changing combat calculations. The last encounter remains reviewable until another encounter starts.
 
-## Validation completed on 2026-09-08
+## Current validation checkpoint (2026-09-08)
 
 - Visual Studio MSBuild Debug x64: game and both standalone targets built successfully.
 - EquipmentV2Tests, InvestigationHarness, and content validation: exit code 0.
-- The harness checks 700,000 seeded ordinary enemy selections, 40,000 investigations with actual inventory/XP mutation, first-clear and farm boss rules, early fights, and 32 fresh progression simulations. Added console regressions cover lethal opening history, acknowledgment, stable IDs beyond 200 events, duplicate-free presentation, invalid input/EOF, and multiple queued Shimmer rewards.
-- A real keyboard-driven console session purified the Fountain, completed ordinary fights, discovered items and XP, equipped a weapon, reached level 2 without boss XP, selected/equipped/used Shimmer, lost to the level-8 Matron, reviewed the entire defeat, recovered, retried, earned its 200 first-clear XP, entered Archive Room, and revisited cleared Entrance Hall.
+- The harness checks 700,000 seeded ordinary enemy selections, 40,000 investigations with actual inventory/XP mutation, 900,000 loot selections, Basic gear pity, first-clear and farm boss rules, early fights, and 32 fresh progression simulations. Equipment tests validate 9,664 rolls, percentage/fixed aggregation, and unchanged state during previews. All 12 consumable definitions have runtime regression coverage.
+- The repeatable keyboard smoke test starts a fresh character, locks/unlocks and attempts a locked consumable, equips gear, uses a consumable in combat, purifies the Fountain, checks the guaranteed Common drop and its actual stat comparison, protects equipped items from discard, heals, changes the Shimmer loadout, enters Entrance Hall, and exits.
 - The tested executable has PE subsystem 3 (console), no USER32/GDI/Python dependencies, and had a zero GUI window handle during the running smoke test. Only the terminal was used.
 
-Evidence: [automated results](validation/progression-validation.txt), [actual console transcript](validation/console-smoke.txt), and [conversion report](validation/course-conversion.md).
+Evidence and phase boundaries: [gameplay audit](validation/gameplay-audit.md), [automated results](validation/phase-2-tests.txt), [equipment tests](validation/phase-2-equipment.txt), and [actual console transcript](validation/phase-2-console.txt).
 
-There are no known course-compliance blockers in the tested Debug x64 configuration. Progress is retained during the running session; the existing game has no disk-save system. Existing strong equipment and Shimmer values can allow boss clears earlier than the suggested readiness level; the smoke session cleared Matron at level 2 using earned equipment and Gleam Needle. Those existing item/skill balance values were preserved during this conversion.
+There are no known course-compliance blockers in the tested Debug x64 configuration. Progress is retained during the running session; the existing game has no disk-save system. This is a functional audit checkpoint, not certification of every gameplay system. Status/action/RNG mechanics, full ability and set/Artifact behavior, discovery consistency, final balance, and the full console progression smoke remain for later phases. Earlier conversion-era balance results predate the percentage equipment repair.

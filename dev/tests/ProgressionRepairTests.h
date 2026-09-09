@@ -328,10 +328,9 @@ inline void TestFixedBossAndFirstClear() {
     std::cout << "FARM hpLevel1=" << farmHP1 << " hpLevel20=" << farmHP20 << '\n';
 }
 
-inline double EquipmentScore(const Item& item) {
-    const auto& stats = item.getStats();
-    return stats.atk * 4.0 + stats.atkPercent * 4.0 + stats.hp * 0.25 + stats.hpPercent
-        + stats.def * 0.5 + stats.defPercent * 0.5 + stats.spd * 2.0 + stats.spdPercent * 2.0
+inline double EquipmentScore(const Stats& stats) {
+    return stats.atk * 4.0 + stats.hp * 0.25
+        + stats.def * 0.5 + stats.spd * 2.0
         + stats.critRate + stats.critDamage * 0.3 + stats.acc * 0.3 + stats.evasion;
 }
 
@@ -339,7 +338,8 @@ inline void EquipUpgrades(Player& player) {
     for (const auto& entry : player.GetInventory().GetItems()) {
         if (!entry->isEquippable() || entry->getSlot() == EquipSlot::None) continue;
         const Item* equipped = player.GetEquipped(entry->getSlot());
-        if (!equipped || EquipmentScore(*entry.item) > EquipmentScore(*equipped)) player.Equip(*entry.item);
+        if (!equipped || EquipmentScore(player.PreviewEquipment(*entry.item)) >
+            EquipmentScore(player.GetEffectiveStats())) player.Equip(*entry.item);
     }
 }
 

@@ -18,7 +18,7 @@ public:
     void PresentEvents(const CombatManager&) const;
     void ShowBattleHistory(const CombatManager&) const;
     void ShowDefeat(const Player&, const CombatManager&) const;
-    void ManageInventory(Player&) const;
+    void ManageInventory(Player&, CombatManager* combat = nullptr, Area* area = nullptr) const;
     void ManageShimmerSkills(ProgressionManager&) const;
     void ShowMap(const std::vector<Area>&) const;
     void ShowMessage(const std::string&) const;

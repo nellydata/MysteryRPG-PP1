@@ -5,6 +5,7 @@
 #include <cmath>
 #include "ShimmerSkill.h"
 #include "CombatMath.h"
+#include "ConsumableEffects.h"
 #include <algorithm>
 #include <string>
 #include <memory>
@@ -421,30 +422,94 @@ bool CombatManager::resolve(CombatAction action, Player& player, Enemy& enemy,
 }
 
 bool CombatManager::UseConsumable(const std::string& itemName, Player& player, Enemy& enemy, ProgressionManager* progression) {
+    const Item* item = player.GetInventory().FindUsableItem(itemName);
+    if (item == nullptr) {
+        AddEvent(CombatEvent::Kind::Info, "No unlocked consumable with that name is available.");
+        return false;
+    }
+    return UseConsumable(item->getInstanceId(), player, enemy, progression);
+}
+
+bool CombatManager::CanUseConsumableNow(const Player& player, const Enemy* target) const {
+    if (encounterCompleted_ || !player.isAlive() || !playerTurn_ || consumableUsedThisTurn_ ||
+        activeEnemy_ == nullptr || !activeEnemy_->isAlive()) return false;
+    if (target == nullptr) return true;
+    if (!target->isAlive()) return false;
+    return target == activeEnemy_ || std::find(currentEnemyParty_.begin(), currentEnemyParty_.end(), target) != currentEnemyParty_.end();
+}
+
+bool CombatManager::HasActiveShimmerCooldowns() const {
+    return std::any_of(shimmerCooldowns_.begin(), shimmerCooldowns_.end(), [](const auto& cooldown) { return cooldown.second > 0; });
+}
+
+int CombatManager::ReduceShimmerCooldowns(int turns) {
+    if (turns <= 0) return 0;
+    int reduced = 0;
+    for (auto& cooldown : shimmerCooldowns_) {
+        const int reduction = (std::min)(turns, cooldown.second);
+        cooldown.second -= reduction;
+        reduced += reduction;
+    }
+    return reduced;
+}
+
+bool CombatManager::UseConsumable(unsigned long long instanceId, Player& player, Enemy& enemy, ProgressionManager* progression) {
     if (!player.isAlive()) {
         enemy.ForfeitRewards();
         ForfeitEncounterRewards();
         return false;
     }
-    if (encounterCompleted_ || !player.isAlive() || !enemy.isAlive() || !playerTurn_ || consumableUsedThisTurn_) {
-        AddEvent(CombatEvent::Kind::Info, "Only one consumable can be used per turn.");
+    if (!CanUseConsumableNow(player, &enemy)) {
+        AddEvent(CombatEvent::Kind::Info, "A consumable requires your active turn and a living encounter target.");
         return false;
     }
+    const Item* item = player.GetInventory().FindItem(instanceId);
+    if (item == nullptr) return false;
+    const std::string itemName = item->getName();
+    const auto* effect = FindConsumableEffect(item->getEffect());
     const int healthBefore = player.getHP();
-    const int enemyHealthBefore = enemy.getHP();
-    const auto enemyStatusesBefore = enemy.GetStatuses().size();
-    if (!player.UseConsumable(itemName, &enemy)) {
-        AddEvent(CombatEvent::Kind::Info, "That consumable cannot be used in battle.");
+    const int barrierBefore = player.GetBarrier();
+    const auto playerApplicationsBefore = player.GetStatusApplications().size();
+    const auto enemyApplicationsBefore = enemy.GetStatusApplications().size();
+    const auto countNegative = [](const Player& actor) {
+        return std::count_if(actor.GetStatuses().begin(), actor.GetStatuses().end(), [](const StatusEffect& status) { return IsNegativeConsumableStatus(status.type); });
+    };
+    const auto negativeBefore = countNegative(player);
+    int cooldownBefore = 0;
+    for (const auto& cooldown : shimmerCooldowns_) cooldownBefore += cooldown.second;
+    if (!player.UseConsumable(instanceId, &enemy, this)) {
+        AddEvent(CombatEvent::Kind::Info, "That consumable is locked, unavailable, or has no effect in the current context.");
         return false;
     }
     consumableUsedThisTurn_ = true;
-    AddEvent(CombatEvent::Kind::Info, player.getName() + " uses " + itemName + ".");
+    const bool offensive = effect != nullptr && (effect->kind == ConsumableEffectKind::FlatDamage || effect->kind == ConsumableEffectKind::ApplyBurn);
+    auto& action = AddEvent(CombatEvent::Kind::Skill, player.getName() + " uses " + itemName + " on " + (offensive ? enemy.getName() : player.getName()) + ".");
+    action.actor = player.getName(); action.target = offensive ? enemy.getName() : player.getName(); action.skill = itemName;
     const int healing = player.getHP() - healthBefore;
-    const int damage = enemyHealthBefore - enemy.getHP();
-    if (healing > 0) AddEvent(CombatEvent::Kind::Heal, player.getName() + " heals " + std::to_string(healing) + " HP.", healing);
-    if (damage > 0) RecordDamage(player.getName(), enemy.getName(), itemName, enemy.GetLastDamageResult());
-    if (enemy.GetStatuses().size() > enemyStatusesBefore)
-        AddEvent(CombatEvent::Kind::Status, enemy.getName() + " receives " + StatusDisplayName(enemy.GetStatuses().back().type) + " from " + itemName + ".");
+    if (healing > 0) {
+        auto& event = AddEvent(CombatEvent::Kind::Heal, player.getName() + " heals " + std::to_string(healing) + " HP.", healing);
+        event.actor = player.getName(); event.target = player.getName(); event.skill = itemName; event.remainingHP = player.getHP();
+    }
+    if (player.GetBarrier() > barrierBefore)
+        AddEvent(CombatEvent::Kind::Shield, player.getName() + " gains " + std::to_string(player.GetBarrier() - barrierBefore) + " barrier.", player.GetBarrier() - barrierBefore);
+    if (effect != nullptr && effect->kind == ConsumableEffectKind::FlatDamage)
+        RecordDamage(player.getName(), enemy.getName(), itemName, enemy.GetLastDamageResult());
+    const auto recordApplications = [&](const std::vector<StatusApplicationResolution>& applications, std::size_t first, const std::string& targetName) {
+        for (std::size_t index = first; index < applications.size(); ++index) {
+            const auto& result = applications[index];
+            auto& event = AddEvent(result.applied ? CombatEvent::Kind::Status : CombatEvent::Kind::Resistance,
+                targetName + (result.applied ? " receives " : " resists ") + StatusDisplayName(result.status.type) +
+                (result.applied ? " (" + std::to_string(result.status.turns) + " turns, potency " + std::to_string(result.status.potency) + ")" : "") + " from " + itemName + ".");
+            event.actor = player.getName(); event.target = targetName; event.skill = itemName;
+        }
+    };
+    recordApplications(player.GetStatusApplications(), playerApplicationsBefore, player.getName());
+    recordApplications(enemy.GetStatusApplications(), enemyApplicationsBefore, enemy.getName());
+    const auto cleansed = negativeBefore - countNegative(player);
+    if (cleansed > 0) AddEvent(CombatEvent::Kind::Cleanse, player.getName() + " cleanses " + std::to_string(cleansed) + " negative statuses.", static_cast<int>(cleansed));
+    int cooldownAfter = 0;
+    for (const auto& cooldown : shimmerCooldowns_) cooldownAfter += cooldown.second;
+    if (cooldownAfter < cooldownBefore) AddEvent(CombatEvent::Kind::Info, itemName + " removes " + std::to_string(cooldownBefore - cooldownAfter) + " total Shimmer cooldown turns.", cooldownBefore - cooldownAfter);
     if (!enemy.isAlive()) AddEvent(CombatEvent::Kind::Death, enemy.getName() + " has been defeated.");
     ResolveDefeatReward(player, enemy, progression);
     playerGauge_ -= 1000;

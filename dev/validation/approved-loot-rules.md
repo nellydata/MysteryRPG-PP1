@@ -18,6 +18,6 @@ Rarity gates: Common 1, Uncommon 5, Rare 10, Epic 20, Legendary 40 (bosses only)
 
 Approved level-100 Boss distribution: Rare 5%, Epic 65%, Legendary 25%, Artifact 5%. Artifact anchors: level 70 = 1%, level 80 = 2%, level 100 = 5%.
 
-Proposed interpolation for review: interpolate Artifact chance linearly within 70-80 and 80-100. Preserve the existing cumulative 30% Legendary-or-Artifact bucket, so increasing Artifact share replaces Legendary share; retain the existing 65% Epic / 5% Rare shares once all four tiers are eligible. Thus level 70 would be 1% Artifact / 29% Legendary / 65% Epic / 5% Rare, and level 80 would be 2% / 28% / 65% / 5%. This proposal reaches the supplied level-100 distribution without inventing unrelated rarity breakpoints. It has not yet been applied in Phase 1.
+Reported interpolation, applied in Phase 2: interpolate Artifact chance linearly within 70-80 and 80-100. Preserve the existing cumulative 30% Legendary-or-Artifact bucket, so increasing Artifact share replaces Legendary share; retain the existing 65% Epic / 5% Rare shares once all four tiers are eligible. Thus level 70 is 1% Artifact / 29% Legendary / 65% Epic / 5% Rare, and level 80 is 2% / 28% / 65% / 5%. This is the explicitly reported proposal for intermediate weights, not an assertion that the user supplied every intermediate weight.
 
 Encounter selection is independent of loot: preserve 50% eligible first-clear boss spawning and the separate 8% farming-boss draw.

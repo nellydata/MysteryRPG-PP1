@@ -12,6 +12,7 @@
   <ItemDefinitionGroup><ClCompile><WarningLevel>Level3</WarningLevel><SDLCheck>true</SDLCheck><ConformanceMode>true</ConformanceMode><LanguageStandard>stdcpp17</LanguageStandard><AdditionalIncludeDirectories>$(ProjectDir)include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories><PreprocessorDefinitions>_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions></ClCompile><Link><SubSystem>Console</SubSystem></Link></ItemDefinitionGroup>
   <ItemGroup>
 	<ClCompile Include="tests\CombatCorrectnessTests.cpp" />
+    <ClCompile Include="src\ConsumableEffects.cpp" />
 	<ClCompile Include="src\Area.cpp" /><ClCompile Include="src\CombatManager.cpp" /><ClCompile Include="src\ConsoleUI.cpp" /><ClCompile Include="src\ContentCatalog.cpp" /><ClCompile Include="src\EncounterManager.cpp" /><ClCompile Include="src\Enemy.cpp" /><ClCompile Include="src\EnemyCatalog.cpp" /><ClCompile Include="src\Inventory.cpp" /><ClCompile Include="src\Item.cpp" /><ClCompile Include="src\MapManager.cpp" /><ClCompile Include="src\Player.cpp" /><ClCompile Include="src\ProgressionManager.cpp" /><ClCompile Include="src\ShimmerSkill.cpp" />
   </ItemGroup>
   <PropertyGroup>
@@ -24,6 +25,9 @@
     <ClInclude Include="tests\ConsoleConversionTests.h" />
     <ClInclude Include="tests\ProgressionOwnershipTests.h" />
     <ClInclude Include="tests\RewardOwnershipTests.h" />
+    <ClInclude Include="tests\InventoryCorrectnessTests.h" />
+    <ClInclude Include="tests\ConsumableCorrectnessTests.h" />
+    <ClInclude Include="tests\LootEconomyTests.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>

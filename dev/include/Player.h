@@ -8,6 +8,9 @@
 #include "Item.h"
 #include "Inventory.h"
 
+class CombatManager;
+class Area;
+
 class Player {
 public:
     Player(const std::string& name = "Adelaide", int maxHp = 100, int maxSp = 10);
@@ -49,6 +52,9 @@ public:
     int getDisplayedCritRate() const;
     int getDisplayedEvasion() const;
     const Stats& getStats() const;
+    Stats GetEffectiveStats() const;
+    Stats PreviewEquipment(const Item& item) const;
+    Stats PreviewUnequip(EquipSlot slot) const;
     std::size_t GetInventorySize() const;
 
     void increaseMaxHP(int amount);
@@ -62,7 +68,10 @@ public:
     void PrintInventory() const;
     bool Equip(Item& item);
     bool ToggleEquip(Item& item);
-    bool UseConsumable(const std::string& itemName, class Enemy* target = nullptr);
+    bool UseConsumable(const std::string& itemName, class Enemy* target = nullptr,
+                       CombatManager* combat = nullptr, Area* area = nullptr);
+    bool UseConsumable(unsigned long long instanceId, class Enemy* target = nullptr,
+                       CombatManager* combat = nullptr, Area* area = nullptr);
     bool HasStatus(StatusType type) const;
     bool ApplyStatus(const StatusEffect& status, int accuracy = 100);
     void ProcessStatuses();
@@ -98,6 +107,8 @@ private:
     Item* equipped_[5];
 
     void RecalculateStats();
+    Stats CalculateEquipmentStats(const Item* const equipment[5]) const;
+    Stats EffectiveStatsFor(const Stats& stats) const;
     int SumStatusBonus(StatusType type) const;
     static std::vector<std::pair<StatusType, int>>& EmptyDamageEvents();
     static int& EmptyHealing();

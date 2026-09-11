@@ -1,4 +1,5 @@
 #include "EnemyCatalog.h"
+#include "Catalog.h"
 #include "Enemy.h"
 #include <algorithm>
 #include <cmath>
@@ -216,8 +217,7 @@ bool ValidateEnemyCatalogue(std::string* error) {
 }
 
 const EnemyDefinition* FindEnemyDefinition(const std::string& name) {
-	for (const auto& definition : GetEnemyCatalogue()) if (definition.name == name) return &definition;
-	return nullptr;
+	return Catalog::FindByName(GetEnemyCatalogue(), name);
 }
 
 std::unique_ptr<Enemy> CreateCatalogueEnemy(const std::string& name, int level) {

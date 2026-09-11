@@ -454,3 +454,11 @@ FodyWeavers.xsd
 *.vsidx
 *.vs
 .DS_Store
+
+# Full baseline console captures are preserved, hash-verified, in this archive.
+!dev/validation/endurance-evidence.zip
+/dev/validation/endurance*-console-*.txt
+/dev/validation/endurance*-state.json
+/dev/validation/endurance-extended-replay-input.txt
+/dev/validation/endurance-extended-replay-output.txt
+/dev/validation/endurance-final-events.txt

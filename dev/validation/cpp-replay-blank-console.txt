@@ -1,0 +1,21 @@
+MICARE - console edition
+Investigator name (Enter for Adelaide):
+> 
+
+=== MICARE: CATHEDRAL OF LIES ===
+Adelaide | Level 1 | HP 108/108 | ATK 20 DEF 10 SPD 100 | XP 0/100
+Investigate, improve your equipment, and challenge each room's guardian.
+1. Fountain
+2. Entrance Hall [LOCKED]
+3. Archive Room [LOCKED]
+4. Chapel [LOCKED]
+5. Storage Room [LOCKED]
+6. Inventory
+7. Shimmer skills
+8. Floor map
+9. Last encounter log
+0. Quit
+
+Destination or panel:
+> 0
+Session complete.

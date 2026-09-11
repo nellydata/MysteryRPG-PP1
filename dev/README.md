@@ -11,6 +11,7 @@ dev/
   COS-PP1.vcxproj.filters
   InvestigationHarness.vcxproj
   EquipmentV2Tests.vcxproj
+  ConsoleValidation.vcxproj
   include/                         Shared model/manager and console headers
   src/                             Standard C++ game and console implementation
   tests/                           Existing tests plus console regressions
@@ -23,19 +24,19 @@ The relocated local `COS-PP1.vcxproj.user` is ignored by Git. Shared working-dir
 
 ## Build and validate
 
-From this folder in a Visual Studio Developer PowerShell:
+From this folder in a Visual Studio Developer Command Prompt:
 
-```powershell
+```text
 msbuild COS-PP1.slnx /m /p:Configuration=Debug /p:Platform=x64
 .\bin\x64\Debug\EquipmentV2Tests.exe
 .\bin\x64\Debug\InvestigationHarness.exe
 .\bin\x64\Debug\COS-PP1.exe --validate
-.\tests\CheckHeaders.ps1
-.\tests\ConsoleEconomySmoke.ps1
+.\bin\x64\Debug\ConsoleValidation.exe --headers
+.\bin\x64\Debug\ConsoleValidation.exe --smoke
 .\bin\x64\Debug\COS-PP1.exe
 ```
 
-All three projects build together. Test projects compile their own copy of the shared gameplay sources. Each project has its own intermediate directory, and no source/include reference depends on the parent directory. The repository's VS Code task and debugger configuration point to this solution and executable.
+All four projects build together. The two gameplay test projects compile their own copy of the shared gameplay sources. ConsoleValidation is a separate C++17 executable that drives the real game's keyboard input and captures its output; it does not link gameplay managers or inject player state. Its process and pipe transport uses Windows system APIs without a graphical interface. Each project has its own intermediate directory, and no source/include reference depends on the parent directory. The repository's VS Code task directly runs the installed Visual Studio 18 Community MSBuild executable; update that task's executable path if a different Visual Studio edition or location is used.
 
 For VS Code, open the repository root and install the recommended Microsoft **C/C++** extension (`ms-vscode.cpptools`). It supplies the `cppvsdbg` debugger used by **Debug COS-PP1 (x64)**. If VS Code reports that `cppvsdbg` is unsupported, install/enable that extension and run **Developer: Reload Window**. To play directly in the terminal, use **Tasks: Run Task > Run COS-PP1 (console)**; this builds the solution and starts the game without a debugger.
 
@@ -61,6 +62,8 @@ Combat events are printed once as actions resolve, with stable sequence IDs and 
 - The repeatable keyboard smoke test starts a fresh character, locks/unlocks and attempts a locked consumable, equips gear, uses a consumable in combat, purifies the Fountain, checks the guaranteed Common drop and its actual stat comparison, protects equipped items from discard, heals, changes the Shimmer loadout, enters Entrance Hall, and exits.
 - The tested executable has PE subsystem 3 (console), no USER32/GDI/Python dependencies, and had a zero GUI window handle during the running smoke test. Only the terminal was used.
 
-Evidence and phase boundaries: [gameplay audit](validation/gameplay-audit.md), [automated results](validation/phase-3-tests.txt), [equipment tests](validation/phase-3-equipment.txt), and [actual console transcript](validation/phase-3-console.txt). To capture this checkpoint separately, run `tests/ConsoleEconomySmoke.ps1 -CaptureName phase-3`.
+Evidence and phase boundaries: [gameplay audit](validation/gameplay-audit.md), [automated results](validation/phase-3-tests.txt), [equipment tests](validation/phase-3-equipment.txt), and [actual console transcript](validation/phase-3-console.txt). Capture a new smoke transcript with `bin/x64/Debug/ConsoleValidation.exe --smoke capture-name`; existing evidence remains unchanged.
+
+All maintained automation is C++. `ConsoleValidation --endurance capture-name 100 250 --sets` starts a fresh character, earns every level through the real console, performs 250 more investigations after reaching Level 100, checks Storage farming, and exercises available equipment sets using only items actually earned. Every submitted key and observed item detail is captured in `validation`. `--replay input.txt capture-name` replays a keyboard-input text file; a segmented historical capture prefix is also accepted. These captures are observations, not save files or injected player state. The former PowerShell validation scripts have been replaced by this target.
 
 There are no known course-compliance blockers in the tested Debug x64 configuration. Progress is retained during the running session; the existing game has no disk-save system. This is a functional audit checkpoint, not certification of every gameplay system. The full ability catalogue, approved set/Artifact triggers and their action exceptions, discovery consistency, final balance, and the full console progression smoke remain for later phases. Earlier conversion-era balance results predate the percentage equipment repair.

@@ -18,6 +18,11 @@
 #include "StatusResolutionTests.h"
 #include "ShimmerDamageTests.h"
 #include "CombatActionTests.h"
+#include "StorageFarmingTests.h"
+#include "CombatMenuPaginationTests.h"
+#include "AccelerationSkillTests.h"
+#include "LegendarySetTests.h"
+#include "TestDiagnostics.h"
 
 namespace {
 class ConstructorContractSkill final : public ShimmerSkill {
@@ -63,6 +68,11 @@ void EquipSyntheticSet(Player& player, const std::string& setName) {
 }
 
 int main() {
+    UseConsoleTestDiagnostics();
+    RunStorageFarmingTests();
+    RunCombatMenuPaginationTests();
+    RunAccelerationSkillTests();
+    RunLegendarySetTests();
     RunStatusResolutionTests();
     RunShimmerDamageTests();
     RunCombatActionTests();
@@ -228,7 +238,7 @@ int main() {
 		Player player("Set Test", 100, 10);
 		EquipFullSet(player, "Automaton Overlord");
 		assert(player.HasActiveSet("Automaton Overlord"));
-		assert(player.getAccuracy() == 100);
+		assert(player.getSpeed() >= 120);
 		assert(player.getCritDamage() >= 200);
 	}
 
@@ -236,8 +246,8 @@ int main() {
 		Player player("Set Test", 100, 10);
 		EquipSyntheticSet(player, "Shimmer Ascendant");
 		assert(player.HasActiveSet("Shimmer Ascendant"));
-		assert(player.getAttack() == 35);
-		assert(player.getAccuracy() == 15);
+		assert(player.getAttack() == 26);
+		assert(player.getAccuracy() == 0);
 	}
 
 	{

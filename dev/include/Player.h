@@ -94,6 +94,7 @@ public:
     Item* FindItem(const std::string& itemName);
     const std::vector<StatusEffect>& GetStatuses() const;
     const Item* GetEquipped(EquipSlot slot) const;
+    int GetSetPieceCount(const std::string& setName) const;
     std::vector<std::string> GetActiveSets() const;
     bool HasActiveSet(const std::string& setName) const;
     int GetShimmerDamageMultiplierPercent() const;

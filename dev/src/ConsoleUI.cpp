@@ -1,6 +1,7 @@
 #include "ConsoleUI.h"
 #include "Area.h"
 #include "CombatManager.h"
+#include "ConsoleFormat.h"
 #include "EnemyCatalog.h"
 #include "Item.h"
 #include "MapManager.h"
@@ -15,25 +16,15 @@
 
 namespace {
 bool fastPresentation = false;
-const char* SlotName(EquipSlot slot) {
-    static const char* names[] = {"Head", "Torso", "Boots", "Hand", "Accessory", "None"};
-    return names[static_cast<int>(slot)];
-}
-const char* RarityName(Rarity rarity) {
-    static const char* names[] = {"Common", "Uncommon", "Rare", "Epic", "Legendary", "Artifact"};
-    return names[static_cast<int>(rarity)];
-}
 }
 
 void ConsoleUI::SetFast(bool fast) { fastPresentation = fast; }
 bool ConsoleUI::IsFast() { return fastPresentation; }
 
 void ConsoleUI::PrintPlayerPanel(const Player& player, const ProgressionManager& progression) const {
-    std::cout << player.getName() << " | Level " << progression.GetLevel()
-              << " | HP " << player.getHP() << '/' << player.getMaxHP()
-              << " | ATK " << player.getAttack() << " DEF " << player.getDefense()
-              << " SPD " << player.getSpeed() << " | XP " << progression.GetXP()
-              << '/' << progression.GetXPToNextLevel() << '\n';
+    std::cout << ConsoleFormat::PlayerPanel(player.getName(), progression.GetLevel(),
+        player.getHP(), player.getMaxHP(), player.getAttack(), player.getDefense(),
+        player.getSpeed(), progression.GetXP(), progression.GetXPToNextLevel());
 }
 
 void ConsoleUI::RenderDashboard(const Player& player, const ProgressionManager& progression,
@@ -128,12 +119,12 @@ void ConsoleUI::ManageInventory(Player& player, CombatManager* combat, Area* are
         page = (std::min)(page, (items.size() - 1) / 12);
         const std::size_t first = page * 12;
         const std::size_t count = (std::min)(std::size_t{12}, items.size() - first);
-        std::cout << "\n=== INVENTORY page " << page + 1 << '/' << (items.size() + 11) / 12 << " ===\n";
+        std::cout << '\n' << ConsoleFormat::PageHeader("INVENTORY", page + 1, (items.size() + 11) / 12);
         for (std::size_t index = 0; index < count; ++index) {
             const Item& item = *items[first + index];
-            std::cout << index + 1 << ". " << item.getName() << " [" << RarityName(item.getRarity()) << "]";
+            std::cout << index + 1 << ". " << item.getName() << " [" << ConsoleFormat::RarityName(item.getRarity()) << "]";
             if (item.isEquippable()) {
-                std::cout << " " << SlotName(item.getSlot()) << " " << item.getMainStat() << "+"
+                std::cout << " " << ConsoleFormat::SlotName(item.getSlot()) << " " << item.getMainStat() << "+"
                           << (item.getMainStatPercent() ? item.getMainStatPercent() : item.getMainStatValue())
                           << (item.getMainStatPercent() ? "%" : "") << " instance=" << item.getInstanceId();
                 if (player.GetEquipped(item.getSlot()) == &item) std::cout << " [EQUIPPED]";
@@ -159,13 +150,7 @@ void ConsoleUI::ManageInventory(Player& player, CombatManager* combat, Area* are
             const Stats before = player.GetEffectiveStats();
             const Stats after = player.GetEquipped(item.getSlot()) == &item ?
                 player.PreviewUnequip(item.getSlot()) : player.PreviewEquipment(item);
-            std::cout << "After equip/unequip: HP " << before.hp << " -> " << after.hp
-                      << ", ATK " << before.atk << " -> " << after.atk
-                      << ", DEF " << before.def << " -> " << after.def
-                      << ", SPD " << before.spd << " -> " << after.spd
-                      << "\nACC " << before.acc << " -> " << after.acc
-                      << ", RES " << before.res << " -> " << after.res
-                      << ", Crit " << before.critRate << "% -> " << after.critRate << "%\n";
+            std::cout << ConsoleFormat::StatPreview(before, after);
         }
         if (!item.getUniqueEffect().empty()) ShowMessage("Unique effect: " + item.getUniqueEffect());
         if (!item.getPassive().empty()) ShowMessage(item.getPassive());

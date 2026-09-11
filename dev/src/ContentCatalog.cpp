@@ -1,4 +1,5 @@
 #include "ContentCatalog.h"
+#include "Catalog.h"
 #include <algorithm>
 #include <random>
 #include <stdexcept>
@@ -65,13 +66,14 @@ bool AllowedSubstat(EquipSlot slot, ItemStat stat) {
 		}
 		return result;
 	}();
+	if (!IsWearableSlot(slot)) return false;
 	const int index = static_cast<int>(slot);
-	return index >= 0 && index < 5 && std::find(pools[index].begin(), pools[index].end(), stat) != pools[index].end();
+	return std::find(pools[index].begin(), pools[index].end(), stat) != pools[index].end();
 }
 
 bool AllowedMain(EquipSlot slot, const std::string& key) {
 	const auto rule = EquipmentStats::ForMain(key);
-	if (!rule.flat || slot == EquipSlot::None || static_cast<int>(slot) < 0 || static_cast<int>(slot) >= 5) return false;
+	if (!rule.flat || !IsWearableSlot(slot)) return false;
 	if (slot == EquipSlot::Accessory) return rule.flat != &Stats::spd;
 	if (rule.flat == &Stats::hp) return slot == EquipSlot::Head || slot == EquipSlot::Torso;
 	if (rule.flat == &Stats::def) return slot == EquipSlot::Torso;
@@ -123,15 +125,14 @@ void AddEquippables(std::vector<ItemDefinition>& result, EquipSlot slot, const c
 }
 
 int GetEquipmentSubstatCount(Rarity rarity) {
-	const int tier = static_cast<int>(rarity);
-	if (tier < 0 || tier > 5) throw std::invalid_argument("Unknown equipment rarity");
-	return (std::min)(4, tier);
+	if (!IsValidRarity(rarity)) throw std::invalid_argument("Unknown equipment rarity");
+	return (std::min)(4, static_cast<int>(rarity));
 }
 
 std::pair<int, int> GetEquipmentMainStatRange(const std::string& mainStat, Rarity rarity) {
-	const int tier = static_cast<int>(rarity);
 	const auto rule = EquipmentStats::ForMain(mainStat);
-	if (tier < 0 || tier > 5 || !rule.flat) throw std::invalid_argument("Unknown equipment main stat or rarity");
+	if (!IsValidRarity(rarity) || !rule.flat) throw std::invalid_argument("Unknown equipment main stat or rarity");
+	const int tier = static_cast<int>(rarity);
 	static const std::pair<int, int> core[] = {{8, 12}, {12, 16}, {16, 22}, {22, 28}, {28, 34}, {34, 40}};
 	static const std::pair<int, int> speed[] = {{3, 5}, {5, 8}, {8, 12}, {12, 16}, {16, 20}, {20, 25}};
 	static const std::pair<int, int> crit[] = {{2, 4}, {4, 6}, {6, 9}, {9, 12}, {12, 15}, {15, 18}};
@@ -153,7 +154,7 @@ bool ValidateEquipmentDefinition(const ItemDefinition& item, std::string* error)
 	};
 	if (item.name.empty() || item.category != ItemCategory::Equippable || !AllowedMain(item.slot, item.mainStat))
 		return fail("invalid equipment name, slot, or main stat");
-	if (static_cast<int>(item.rarity) < 0 || static_cast<int>(item.rarity) > 5) return fail("invalid rarity");
+	if (!IsValidRarity(item.rarity)) return fail("invalid rarity");
 	const auto main = EquipmentStats::ForMain(item.mainStat);
 	const auto range = GetEquipmentMainStatRange(item.mainStat, item.rarity);
 	const int mainValue = main.corePercentRoll ? item.mainStatPercent : item.mainStatValue;
@@ -254,12 +255,9 @@ std::string InvestigationConsumableName(ConsumableProfile profile, int playerLev
 }
 
 ItemDefinition BuildInvestigationConsumable(ConsumableProfile profile, int playerLevel) {
-	const std::string name = InvestigationConsumableName(profile, playerLevel);
-	for (auto definition : BuildConsumableCatalog()) {
-		if (definition.name != name) continue;
-		return definition;
-	}
-	return {};
+	static const auto catalogue = BuildConsumableCatalog();
+	const ItemDefinition* found = Catalog::FindByName(catalogue, InvestigationConsumableName(profile, playerLevel));
+	return found != nullptr ? *found : ItemDefinition{};
 }
 
 double BossArtifactChance(int playerLevel) {
@@ -274,7 +272,7 @@ std::vector<ItemDefinition> GenerateLoot(const LootContext& context, unsigned se
 	static const auto equipment = BuildEquippableCatalog();
 	static const auto pools = [] {
 		std::array<std::vector<const ItemDefinition*>, 6> result;
-		for (const auto& item : equipment) result[static_cast<int>(item.rarity)].push_back(&item);
+		for (const auto& item : equipment) if (IsValidRarity(item.rarity)) result[static_cast<int>(item.rarity)].push_back(&item);
 		return result;
 	}();
 	static const auto consumables = BuildConsumableCatalog();
@@ -359,11 +357,8 @@ ItemDefinition RollLootInstance(ItemDefinition item, unsigned seed) {
 }
 
 bool ValidateContentCatalog(std::string* error) {
-	const auto validate = [](const std::vector<ItemDefinition>& items) {
-		for (const auto& item : items) if (item.name.empty()) return false;
-		return true;
-	};
-	if (!validate(BuildEquippableCatalog()) || !validate(BuildConsumableCatalog()) || !validate(BuildClueCatalog()) || !validate(BuildCruxCatalog())) {
+	if (!Catalog::AllNamed(BuildEquippableCatalog()) || !Catalog::AllNamed(BuildConsumableCatalog()) ||
+	!Catalog::AllNamed(BuildClueCatalog()) || !Catalog::AllNamed(BuildCruxCatalog())) {
 		if (error) *error = "Content catalogue contains an unnamed item.";
 		return false;
 	}
@@ -428,13 +423,13 @@ std::vector<ItemDefinition> BuildEquippableCatalog() {
 		if (item.rarity == Rarity::Legendary) {
 			if (item.name.find("broken_choir") != std::string::npos) {
 				item.setName = "Choir of Verdigris";
-				item.setPassive = "Five-piece: gain a barrier at battle start and increase healing received by 25%.";
+				item.setPassive = "2 pieces: +35% final MaxHP and +25 pp Healing Received. 3 pieces: +30% final DEF and +30 pp Barrier Potency.";
 			} else if (item.name.find("lumen_forged") != std::string::npos) {
 				item.setName = "Shimmer Ascendant";
-				item.setPassive = "Five-piece: Shimmer skills deal 25% more damage and restore 5% max HP.";
+				item.setPassive = "2 pieces: +30% final ATK. 3 pieces: +35% direct Shimmer damage and +25 pp DOT Potency.";
 			} else if (item.name.find("radiant_oath") != std::string::npos) {
 				item.setName = "Automaton Overlord";
-				item.setPassive = "Five-piece: accuracy is perfected, critical damage rises by 50%, and every third action grants a bonus turn.";
+				item.setPassive = "2 pieces: +20% final SPD. 3 pieces: +20 pp Crit Rate and +50 pp Crit Damage.";
 			}
 		}
 	}

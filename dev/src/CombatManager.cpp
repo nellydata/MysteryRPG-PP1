@@ -59,6 +59,21 @@ void AccumulateGaugesUntilReady(int& playerGauge, int& enemyGauge,
         enemyGauge = CombatMath::Saturate(static_cast<std::int64_t>(enemyGauge) + (std::max)(1, enemySpeed));
     }
 }
+
+// Shared line-building for a resolved status application, used by both the
+// Shimmer and consumable flows so the wording stays identical everywhere.
+std::string DescribeStatusApplication(const StatusApplicationResolution& application,
+                                      const std::string& target, const std::string& source) {
+    return target + (application.applied ? " receives " : application.resisted ? " resists " : " does not receive ") +
+        StatusDisplayName(application.status.type) +
+        (application.applied ? " (" + std::to_string(application.status.turns) + " turns, potency " +
+            std::to_string(application.status.potency) + ")" : "") + " from " + source + ".";
+}
+
+CombatManager::CombatEvent::Kind StatusApplicationKind(const StatusApplicationResolution& application) {
+    return application.applied ? CombatManager::CombatEvent::Kind::Status :
+        application.resisted ? CombatManager::CombatEvent::Kind::Resistance : CombatManager::CombatEvent::Kind::Info;
+}
 }
 
 void CombatManager::AdvanceTurn(Player& player, Enemy& enemy) {
@@ -407,21 +422,26 @@ bool CombatManager::resolve(CombatAction action, Player& player, Enemy& enemy,
             auto& hit = AddEvent(CombatEvent::Kind::Hit, skill->getName() + " hits " + enemy.getName() + ".");
             hit.actor = player.getName(); hit.target = enemy.getName(); hit.skill = skill->getName();
             RecordDamage(player.getName(), enemy.getName(), skill->getName(), enemy.GetLastDamageResult());
-            if (player.HasActiveSet("Shimmer Ascendant") && enemy.GetLastDamageResult().hpDamage > 0)
-                player.heal(CombatMath::Scale(player.getMaxHP(), 5));
         }
         const auto recordStatuses = [&](const std::vector<StatusApplicationResolution>& applications, std::size_t first, const std::string& target) {
             for (std::size_t index = first; index < applications.size(); ++index) {
                 const auto& application = applications[index];
-                auto& statusEvent = AddEvent(application.applied ? CombatEvent::Kind::Status :
-                    application.resisted ? CombatEvent::Kind::Resistance : CombatEvent::Kind::Info,
-                    target + (application.applied ? " receives " : application.resisted ? " resists " : " does not receive ") +
-                    StatusDisplayName(application.status.type) + " from " + skill->getName() + ".");
+                auto& statusEvent = AddEvent(StatusApplicationKind(application),
+                    DescribeStatusApplication(application, target, skill->getName()));
                 statusEvent.actor = player.getName(); statusEvent.target = target; statusEvent.skill = skill->getName();
             }
         };
         recordStatuses(player.GetStatusApplications(), playerApplications, player.getName());
         recordStatuses(enemy.GetStatusApplications(), enemyApplications, enemy.getName());
+        const int gaugeProgress = (std::max)(0, skill->getCombatBuff().nextActionGauge);
+        if (gaugeProgress > 0) {
+            const int gaugeBefore = playerGauge_;
+            playerGauge_ = CombatMath::Saturate(static_cast<std::int64_t>(playerGauge_) + gaugeProgress);
+            const int gained = playerGauge_ - gaugeBefore;
+            auto& acceleration = AddEvent(CombatEvent::Kind::Buff, player.getName() + " gains " +
+                std::to_string(gained) + "/1000 next-action gauge progress from " + skill->getName() + ".", gained);
+            acceleration.actor = player.getName(); acceleration.target = player.getName(); acceleration.skill = skill->getName();
+        }
         const int healed = player.getHP() - playerHealthBefore;
         if (healed > 0) AddEvent(CombatEvent::Kind::Heal, player.getName() + " restores " + std::to_string(healed) + " HP with " + skill->getName() + ".", healed);
         const int shield = player.GetBarrier() - barrierBefore;
@@ -533,10 +553,8 @@ bool CombatManager::UseConsumable(unsigned long long instanceId, Player& player,
     const auto recordApplications = [&](const std::vector<StatusApplicationResolution>& applications, std::size_t first, const std::string& targetName) {
         for (std::size_t index = first; index < applications.size(); ++index) {
             const auto& result = applications[index];
-            auto& event = AddEvent(result.applied ? CombatEvent::Kind::Status :
-                result.resisted ? CombatEvent::Kind::Resistance : CombatEvent::Kind::Info,
-                targetName + (result.applied ? " receives " : result.resisted ? " resists " : " does not receive ") + StatusDisplayName(result.status.type) +
-                (result.applied ? " (" + std::to_string(result.status.turns) + " turns, potency " + std::to_string(result.status.potency) + ")" : "") + " from " + itemName + ".");
+            auto& event = AddEvent(StatusApplicationKind(result),
+                DescribeStatusApplication(result, targetName, itemName));
             event.actor = player.getName(); event.target = targetName; event.skill = itemName;
         }
     };
@@ -603,122 +621,164 @@ void CombatManager::enemyTurn(Player& player, Enemy& enemy, ProgressionManager* 
         AdvanceTurn(player, enemy);
         return;
     }
-    const auto finishAction = [&](bool extraTurn = false) {
-        if (!bonusAction) enemy.EndStatusTurn();
-        if (!player.isAlive()) {
-            enemy.ForfeitRewards();
-            ForfeitEncounterRewards();
-            AddEvent(CombatEvent::Kind::Death, player.getName() + " has been defeated.");
-        }
-        enemyGauge_ -= 1000;
-        if (extraTurn && !bonusAction) { enemyGauge_ = 1000; nextEnemyBonus_ = true; }
-        playerTurn_ = false;
-        if (!nextEnemyBonus_) AdvanceTurn(player, enemy);
-    };
-    const auto damagePlayer = [&](int requested, const std::string& skillName, bool guaranteedCritical = false) {
-        int accuracyFloor = 0;
-        for (const auto& status : enemy.GetStatuses()) if (status.type == StatusType::AccuracyFloor)
-            accuracyFloor = (std::max)(accuracyFloor, status.potency);
-        const int hitChance = (std::max)(accuracyFloor, CombatMath::AccuracyChance(100, enemy.getAccuracy(), player.getEvasion()));
-        if (!random_.RollPercent(hitChance)) {
-            auto& miss = AddEvent(CombatEvent::Kind::Miss, enemy.getName() + " misses " + player.getName() + ".");
-            miss.actor = enemy.getName(); miss.target = player.getName(); miss.skill = skillName;
-            return false;
-        }
-        const bool critical = guaranteedCritical || enemy.HasStatus(StatusType::GuaranteedCrit) ||
-            random_.RollPercent(enemy.getCritRate());
-        const int rawDamage = critical ? CombatMath::Scale(requested, enemy.getCritDamage()) : requested;
-        auto& hit = AddEvent(critical ? CombatEvent::Kind::Critical : CombatEvent::Kind::Hit,
-            enemy.getName() + (critical ? " critically hits " : " hits ") + player.getName() + ".");
-        hit.actor = enemy.getName(); hit.target = player.getName(); hit.skill = skillName;
-        player.ApplyDirectDamage(rawDamage);
-        RecordDamage(enemy.getName(), player.getName(), skillName, player.GetLastDamageResult());
-        return true;
-    };
-    const auto applyDebuff = [&](StatusType type, const EnemySkillDefinition& skill) {
-        const int duration = skill.duration > 0 ? skill.duration : 2;
-        const bool applied = player.ApplyStatus({type, duration, skill.statusPotency, enemy.getAtk(),
-            enemy.getDotPotency(), enemy.getDefense(), enemy.getName(), enemy.GetCombatantId()}, enemy.getAccuracy());
-        const auto& result = player.GetStatusApplications().back();
-        auto& event = AddEvent(applied ? CombatEvent::Kind::Debuff : result.resisted ? CombatEvent::Kind::Resistance : CombatEvent::Kind::Info,
-            player.getName() + (applied ? " receives " : result.resisted ? " resists " : " does not receive ") + StatusDisplayName(type) +
-            (applied ? " (" + std::to_string(result.status.turns) + " turns, potency " + std::to_string(result.status.potency) + ")" : "") + " from " + skill.name + ".");
-        event.actor = enemy.getName(); event.target = player.getName(); event.skill = skill.name;
-    };
+    EnemySkillContext context{player, enemy, bonusAction, currentEnemyParty_};
     const auto& skills = enemy.GetSkills();
     for (std::size_t index = 0; index < skills.size(); ++index) {
-        const auto& skill = skills[index];
-        if (!enemy.IsSkillReady(index)) continue;
-        if (skill.effect == "heal_self" && enemy.getHP() >= enemy.getMaxHP() / 2) continue;
-        if (skill.effect == "cleanse_self" && enemy.GetStatuses().empty()) continue;
-        Enemy* ally = nullptr;
-        if (skill.effect.find("ally") != std::string::npos) {
-            for (Enemy* candidate : currentEnemyParty_)
-                if (candidate != nullptr && candidate != &enemy && candidate->isAlive()) { ally = candidate; break; }
-            if (ally == nullptr && skill.multiplier <= 0) continue;
-        }
-        const bool offensive = skill.multiplier > 0 || skill.effect == "bleed" || skill.effect == "burn" || skill.effect == "poison" ||
-            skill.effect == "tri_dot" || skill.effect == "burn_bleed" || skill.effect == "def_down" || skill.effect == "accuracy_down";
-        const std::string target = ally != nullptr ? ally->getName() : offensive ? player.getName() : enemy.getName();
-        auto& action = AddEvent(CombatEvent::Kind::Skill, enemy.getName() + " uses " + skill.name + " on " + target + ".");
-        action.actor = enemy.getName(); action.target = target; action.skill = skill.name;
-        const bool landed = skill.multiplier <= 0 || damagePlayer((std::max)(1, CombatMath::Scale(enemy.getAtk(), skill.multiplier)), skill.name, skill.effect == "guaranteed_crit");
-        if (ally != nullptr && skill.effect.find("heal") != std::string::npos) {
-            const int before = ally->getHP();
-            ally->heal((std::max)(1, CombatMath::Scale(ally->getMaxHP(), 15)));
-            AddEvent(CombatEvent::Kind::Heal, ally->getName() + " heals " + std::to_string(ally->getHP() - before) + " HP.", ally->getHP() - before);
-        }
-        if (landed && player.isAlive()) {
-            if (skill.effect == "bleed" || skill.effect == "burn" || skill.effect == "poison")
-                applyDebuff(skill.effect == "bleed" ? StatusType::Bleed : skill.effect == "burn" ? StatusType::Burn : StatusType::Poison, skill);
-            else if (skill.effect == "tri_dot" || skill.effect == "burn_bleed") {
-                for (StatusType type : {StatusType::Burn, StatusType::Bleed, StatusType::Poison})
-                    if (!(skill.effect == "burn_bleed" && type == StatusType::Poison)) applyDebuff(type, skill);
-            } else if (skill.effect == "def_down" || skill.effect == "accuracy_down")
-                applyDebuff(skill.effect == "def_down" ? StatusType::DefenseDown : StatusType::AccuracyDown, skill);
-        }
-        if (skill.effect == "heal_self" || skill.effect == "heal_cleanse") {
-            const int before = enemy.getHP();
-            enemy.heal((std::max)(1, CombatMath::Scale(enemy.getMaxHP(), 15)));
-            AddEvent(CombatEvent::Kind::Heal, enemy.getName() + " heals " + std::to_string(enemy.getHP() - before) + " HP.", enemy.getHP() - before);
-        }
-        if (skill.effect == "cleanse_self" || skill.effect == "heal_cleanse") {
-            const int count = enemy.CleanseNegativeStatuses();
-            AddEvent(CombatEvent::Kind::Cleanse, enemy.getName() + " cleanses " + std::to_string(count) + " negative statuses.", count);
-        } else if (skill.effect == "barrier" || skill.effect == "barrier_accuracy") {
-            const int amount = enemy.getMaxHP() / 5;
-            const bool applied = enemy.ApplyStatus({StatusType::Barrier, skill.duration > 0 ? skill.duration : 2, amount});
-            if (applied) AddEvent(CombatEvent::Kind::Shield, enemy.getName() + " gains " + std::to_string(amount) + " barrier.", amount);
-            if (skill.effect == "barrier_accuracy" && enemy.ApplyStatus({StatusType::AccuracyUp, skill.duration > 0 ? skill.duration : 2, skill.statusPotency}))
-                AddEvent(CombatEvent::Kind::Buff, enemy.getName() + " gains Accuracy Up.");
-        } else {
-            std::vector<StatusType> buffs;
-            if (skill.effect == "attack_up") buffs.push_back(StatusType::AttackUp);
-            else if (skill.effect == "accuracy_up") buffs.push_back(StatusType::AccuracyUp);
-            else if (skill.effect == "crit_up") buffs.push_back(StatusType::CritUp);
-            else if (skill.effect == "crit_damage_up") buffs.push_back(StatusType::CritDamageUp);
-            else if (skill.effect == "guaranteed_crit") buffs.push_back(StatusType::GuaranteedCrit);
-            else if (skill.effect == "dot_up") buffs.push_back(StatusType::DotUp);
-            else if (skill.effect == "heal_resistance" && player.isAlive()) applyDebuff(StatusType::HealResistance, skill);
-            else if (skill.effect == "accuracy_floor") buffs.push_back(StatusType::AccuracyFloor);
-            else if (skill.effect == "dot_reduction") buffs.push_back(StatusType::DotReduction);
-            else if (skill.effect == "accuracy_crit_up") buffs = {StatusType::AccuracyUp, StatusType::CritUp};
-            for (StatusType type : buffs) {
-                const bool applied = enemy.ApplyStatus({type, skill.duration > 0 ? skill.duration : 2, skill.statusPotency});
-                AddEvent(applied ? CombatEvent::Kind::Buff : CombatEvent::Kind::Info, enemy.getName() +
-                    (applied ? " gains " : " keeps its existing ") + StatusDisplayName(type) + ".");
-            }
-        }
-        const bool extraTurn = skill.effect == "extra_turn" && !bonusAction;
-        if (extraTurn) AddEvent(CombatEvent::Kind::ExtraTurn, enemy.getName() + " gains an extra turn.");
-        enemy.StartSkillCooldown(index);
-        finishAction(extraTurn);
-        return;
+        if (RunEnemySkillIndex(context, index)) return;
     }
     auto& attack = AddEvent(CombatEvent::Kind::Attack, enemy.getName() + " uses Attack on " + player.getName() + ".");
     attack.actor = enemy.getName(); attack.target = player.getName(); attack.skill = "Attack";
-    damagePlayer(enemy.getAtk(), "Attack");
-    finishAction();
+    AttemptEnemySkillAttack(EnemySkillDefinition{"Attack", "", 100, 0}, context);
+    FinishEnemyAction(player, enemy, bonusAction, false);
+}
+
+// Closes out an enemy action: ends the status turn, settles defeat rewards for a
+// fallen player, decrements the gauge, and either grants an extra turn or hands
+// control back through AdvanceTurn().
+void CombatManager::FinishEnemyAction(Player& player, Enemy& enemy, bool bonusAction, bool extraTurn) {
+    if (!bonusAction) enemy.EndStatusTurn();
+    if (!player.isAlive()) {
+        enemy.ForfeitRewards();
+        ForfeitEncounterRewards();
+        AddEvent(CombatEvent::Kind::Death, player.getName() + " has been defeated.");
+    }
+    enemyGauge_ -= 1000;
+    if (extraTurn && !bonusAction) { enemyGauge_ = 1000; nextEnemyBonus_ = true; }
+    playerTurn_ = false;
+    if (!nextEnemyBonus_) AdvanceTurn(player, enemy);
+}
+
+// Rolls a single enemy attack (skill or the fallback basic Attack). Returns
+// false only when the strike is evaded, matching the inlined damagePlayer().
+bool CombatManager::AttemptEnemySkillAttack(const EnemySkillDefinition& skill, EnemySkillContext& context) {
+    Player& player = context.player;
+    Enemy& enemy = context.enemy;
+    const std::string& skillName = skill.name;
+    // The fallback basic Attack is expressed as a 100% skill so it shares this
+    // path; a skill with multiplier <= 0 never reaches here (landed is forced).
+    const int requested = skill.multiplier == 100 && skill.effect.empty()
+        ? enemy.getAtk()
+        : (std::max)(1, CombatMath::Scale(enemy.getAtk(), skill.multiplier));
+    int accuracyFloor = 0;
+    for (const auto& status : enemy.GetStatuses()) if (status.type == StatusType::AccuracyFloor)
+        accuracyFloor = (std::max)(accuracyFloor, status.potency);
+    const int hitChance = (std::max)(accuracyFloor, CombatMath::AccuracyChance(100, enemy.getAccuracy(), player.getEvasion()));
+    if (!random_.RollPercent(hitChance)) {
+        auto& miss = AddEvent(CombatEvent::Kind::Miss, enemy.getName() + " misses " + player.getName() + ".");
+        miss.actor = enemy.getName(); miss.target = player.getName(); miss.skill = skillName;
+        return false;
+    }
+    const bool guaranteedCritical = skill.effect == "guaranteed_crit";
+    const bool critical = guaranteedCritical || enemy.HasStatus(StatusType::GuaranteedCrit) ||
+        random_.RollPercent(enemy.getCritRate());
+    const int rawDamage = critical ? CombatMath::Scale(requested, enemy.getCritDamage()) : requested;
+    auto& hit = AddEvent(critical ? CombatEvent::Kind::Critical : CombatEvent::Kind::Hit,
+        enemy.getName() + (critical ? " critically hits " : " hits ") + player.getName() + ".");
+    hit.actor = enemy.getName(); hit.target = player.getName(); hit.skill = skillName;
+    player.ApplyDirectDamage(rawDamage);
+    RecordDamage(enemy.getName(), player.getName(), skillName, player.GetLastDamageResult());
+    return true;
+}
+
+Enemy* CombatManager::FindLivingAlly(Enemy& enemy) const {
+    for (Enemy* candidate : currentEnemyParty_)
+        if (candidate != nullptr && candidate != &enemy && candidate->isAlive()) return candidate;
+    return nullptr;
+}
+
+void CombatManager::ApplyEnemyDebuff(Player& player, Enemy& enemy, StatusType type, const EnemySkillDefinition& skill) {
+    const int duration = skill.duration > 0 ? skill.duration : 2;
+    const bool applied = player.ApplyStatus({type, duration, skill.statusPotency, enemy.getAtk(),
+        enemy.getDotPotency(), enemy.getDefense(), enemy.getName(), enemy.GetCombatantId()}, enemy.getAccuracy());
+    const auto& result = player.GetStatusApplications().back();
+    auto& event = AddEvent(applied ? CombatEvent::Kind::Debuff : result.resisted ? CombatEvent::Kind::Resistance : CombatEvent::Kind::Info,
+        player.getName() + (applied ? " receives " : result.resisted ? " resists " : " does not receive ") + StatusDisplayName(type) +
+        (applied ? " (" + std::to_string(result.status.turns) + " turns, potency " + std::to_string(result.status.potency) + ")" : "") + " from " + skill.name + ".");
+    event.actor = enemy.getName(); event.target = player.getName(); event.skill = skill.name;
+}
+
+// Applies every non-attack half of a skill effect: debuffs on the player, ally
+// and self healing, cleansing, barriers, and the various self-buff tables.
+void CombatManager::ApplyEnemySkillEffect(EnemySkillContext& context, const EnemySkillDefinition& skill, bool landed) {
+    Player& player = context.player;
+    Enemy& enemy = context.enemy;
+    Enemy* ally = skill.effect.find("ally") != std::string::npos ? FindLivingAlly(enemy) : nullptr;
+    if (ally != nullptr && skill.effect.find("heal") != std::string::npos && skill.effect != "heal_self" && skill.effect != "heal_cleanse") {
+        const int before = ally->getHP();
+        ally->heal((std::max)(1, CombatMath::Scale(ally->getMaxHP(), 15)));
+        AddEvent(CombatEvent::Kind::Heal, ally->getName() + " heals " + std::to_string(ally->getHP() - before) + " HP.", ally->getHP() - before);
+    }
+    if (landed && player.isAlive()) {
+        if (skill.effect == "bleed" || skill.effect == "burn" || skill.effect == "poison")
+            ApplyEnemyDebuff(player, enemy, skill.effect == "bleed" ? StatusType::Bleed : skill.effect == "burn" ? StatusType::Burn : StatusType::Poison, skill);
+        else if (skill.effect == "tri_dot" || skill.effect == "burn_bleed") {
+            for (StatusType type : {StatusType::Burn, StatusType::Bleed, StatusType::Poison})
+                if (!(skill.effect == "burn_bleed" && type == StatusType::Poison)) ApplyEnemyDebuff(player, enemy, type, skill);
+        } else if (skill.effect == "def_down" || skill.effect == "accuracy_down")
+            ApplyEnemyDebuff(player, enemy, skill.effect == "def_down" ? StatusType::DefenseDown : StatusType::AccuracyDown, skill);
+    }
+    if (skill.effect == "heal_self" || skill.effect == "heal_cleanse") {
+        const int before = enemy.getHP();
+        enemy.heal((std::max)(1, CombatMath::Scale(enemy.getMaxHP(), 15)));
+        AddEvent(CombatEvent::Kind::Heal, enemy.getName() + " heals " + std::to_string(enemy.getHP() - before) + " HP.", enemy.getHP() - before);
+    }
+    if (skill.effect == "cleanse_self" || skill.effect == "heal_cleanse") {
+        const int count = enemy.CleanseNegativeStatuses();
+        AddEvent(CombatEvent::Kind::Cleanse, enemy.getName() + " cleanses " + std::to_string(count) + " negative statuses.", count);
+        return;
+    }
+    if (skill.effect == "barrier" || skill.effect == "barrier_accuracy") {
+        const int amount = enemy.getMaxHP() / 5;
+        const bool applied = enemy.ApplyStatus({StatusType::Barrier, skill.duration > 0 ? skill.duration : 2, amount});
+        if (applied) AddEvent(CombatEvent::Kind::Shield, enemy.getName() + " gains " + std::to_string(amount) + " barrier.", amount);
+        if (skill.effect == "barrier_accuracy" && enemy.ApplyStatus({StatusType::AccuracyUp, skill.duration > 0 ? skill.duration : 2, skill.statusPotency}))
+            AddEvent(CombatEvent::Kind::Buff, enemy.getName() + " gains Accuracy Up.");
+        return;
+    }
+    std::vector<StatusType> buffs;
+    if (skill.effect == "attack_up") buffs.push_back(StatusType::AttackUp);
+    else if (skill.effect == "accuracy_up") buffs.push_back(StatusType::AccuracyUp);
+    else if (skill.effect == "crit_up") buffs.push_back(StatusType::CritUp);
+    else if (skill.effect == "crit_damage_up") buffs.push_back(StatusType::CritDamageUp);
+    else if (skill.effect == "guaranteed_crit") buffs.push_back(StatusType::GuaranteedCrit);
+    else if (skill.effect == "dot_up") buffs.push_back(StatusType::DotUp);
+    else if (skill.effect == "heal_resistance" && player.isAlive()) ApplyEnemyDebuff(player, enemy, StatusType::HealResistance, skill);
+    else if (skill.effect == "accuracy_floor") buffs.push_back(StatusType::AccuracyFloor);
+    else if (skill.effect == "dot_reduction") buffs.push_back(StatusType::DotReduction);
+    else if (skill.effect == "accuracy_crit_up") buffs = {StatusType::AccuracyUp, StatusType::CritUp};
+    for (StatusType type : buffs) {
+        const bool applied = enemy.ApplyStatus({type, skill.duration > 0 ? skill.duration : 2, skill.statusPotency});
+        AddEvent(applied ? CombatEvent::Kind::Buff : CombatEvent::Kind::Info, enemy.getName() +
+            (applied ? " gains " : " keeps its existing ") + StatusDisplayName(type) + ".");
+    }
+}
+
+// Runs one skill index. Returns true when the skill fired and consumed the
+// enemy's turn, so enemyTurn() stops and skips its fallback basic Attack.
+bool CombatManager::RunEnemySkillIndex(EnemySkillContext& context, std::size_t index) {
+    Player& player = context.player;
+    Enemy& enemy = context.enemy;
+    const auto& skill = enemy.GetSkills()[index];
+    if (!enemy.IsSkillReady(index)) return false;
+    if (skill.effect == "heal_self" && enemy.getHP() >= enemy.getMaxHP() / 2) return false;
+    if (skill.effect == "cleanse_self" && enemy.GetStatuses().empty()) return false;
+    if (skill.effect.find("ally") != std::string::npos) {
+        const Enemy* ally = FindLivingAlly(enemy);
+        if (ally == nullptr && skill.multiplier <= 0) return false;
+    }
+    const bool offensive = skill.multiplier > 0 || skill.effect == "bleed" || skill.effect == "burn" || skill.effect == "poison" ||
+        skill.effect == "tri_dot" || skill.effect == "burn_bleed" || skill.effect == "def_down" || skill.effect == "accuracy_down";
+    const Enemy* ally = skill.effect.find("ally") != std::string::npos ? FindLivingAlly(enemy) : nullptr;
+    const std::string target = ally != nullptr ? ally->getName() : offensive ? player.getName() : enemy.getName();
+    auto& action = AddEvent(CombatEvent::Kind::Skill, enemy.getName() + " uses " + skill.name + " on " + target + ".");
+    action.actor = enemy.getName(); action.target = target; action.skill = skill.name;
+    const bool landed = skill.multiplier <= 0 || AttemptEnemySkillAttack(skill, context);
+    ApplyEnemySkillEffect(context, skill, landed);
+    const bool extraTurn = skill.effect == "extra_turn" && !context.bonusAction;
+    if (extraTurn) AddEvent(CombatEvent::Kind::ExtraTurn, enemy.getName() + " gains an extra turn.");
+    enemy.StartSkillCooldown(index);
+    FinishEnemyAction(player, enemy, context.bonusAction, extraTurn);
+    return true;
 }
 
 void CombatManager::PrepareGroupTurn(Player& player, const std::vector<Enemy*>& enemies) {

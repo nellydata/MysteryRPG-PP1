@@ -1,0 +1,1925 @@
+REAL console output; submitted keyboard input follows each > prompt.
+MICARE - console edition
+Investigator name (Enter for Adelaide):
+> QA_CPP
+
+=== MICARE: CATHEDRAL OF LIES ===
+QA_CPP | Level 1 | HP 108/108 | ATK 20 DEF 10 SPD 100 | XP 0/100
+Investigate, improve your equipment, and challenge each room's guardian.
+1. Fountain
+2. Entrance Hall [LOCKED]
+3. Archive Room [LOCKED]
+4. Chapel [LOCKED]
+5. Storage Room [LOCKED]
+6. Inventory
+7. Shimmer skills
+8. Floor map
+9. Last encounter log
+0. Quit
+
+Destination or panel:
+> 6
+
+=== INVENTORY page 1/1 ===
+1. first_nuns_diary [Legendary] x1 [STORY]
+2. storage_key [Common] x1 [STORY]
+3. purification_salts [Uncommon] x1
+4. cellar_rations [Common] x1
+5. plain_rosary [Common] Accessory hp+8% instance=2 [EQUIPPED]
+6. linen_veil [Common] Head hp+12% instance=1
+
+Inventory: select item; 13 next, 14 previous, 15 sort (newest/rarity/name), 0 return.
+> 1
+first_nuns_diary: Unlocks the first major story branch.
+
+Item action: 1 equip/unequip or use, 2 lock/unlock this instance, 3 discard this instance/stack, 0 cancel.
+> 0
+
+=== INVENTORY page 1/1 ===
+1. first_nuns_diary [Legendary] x1 [STORY]
+2. storage_key [Common] x1 [STORY]
+3. purification_salts [Uncommon] x1
+4. cellar_rations [Common] x1
+5. plain_rosary [Common] Accessory hp+8% instance=2 [EQUIPPED]
+6. linen_veil [Common] Head hp+12% instance=1
+
+Inventory: select item; 13 next, 14 previous, 15 sort (newest/rarity/name), 0 return.
+> 2
+storage_key: Opens storage room doors.
+
+Item action: 1 equip/unequip or use, 2 lock/unlock this instance, 3 discard this instance/stack, 0 cancel.
+> 0
+
+=== INVENTORY page 1/1 ===
+1. first_nuns_diary [Legendary] x1 [STORY]
+2. storage_key [Common] x1 [STORY]
+3. purification_salts [Uncommon] x1
+4. cellar_rations [Common] x1
+5. plain_rosary [Common] Accessory hp+8% instance=2 [EQUIPPED]
+6. linen_veil [Common] Head hp+12% instance=1
+
+Inventory: select item; 13 next, 14 previous, 15 sort (newest/rarity/name), 0 return.
+> 3
+purification_salts: Remove all debuffs.
+
+Item action: 1 equip/unequip or use, 2 lock/unlock this instance, 3 discard this instance/stack, 0 cancel.
+> 0
+
+=== INVENTORY page 1/1 ===
+1. first_nuns_diary [Legendary] x1 [STORY]
+2. storage_key [Common] x1 [STORY]
+3. purification_salts [Uncommon] x1
+4. cellar_rations [Common] x1
+5. plain_rosary [Common] Accessory hp+8% instance=2 [EQUIPPED]
+6. linen_veil [Common] Head hp+12% instance=1
+
+Inventory: select item; 13 next, 14 previous, 15 sort (newest/rarity/name), 0 return.
+> 4
+cellar_rations: Restore 20 percent HP.
+
+Item action: 1 equip/unequip or use, 2 lock/unlock this instance, 3 discard this instance/stack, 0 cancel.
+> 0
+
+=== INVENTORY page 1/1 ===
+1. first_nuns_diary [Legendary] x1 [STORY]
+2. storage_key [Common] x1 [STORY]
+3. purification_salts [Uncommon] x1
+4. cellar_rations [Common] x1
+5. plain_rosary [Common] Accessory hp+8% instance=2 [EQUIPPED]
+6. linen_veil [Common] Head hp+12% instance=1
+
+Inventory: select item; 13 next, 14 previous, 15 sort (newest/rarity/name), 0 return.
+> 5
+plain_rosary: Micare hp equipment.
+Main: HP +8%
+After equip/unequip: HP 108 -> 100, ATK 20 -> 20, DEF 10 -> 10, SPD 100 -> 100
+ACC 0 -> 0, RES 0 -> 0, Crit 5% -> 5%
+
+Item action: 1 equip/unequip or use, 2 lock/unlock this instance, 3 discard this instance/stack, 0 cancel.
+> 0
+
+=== INVENTORY page 1/1 ===
+1. first_nuns_diary [Legendary] x1 [STORY]
+2. storage_key [Common] x1 [STORY]
+3. purification_salts [Uncommon] x1
+4. cellar_rations [Common] x1
+5. plain_rosary [Common] Accessory hp+8% instance=2 [EQUIPPED]
+6. linen_veil [Common] Head hp+12% instance=1
+
+Inventory: select item; 13 next, 14 previous, 15 sort (newest/rarity/name), 0 return.
+> 6
+linen_veil: Micare hp equipment.
+Main: HP +12%
+After equip/unequip: HP 108 -> 120, ATK 20 -> 20, DEF 10 -> 10, SPD 100 -> 100
+ACC 0 -> 0, RES 0 -> 0, Crit 5% -> 5%
+
+Item action: 1 equip/unequip or use, 2 lock/unlock this instance, 3 discard this instance/stack, 0 cancel.
+> 1
+Equipment updated: linen_veil
+
+=== INVENTORY page 1/1 ===
+1. first_nuns_diary [Legendary] x1 [STORY]
+2. storage_key [Common] x1 [STORY]
+3. purification_salts [Uncommon] x1
+4. cellar_rations [Common] x1
+5. plain_rosary [Common] Accessory hp+8% instance=2 [EQUIPPED]
+6. linen_veil [Common] Head hp+12% instance=1 [EQUIPPED]
+
+Inventory: select item; 13 next, 14 previous, 15 sort (newest/rarity/name), 0 return.
+> 0
+
+=== MICARE: CATHEDRAL OF LIES ===
+QA_CPP | Level 1 | HP 108/120 | ATK 20 DEF 10 SPD 100 | XP 0/100
+Investigate, improve your equipment, and challenge each room's guardian.
+1. Fountain
+2. Entrance Hall [LOCKED]
+3. Archive Room [LOCKED]
+4. Chapel [LOCKED]
+5. Storage Room [LOCKED]
+6. Inventory
+7. Shimmer skills
+8. Floor map
+9. Last encounter log
+0. Quit
+
+Destination or panel:
+> 7
+
+=== SHIMMER SKILLS | free points 10/12 ===
+1. Pulsus Luminis cost 2 cooldown 5 [EQUIPPED]
+   Deal 900% ATK as a focused Shimmer strike.
+
+Shimmer loadout: select skill to equip/unequip, 0 return.
+> 0
+
+=== MICARE: CATHEDRAL OF LIES ===
+QA_CPP | Level 1 | HP 108/120 | ATK 20 DEF 10 SPD 100 | XP 0/100
+Investigate, improve your equipment, and challenge each room's guardian.
+1. Fountain
+2. Entrance Hall [LOCKED]
+3. Archive Room [LOCKED]
+4. Chapel [LOCKED]
+5. Storage Room [LOCKED]
+6. Inventory
+7. Shimmer skills
+8. Floor map
+9. Last encounter log
+0. Quit
+
+Destination or panel:
+> 1
+
+=== ROOM: Fountain ===
+QA_CPP | Level 1 | HP 108/120 | ATK 20 DEF 10 SPD 100 | XP 0/100
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+0. Leave room
+
+Room action:
+> 2
+A weak guardian rises from the sealed Fountain. Defeat it to purify the sanctuary.
+[1] Encounter begins: Devotee Acolyte (level 1, Basic).
+[2] QA_CPP (level 1, HP 108) faces Devotee Acolyte.
+[3] QA_CPP's action begins (gauge 1000).
+[4] Waiting for QA_CPP to choose an action.
+QA_CPP | Level 1 | HP 108/120 | ATK 20 DEF 10 SPD 100 | XP 0/100
+Enemy: Devotee Acolyte | Level 1 Basic | HP 54/54 DEF 6 SPD 89
+Acting: QA_CPP
+1. Attack
+2. Consumable
+3. Shimmer
+4. Flee
+5. Full encounter log
+6. Toggle fast presentation
+
+Combat action:
+> 3
+1. Pulsus Luminis cooldown 0
+
+Choose combat Shimmer, 0 cancel:
+> 1
+[5] Waiting for QA_CPP to choose an action.
+[6] QA_CPP uses Shimmer skill Pulsus Luminis on Devotee Acolyte.
+[7] Pulsus Luminis hits Devotee Acolyte.
+[8] QA_CPP -> Devotee Acolyte: 180 requested damage; mitigated 0; barrier absorbs 0; 54 actual HP damage. HP: 0.
+[9] Devotee Acolyte has been defeated.
+[10] XP gained: +10.
+[11] The Fountain is purified. Full healing is now available.
+[12] Entrance Hall is now unlocked.
+[13] Found: faded_sanctum_gown.
+[14] Encounter complete: victory.
+
+=== ROOM: Fountain ===
+QA_CPP | Level 1 | HP 108/120 | ATK 20 DEF 10 SPD 100 | XP 10/100
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+7. Heal at the Fountain
+0. Leave room
+
+Room action:
+> 3
+
+=== INVENTORY page 1/1 ===
+1. faded_sanctum_gown [Common] Torso def+11% instance=7
+2. first_nuns_diary [Legendary] x1 [STORY]
+3. storage_key [Common] x1 [STORY]
+4. purification_salts [Uncommon] x1
+5. cellar_rations [Common] x1
+6. plain_rosary [Common] Accessory hp+8% instance=2 [EQUIPPED]
+7. linen_veil [Common] Head hp+12% instance=1 [EQUIPPED]
+
+Inventory: select item; 13 next, 14 previous, 15 sort (newest/rarity/name), 0 return.
+> 1
+faded_sanctum_gown: Micare def equipment.
+Main: DEF +11%
+After equip/unequip: HP 120 -> 120, ATK 20 -> 20, DEF 10 -> 11, SPD 100 -> 100
+ACC 0 -> 0, RES 0 -> 0, Crit 5% -> 5%
+
+Item action: 1 equip/unequip or use, 2 lock/unlock this instance, 3 discard this instance/stack, 0 cancel.
+> 1
+Equipment updated: faded_sanctum_gown
+
+=== INVENTORY page 1/1 ===
+1. faded_sanctum_gown [Common] Torso def+11% instance=7 [EQUIPPED]
+2. first_nuns_diary [Legendary] x1 [STORY]
+3. storage_key [Common] x1 [STORY]
+4. purification_salts [Uncommon] x1
+5. cellar_rations [Common] x1
+6. plain_rosary [Common] Accessory hp+8% instance=2 [EQUIPPED]
+7. linen_veil [Common] Head hp+12% instance=1 [EQUIPPED]
+
+Inventory: select item; 13 next, 14 previous, 15 sort (newest/rarity/name), 0 return.
+> 0
+
+=== ROOM: Fountain ===
+QA_CPP | Level 1 | HP 108/120 | ATK 20 DEF 11 SPD 100 | XP 10/100
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+7. Heal at the Fountain
+0. Leave room
+
+Room action:
+> 5
+
+=== SHIMMER SKILLS | free points 10/12 ===
+1. Pulsus Luminis cost 2 cooldown 5 [EQUIPPED]
+   Deal 900% ATK as a focused Shimmer strike.
+
+Shimmer loadout: select skill to equip/unequip, 0 return.
+> 0
+
+=== ROOM: Fountain ===
+QA_CPP | Level 1 | HP 108/120 | ATK 20 DEF 11 SPD 100 | XP 10/100
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+7. Heal at the Fountain
+0. Leave room
+
+Room action:
+> 7
+The Fountain restores you to full health.
+
+=== ROOM: Fountain ===
+QA_CPP | Level 1 | HP 120/120 | ATK 20 DEF 11 SPD 100 | XP 10/100
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+7. Heal at the Fountain
+0. Leave room
+
+Room action:
+> 0
+
+=== MICARE: CATHEDRAL OF LIES ===
+QA_CPP | Level 1 | HP 120/120 | ATK 20 DEF 11 SPD 100 | XP 10/100
+Investigate, improve your equipment, and challenge each room's guardian.
+1. Fountain
+2. Entrance Hall
+3. Archive Room [LOCKED]
+4. Chapel [LOCKED]
+5. Storage Room [LOCKED]
+6. Inventory
+7. Shimmer skills
+8. Floor map
+9. Last encounter log
+0. Quit
+
+Destination or panel:
+> 2
+
+=== ROOM: Entrance Hall ===
+QA_CPP | Level 1 | HP 120/120 | ATK 20 DEF 11 SPD 100 | XP 10/100
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+0. Leave room
+
+Room action:
+> 1
+You discover supplies hidden in the room.
+Found: cellar_rations.
+
+=== ROOM: Entrance Hall ===
+QA_CPP | Level 1 | HP 120/120 | ATK 20 DEF 11 SPD 100 | XP 10/100
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+0. Leave room
+
+Room action:
+> 3
+
+=== INVENTORY page 1/1 ===
+1. cellar_rations [Common] x1
+2. faded_sanctum_gown [Common] Torso def+11% instance=7 [EQUIPPED]
+3. first_nuns_diary [Legendary] x1 [STORY]
+4. storage_key [Common] x1 [STORY]
+5. purification_salts [Uncommon] x1
+6. cellar_rations [Common] x1
+7. plain_rosary [Common] Accessory hp+8% instance=2 [EQUIPPED]
+8. linen_veil [Common] Head hp+12% instance=1 [EQUIPPED]
+
+Inventory: select item; 13 next, 14 previous, 15 sort (newest/rarity/name), 0 return.
+> 0
+
+=== ROOM: Entrance Hall ===
+QA_CPP | Level 1 | HP 120/120 | ATK 20 DEF 11 SPD 100 | XP 10/100
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+0. Leave room
+
+Room action:
+> 2
+You piece together a useful detail about the cathedral.
+Investigation gained 12 XP.
+
+=== ROOM: Entrance Hall ===
+QA_CPP | Level 1 | HP 120/120 | ATK 20 DEF 11 SPD 100 | XP 22/100
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+0. Leave room
+
+Room action:
+> 1
+Falling masonry catches you by surprise.
+Investigation damage: 6 HP.
+
+=== ROOM: Entrance Hall ===
+QA_CPP | Level 1 | HP 114/120 | ATK 20 DEF 11 SPD 100 | XP 22/100
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+0. Leave room
+
+Room action:
+> 2
+A hostile presence emerges: Devotee Acolyte (Basic, level 1).
+[15] Encounter begins: Devotee Acolyte (level 1, Basic).
+[16] QA_CPP (level 1, HP 114) faces Devotee Acolyte.
+[17] QA_CPP's action begins (gauge 1000).
+[18] Waiting for QA_CPP to choose an action.
+QA_CPP | Level 1 | HP 114/120 | ATK 20 DEF 11 SPD 100 | XP 22/100
+Enemy: Devotee Acolyte | Level 1 Basic | HP 54/54 DEF 6 SPD 89
+Acting: QA_CPP
+1. Attack
+2. Consumable
+3. Shimmer
+4. Flee
+5. Full encounter log
+6. Toggle fast presentation
+
+Combat action:
+> 3
+1. Pulsus Luminis cooldown 0
+
+Choose combat Shimmer, 0 cancel:
+> 1
+[19] Waiting for QA_CPP to choose an action.
+[20] QA_CPP uses Shimmer skill Pulsus Luminis on Devotee Acolyte.
+[21] Pulsus Luminis hits Devotee Acolyte.
+[22] QA_CPP -> Devotee Acolyte: 180 requested damage; mitigated 0; barrier absorbs 0; 54 actual HP damage. HP: 0.
+[23] Devotee Acolyte has been defeated.
+[24] XP gained: +10.
+[25] Found: dusty_linen_gown.
+[26] Encounter complete: victory.
+
+=== ROOM: Entrance Hall ===
+QA_CPP | Level 1 | HP 114/120 | ATK 20 DEF 11 SPD 100 | XP 32/100
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+0. Leave room
+
+Room action:
+> 3
+
+=== INVENTORY page 1/1 ===
+1. dusty_linen_gown [Common] Torso def+8% instance=9
+2. cellar_rations [Common] x1
+3. faded_sanctum_gown [Common] Torso def+11% instance=7 [EQUIPPED]
+4. first_nuns_diary [Legendary] x1 [STORY]
+5. storage_key [Common] x1 [STORY]
+6. purification_salts [Uncommon] x1
+7. cellar_rations [Common] x1
+8. plain_rosary [Common] Accessory hp+8% instance=2 [EQUIPPED]
+9. linen_veil [Common] Head hp+12% instance=1 [EQUIPPED]
+
+Inventory: select item; 13 next, 14 previous, 15 sort (newest/rarity/name), 0 return.
+> 1
+dusty_linen_gown: Micare def equipment.
+Main: DEF +8%
+After equip/unequip: HP 120 -> 120, ATK 20 -> 20, DEF 11 -> 11, SPD 100 -> 100
+ACC 0 -> 0, RES 0 -> 0, Crit 5% -> 5%
+
+Item action: 1 equip/unequip or use, 2 lock/unlock this instance, 3 discard this instance/stack, 0 cancel.
+> 0
+
+=== INVENTORY page 1/1 ===
+1. dusty_linen_gown [Common] Torso def+8% instance=9
+2. cellar_rations [Common] x1
+3. faded_sanctum_gown [Common] Torso def+11% instance=7 [EQUIPPED]
+4. first_nuns_diary [Legendary] x1 [STORY]
+5. storage_key [Common] x1 [STORY]
+6. purification_salts [Uncommon] x1
+7. cellar_rations [Common] x1
+8. plain_rosary [Common] Accessory hp+8% instance=2 [EQUIPPED]
+9. linen_veil [Common] Head hp+12% instance=1 [EQUIPPED]
+
+Inventory: select item; 13 next, 14 previous, 15 sort (newest/rarity/name), 0 return.
+> 0
+
+=== ROOM: Entrance Hall ===
+QA_CPP | Level 1 | HP 114/120 | ATK 20 DEF 11 SPD 100 | XP 32/100
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+0. Leave room
+
+Room action:
+> 5
+
+=== SHIMMER SKILLS | free points 10/12 ===
+1. Pulsus Luminis cost 2 cooldown 5 [EQUIPPED]
+   Deal 900% ATK as a focused Shimmer strike.
+
+Shimmer loadout: select skill to equip/unequip, 0 return.
+> 0
+
+=== ROOM: Entrance Hall ===
+QA_CPP | Level 1 | HP 114/120 | ATK 20 DEF 11 SPD 100 | XP 32/100
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+0. Leave room
+
+Room action:
+> 1
+You recover a meaningful fragment from the room.
+Investigation gained 6 XP.
+
+=== ROOM: Entrance Hall ===
+QA_CPP | Level 1 | HP 114/120 | ATK 20 DEF 11 SPD 100 | XP 38/100
+  Discovered: Broken statue
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+0. Leave room
+
+Room action:
+> 2
+You discover supplies hidden in the room.
+Found: cellar_rations.
+
+=== ROOM: Entrance Hall ===
+QA_CPP | Level 1 | HP 114/120 | ATK 20 DEF 11 SPD 100 | XP 38/100
+  Discovered: Broken statue
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+0. Leave room
+
+Room action:
+> 3
+
+=== INVENTORY page 1/1 ===
+1. cellar_rations [Common] x1
+2. dusty_linen_gown [Common] Torso def+8% instance=9
+3. cellar_rations [Common] x1
+4. faded_sanctum_gown [Common] Torso def+11% instance=7 [EQUIPPED]
+5. first_nuns_diary [Legendary] x1 [STORY]
+6. storage_key [Common] x1 [STORY]
+7. purification_salts [Uncommon] x1
+8. cellar_rations [Common] x1
+9. plain_rosary [Common] Accessory hp+8% instance=2 [EQUIPPED]
+10. linen_veil [Common] Head hp+12% instance=1 [EQUIPPED]
+
+Inventory: select item; 13 next, 14 previous, 15 sort (newest/rarity/name), 0 return.
+> 0
+
+=== ROOM: Entrance Hall ===
+QA_CPP | Level 1 | HP 114/120 | ATK 20 DEF 11 SPD 100 | XP 38/100
+  Discovered: Broken statue
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+0. Leave room
+
+Room action:
+> 1
+You discover supplies hidden in the room.
+Found: basic_choir_dress.
+
+=== ROOM: Entrance Hall ===
+QA_CPP | Level 1 | HP 114/120 | ATK 20 DEF 11 SPD 100 | XP 38/100
+  Discovered: Broken statue
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+0. Leave room
+
+Room action:
+> 3
+
+=== INVENTORY page 1/1 ===
+1. basic_choir_dress [Common] Torso def+9% instance=11
+2. cellar_rations [Common] x1
+3. dusty_linen_gown [Common] Torso def+8% instance=9
+4. cellar_rations [Common] x1
+5. faded_sanctum_gown [Common] Torso def+11% instance=7 [EQUIPPED]
+6. first_nuns_diary [Legendary] x1 [STORY]
+7. storage_key [Common] x1 [STORY]
+8. purification_salts [Uncommon] x1
+9. cellar_rations [Common] x1
+10. plain_rosary [Common] Accessory hp+8% instance=2 [EQUIPPED]
+11. linen_veil [Common] Head hp+12% instance=1 [EQUIPPED]
+
+Inventory: select item; 13 next, 14 previous, 15 sort (newest/rarity/name), 0 return.
+> 1
+basic_choir_dress: Micare def equipment.
+Main: DEF +9%
+After equip/unequip: HP 120 -> 120, ATK 20 -> 20, DEF 11 -> 11, SPD 100 -> 100
+ACC 0 -> 0, RES 0 -> 0, Crit 5% -> 5%
+
+Item action: 1 equip/unequip or use, 2 lock/unlock this instance, 3 discard this instance/stack, 0 cancel.
+> 0
+
+=== INVENTORY page 1/1 ===
+1. basic_choir_dress [Common] Torso def+9% instance=11
+2. cellar_rations [Common] x1
+3. dusty_linen_gown [Common] Torso def+8% instance=9
+4. cellar_rations [Common] x1
+5. faded_sanctum_gown [Common] Torso def+11% instance=7 [EQUIPPED]
+6. first_nuns_diary [Legendary] x1 [STORY]
+7. storage_key [Common] x1 [STORY]
+8. purification_salts [Uncommon] x1
+9. cellar_rations [Common] x1
+10. plain_rosary [Common] Accessory hp+8% instance=2 [EQUIPPED]
+11. linen_veil [Common] Head hp+12% instance=1 [EQUIPPED]
+
+Inventory: select item; 13 next, 14 previous, 15 sort (newest/rarity/name), 0 return.
+> 0
+
+=== ROOM: Entrance Hall ===
+QA_CPP | Level 1 | HP 114/120 | ATK 20 DEF 11 SPD 100 | XP 38/100
+  Discovered: Broken statue
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+0. Leave room
+
+Room action:
+> 2
+You discover supplies hidden in the room.
+Found: cellar_rations.
+
+=== ROOM: Entrance Hall ===
+QA_CPP | Level 1 | HP 114/120 | ATK 20 DEF 11 SPD 100 | XP 38/100
+  Discovered: Broken statue
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+0. Leave room
+
+Room action:
+> 3
+
+=== INVENTORY page 1/1 ===
+1. cellar_rations [Common] x1
+2. basic_choir_dress [Common] Torso def+9% instance=11
+3. cellar_rations [Common] x1
+4. dusty_linen_gown [Common] Torso def+8% instance=9
+5. cellar_rations [Common] x1
+6. faded_sanctum_gown [Common] Torso def+11% instance=7 [EQUIPPED]
+7. first_nuns_diary [Legendary] x1 [STORY]
+8. storage_key [Common] x1 [STORY]
+9. purification_salts [Uncommon] x1
+10. cellar_rations [Common] x1
+11. plain_rosary [Common] Accessory hp+8% instance=2 [EQUIPPED]
+12. linen_veil [Common] Head hp+12% instance=1 [EQUIPPED]
+
+Inventory: select item; 13 next, 14 previous, 15 sort (newest/rarity/name), 0 return.
+> 0
+
+=== ROOM: Entrance Hall ===
+QA_CPP | Level 1 | HP 114/120 | ATK 20 DEF 11 SPD 100 | XP 38/100
+  Discovered: Broken statue
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+0. Leave room
+
+Room action:
+> 1
+You discover supplies hidden in the room.
+Found: cellar_rations.
+
+=== ROOM: Entrance Hall ===
+QA_CPP | Level 1 | HP 114/120 | ATK 20 DEF 11 SPD 100 | XP 38/100
+  Discovered: Broken statue
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+0. Leave room
+
+Room action:
+> 3
+
+=== INVENTORY page 1/2 ===
+1. cellar_rations [Common] x1
+2. cellar_rations [Common] x1
+3. basic_choir_dress [Common] Torso def+9% instance=11
+4. cellar_rations [Common] x1
+5. dusty_linen_gown [Common] Torso def+8% instance=9
+6. cellar_rations [Common] x1
+7. faded_sanctum_gown [Common] Torso def+11% instance=7 [EQUIPPED]
+8. first_nuns_diary [Legendary] x1 [STORY]
+9. storage_key [Common] x1 [STORY]
+10. purification_salts [Uncommon] x1
+11. cellar_rations [Common] x1
+12. plain_rosary [Common] Accessory hp+8% instance=2 [EQUIPPED]
+
+Inventory: select item; 13 next, 14 previous, 15 sort (newest/rarity/name), 0 return.
+> 0
+
+=== ROOM: Entrance Hall ===
+QA_CPP | Level 1 | HP 114/120 | ATK 20 DEF 11 SPD 100 | XP 38/100
+  Discovered: Broken statue
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+0. Leave room
+
+Room action:
+> 2
+You recover a meaningful fragment from the room. The room's required discoveries are complete; its guardian may now appear.
+Investigation gained 26 XP.
+
+=== ROOM: Entrance Hall ===
+QA_CPP | Level 1 | HP 114/120 | ATK 20 DEF 11 SPD 100 | XP 64/100
+  Discovered: Broken statue
+  Discovered: Old banner
+Guardian eligible: Matron of the Catacombs | fixed level 8 | suggested readiness 8.
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+0. Leave room
+
+Room action:
+> 1
+You discover supplies hidden in the room.
+Found: cellar_rations.
+
+=== ROOM: Entrance Hall ===
+QA_CPP | Level 1 | HP 114/120 | ATK 20 DEF 11 SPD 100 | XP 64/100
+  Discovered: Broken statue
+  Discovered: Old banner
+Guardian eligible: Matron of the Catacombs | fixed level 8 | suggested readiness 8.
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+0. Leave room
+
+Room action:
+> 3
+
+=== INVENTORY page 1/2 ===
+1. cellar_rations [Common] x1
+2. cellar_rations [Common] x1
+3. cellar_rations [Common] x1
+4. basic_choir_dress [Common] Torso def+9% instance=11
+5. cellar_rations [Common] x1
+6. dusty_linen_gown [Common] Torso def+8% instance=9
+7. cellar_rations [Common] x1
+8. faded_sanctum_gown [Common] Torso def+11% instance=7 [EQUIPPED]
+9. first_nuns_diary [Legendary] x1 [STORY]
+10. storage_key [Common] x1 [STORY]
+11. purification_salts [Uncommon] x1
+12. cellar_rations [Common] x1
+
+Inventory: select item; 13 next, 14 previous, 15 sort (newest/rarity/name), 0 return.
+> 0
+
+=== ROOM: Entrance Hall ===
+QA_CPP | Level 1 | HP 114/120 | ATK 20 DEF 11 SPD 100 | XP 64/100
+  Discovered: Broken statue
+  Discovered: Old banner
+Guardian eligible: Matron of the Catacombs | fixed level 8 | suggested readiness 8.
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+0. Leave room
+
+Room action:
+> 2
+You discover supplies hidden in the room.
+Found: dusty_prayer_shawl.
+
+=== ROOM: Entrance Hall ===
+QA_CPP | Level 1 | HP 114/120 | ATK 20 DEF 11 SPD 100 | XP 64/100
+  Discovered: Broken statue
+  Discovered: Old banner
+Guardian eligible: Matron of the Catacombs | fixed level 8 | suggested readiness 8.
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+0. Leave room
+
+Room action:
+> 3
+
+=== INVENTORY page 1/2 ===
+1. dusty_prayer_shawl [Common] Head hp+11% instance=15
+2. cellar_rations [Common] x1
+3. cellar_rations [Common] x1
+4. cellar_rations [Common] x1
+5. basic_choir_dress [Common] Torso def+9% instance=11
+6. cellar_rations [Common] x1
+7. dusty_linen_gown [Common] Torso def+8% instance=9
+8. cellar_rations [Common] x1
+9. faded_sanctum_gown [Common] Torso def+11% instance=7 [EQUIPPED]
+10. first_nuns_diary [Legendary] x1 [STORY]
+11. storage_key [Common] x1 [STORY]
+12. purification_salts [Uncommon] x1
+
+Inventory: select item; 13 next, 14 previous, 15 sort (newest/rarity/name), 0 return.
+> 1
+dusty_prayer_shawl: Micare hp equipment.
+Main: HP +11%
+After equip/unequip: HP 120 -> 119, ATK 20 -> 20, DEF 11 -> 11, SPD 100 -> 100
+ACC 0 -> 0, RES 0 -> 0, Crit 5% -> 5%
+
+Item action: 1 equip/unequip or use, 2 lock/unlock this instance, 3 discard this instance/stack, 0 cancel.
+> 0
+
+=== INVENTORY page 1/2 ===
+1. dusty_prayer_shawl [Common] Head hp+11% instance=15
+2. cellar_rations [Common] x1
+3. cellar_rations [Common] x1
+4. cellar_rations [Common] x1
+5. basic_choir_dress [Common] Torso def+9% instance=11
+6. cellar_rations [Common] x1
+7. dusty_linen_gown [Common] Torso def+8% instance=9
+8. cellar_rations [Common] x1
+9. faded_sanctum_gown [Common] Torso def+11% instance=7 [EQUIPPED]
+10. first_nuns_diary [Legendary] x1 [STORY]
+11. storage_key [Common] x1 [STORY]
+12. purification_salts [Uncommon] x1
+
+Inventory: select item; 13 next, 14 previous, 15 sort (newest/rarity/name), 0 return.
+> 13
+
+=== INVENTORY page 2/2 ===
+1. cellar_rations [Common] x1
+2. plain_rosary [Common] Accessory hp+8% instance=2 [EQUIPPED]
+3. linen_veil [Common] Head hp+12% instance=1 [EQUIPPED]
+
+Inventory: select item; 13 next, 14 previous, 15 sort (newest/rarity/name), 0 return.
+> 0
+
+=== ROOM: Entrance Hall ===
+QA_CPP | Level 1 | HP 114/120 | ATK 20 DEF 11 SPD 100 | XP 64/100
+  Discovered: Broken statue
+  Discovered: Old banner
+Guardian eligible: Matron of the Catacombs | fixed level 8 | suggested readiness 8.
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+0. Leave room
+
+Room action:
+> 1
+A major presence emerges: Matron of the Catacombs. Fixed level 8; prepare around level 8. You can withdraw and continue investigating.
+[27] Encounter begins: Matron of the Catacombs (level 8, Boss).
+[28] QA_CPP (level 1, HP 114) faces Matron of the Catacombs.
+[29] QA_CPP's action begins (gauge 1000).
+[30] Waiting for QA_CPP to choose an action.
+QA_CPP | Level 1 | HP 114/120 | ATK 20 DEF 11 SPD 100 | XP 64/100
+Enemy: Matron of the Catacombs | Level 8 Boss | HP 524/524 DEF 37 SPD 94
+Acting: QA_CPP
+1. Attack
+2. Consumable
+3. Shimmer
+4. Flee
+5. Full encounter log
+6. Toggle fast presentation
+
+Combat action:
+> 4
+[31] Waiting for QA_CPP to choose an action.
+[32] QA_CPP retreats from the encounter.
+[33] Encounter complete: fled.
+
+=== ROOM: Entrance Hall ===
+QA_CPP | Level 1 | HP 114/120 | ATK 20 DEF 11 SPD 100 | XP 64/100
+  Discovered: Broken statue
+  Discovered: Old banner
+Guardian eligible: Matron of the Catacombs | fixed level 8 | suggested readiness 8.
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+0. Leave room
+
+Room action:
+> 2
+A major presence emerges: Matron of the Catacombs. Fixed level 8; prepare around level 8. You can withdraw and continue investigating.
+[34] Encounter begins: Matron of the Catacombs (level 8, Boss).
+[35] QA_CPP (level 1, HP 114) faces Matron of the Catacombs.
+[36] QA_CPP's action begins (gauge 1000).
+[37] Waiting for QA_CPP to choose an action.
+QA_CPP | Level 1 | HP 114/120 | ATK 20 DEF 11 SPD 100 | XP 64/100
+Enemy: Matron of the Catacombs | Level 8 Boss | HP 524/524 DEF 37 SPD 94
+Acting: QA_CPP
+1. Attack
+2. Consumable
+3. Shimmer
+4. Flee
+5. Full encounter log
+6. Toggle fast presentation
+
+Combat action:
+> 4
+[38] Waiting for QA_CPP to choose an action.
+[39] QA_CPP retreats from the encounter.
+[40] Encounter complete: fled.
+
+=== ROOM: Entrance Hall ===
+QA_CPP | Level 1 | HP 114/120 | ATK 20 DEF 11 SPD 100 | XP 64/100
+  Discovered: Broken statue
+  Discovered: Old banner
+Guardian eligible: Matron of the Catacombs | fixed level 8 | suggested readiness 8.
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+0. Leave room
+
+Room action:
+> 1
+A major presence emerges: Matron of the Catacombs. Fixed level 8; prepare around level 8. You can withdraw and continue investigating.
+[41] Encounter begins: Matron of the Catacombs (level 8, Boss).
+[42] QA_CPP (level 1, HP 114) faces Matron of the Catacombs.
+[43] QA_CPP's action begins (gauge 1000).
+[44] Waiting for QA_CPP to choose an action.
+QA_CPP | Level 1 | HP 114/120 | ATK 20 DEF 11 SPD 100 | XP 64/100
+Enemy: Matron of the Catacombs | Level 8 Boss | HP 524/524 DEF 37 SPD 94
+Acting: QA_CPP
+1. Attack
+2. Consumable
+3. Shimmer
+4. Flee
+5. Full encounter log
+6. Toggle fast presentation
+
+Combat action:
+> 4
+[45] Waiting for QA_CPP to choose an action.
+[46] QA_CPP retreats from the encounter.
+[47] Encounter complete: fled.
+
+=== ROOM: Entrance Hall ===
+QA_CPP | Level 1 | HP 114/120 | ATK 20 DEF 11 SPD 100 | XP 64/100
+  Discovered: Broken statue
+  Discovered: Old banner
+Guardian eligible: Matron of the Catacombs | fixed level 8 | suggested readiness 8.
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+0. Leave room
+
+Room action:
+> 2
+A major presence emerges: Matron of the Catacombs. Fixed level 8; prepare around level 8. You can withdraw and continue investigating.
+[48] Encounter begins: Matron of the Catacombs (level 8, Boss).
+[49] QA_CPP (level 1, HP 114) faces Matron of the Catacombs.
+[50] QA_CPP's action begins (gauge 1000).
+[51] Waiting for QA_CPP to choose an action.
+QA_CPP | Level 1 | HP 114/120 | ATK 20 DEF 11 SPD 100 | XP 64/100
+Enemy: Matron of the Catacombs | Level 8 Boss | HP 524/524 DEF 37 SPD 94
+Acting: QA_CPP
+1. Attack
+2. Consumable
+3. Shimmer
+4. Flee
+5. Full encounter log
+6. Toggle fast presentation
+
+Combat action:
+> 4
+[52] Waiting for QA_CPP to choose an action.
+[53] QA_CPP retreats from the encounter.
+[54] Encounter complete: fled.
+
+=== ROOM: Entrance Hall ===
+QA_CPP | Level 1 | HP 114/120 | ATK 20 DEF 11 SPD 100 | XP 64/100
+  Discovered: Broken statue
+  Discovered: Old banner
+Guardian eligible: Matron of the Catacombs | fixed level 8 | suggested readiness 8.
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+0. Leave room
+
+Room action:
+> 1
+A major presence emerges: Matron of the Catacombs. Fixed level 8; prepare around level 8. You can withdraw and continue investigating.
+[55] Encounter begins: Matron of the Catacombs (level 8, Boss).
+[56] QA_CPP (level 1, HP 114) faces Matron of the Catacombs.
+[57] QA_CPP's action begins (gauge 1000).
+[58] Waiting for QA_CPP to choose an action.
+QA_CPP | Level 1 | HP 114/120 | ATK 20 DEF 11 SPD 100 | XP 64/100
+Enemy: Matron of the Catacombs | Level 8 Boss | HP 524/524 DEF 37 SPD 94
+Acting: QA_CPP
+1. Attack
+2. Consumable
+3. Shimmer
+4. Flee
+5. Full encounter log
+6. Toggle fast presentation
+
+Combat action:
+> 4
+[59] Waiting for QA_CPP to choose an action.
+[60] QA_CPP retreats from the encounter.
+[61] Encounter complete: fled.
+
+=== ROOM: Entrance Hall ===
+QA_CPP | Level 1 | HP 114/120 | ATK 20 DEF 11 SPD 100 | XP 64/100
+  Discovered: Broken statue
+  Discovered: Old banner
+Guardian eligible: Matron of the Catacombs | fixed level 8 | suggested readiness 8.
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+0. Leave room
+
+Room action:
+> 2
+A major presence emerges: Matron of the Catacombs. Fixed level 8; prepare around level 8. You can withdraw and continue investigating.
+[62] Encounter begins: Matron of the Catacombs (level 8, Boss).
+[63] QA_CPP (level 1, HP 114) faces Matron of the Catacombs.
+[64] QA_CPP's action begins (gauge 1000).
+[65] Waiting for QA_CPP to choose an action.
+QA_CPP | Level 1 | HP 114/120 | ATK 20 DEF 11 SPD 100 | XP 64/100
+Enemy: Matron of the Catacombs | Level 8 Boss | HP 524/524 DEF 37 SPD 94
+Acting: QA_CPP
+1. Attack
+2. Consumable
+3. Shimmer
+4. Flee
+5. Full encounter log
+6. Toggle fast presentation
+
+Combat action:
+> 4
+[66] Waiting for QA_CPP to choose an action.
+[67] QA_CPP retreats from the encounter.
+[68] Encounter complete: fled.
+
+=== ROOM: Entrance Hall ===
+QA_CPP | Level 1 | HP 114/120 | ATK 20 DEF 11 SPD 100 | XP 64/100
+  Discovered: Broken statue
+  Discovered: Old banner
+Guardian eligible: Matron of the Catacombs | fixed level 8 | suggested readiness 8.
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+0. Leave room
+
+Room action:
+> 1
+A hostile presence emerges: Devotee Acolyte (Basic, level 1).
+[69] Encounter begins: Devotee Acolyte (level 1, Basic).
+[70] QA_CPP (level 1, HP 114) faces Devotee Acolyte.
+[71] QA_CPP's action begins (gauge 1000).
+[72] Waiting for QA_CPP to choose an action.
+QA_CPP | Level 1 | HP 114/120 | ATK 20 DEF 11 SPD 100 | XP 64/100
+Enemy: Devotee Acolyte | Level 1 Basic | HP 54/54 DEF 6 SPD 89
+Acting: QA_CPP
+1. Attack
+2. Consumable
+3. Shimmer
+4. Flee
+5. Full encounter log
+6. Toggle fast presentation
+
+Combat action:
+> 3
+1. Pulsus Luminis cooldown 0
+
+Choose combat Shimmer, 0 cancel:
+> 1
+[73] Waiting for QA_CPP to choose an action.
+[74] QA_CPP uses Shimmer skill Pulsus Luminis on Devotee Acolyte.
+[75] Pulsus Luminis hits Devotee Acolyte.
+[76] QA_CPP -> Devotee Acolyte: 180 requested damage; mitigated 0; barrier absorbs 0; 54 actual HP damage. HP: 0.
+[77] Devotee Acolyte has been defeated.
+[78] XP gained: +10.
+[79] Found: old_ritual_band.
+[80] Encounter complete: victory.
+
+=== ROOM: Entrance Hall ===
+QA_CPP | Level 1 | HP 114/120 | ATK 20 DEF 11 SPD 100 | XP 74/100
+  Discovered: Broken statue
+  Discovered: Old banner
+Guardian eligible: Matron of the Catacombs | fixed level 8 | suggested readiness 8.
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+0. Leave room
+
+Room action:
+> 3
+
+=== INVENTORY page 1/2 ===
+1. old_ritual_band [Common] Head hp+10% instance=16
+2. dusty_prayer_shawl [Common] Head hp+11% instance=15
+3. cellar_rations [Common] x1
+4. cellar_rations [Common] x1
+5. cellar_rations [Common] x1
+6. basic_choir_dress [Common] Torso def+9% instance=11
+7. cellar_rations [Common] x1
+8. dusty_linen_gown [Common] Torso def+8% instance=9
+9. cellar_rations [Common] x1
+10. faded_sanctum_gown [Common] Torso def+11% instance=7 [EQUIPPED]
+11. first_nuns_diary [Legendary] x1 [STORY]
+12. storage_key [Common] x1 [STORY]
+
+Inventory: select item; 13 next, 14 previous, 15 sort (newest/rarity/name), 0 return.
+> 1
+old_ritual_band: Micare hp equipment.
+Main: HP +10%
+After equip/unequip: HP 120 -> 118, ATK 20 -> 20, DEF 11 -> 11, SPD 100 -> 100
+ACC 0 -> 0, RES 0 -> 0, Crit 5% -> 5%
+
+Item action: 1 equip/unequip or use, 2 lock/unlock this instance, 3 discard this instance/stack, 0 cancel.
+> 0
+
+=== INVENTORY page 1/2 ===
+1. old_ritual_band [Common] Head hp+10% instance=16
+2. dusty_prayer_shawl [Common] Head hp+11% instance=15
+3. cellar_rations [Common] x1
+4. cellar_rations [Common] x1
+5. cellar_rations [Common] x1
+6. basic_choir_dress [Common] Torso def+9% instance=11
+7. cellar_rations [Common] x1
+8. dusty_linen_gown [Common] Torso def+8% instance=9
+9. cellar_rations [Common] x1
+10. faded_sanctum_gown [Common] Torso def+11% instance=7 [EQUIPPED]
+11. first_nuns_diary [Legendary] x1 [STORY]
+12. storage_key [Common] x1 [STORY]
+
+Inventory: select item; 13 next, 14 previous, 15 sort (newest/rarity/name), 0 return.
+> 13
+
+=== INVENTORY page 2/2 ===
+1. purification_salts [Uncommon] x1
+2. cellar_rations [Common] x1
+3. plain_rosary [Common] Accessory hp+8% instance=2 [EQUIPPED]
+4. linen_veil [Common] Head hp+12% instance=1 [EQUIPPED]
+
+Inventory: select item; 13 next, 14 previous, 15 sort (newest/rarity/name), 0 return.
+> 0
+
+=== ROOM: Entrance Hall ===
+QA_CPP | Level 1 | HP 114/120 | ATK 20 DEF 11 SPD 100 | XP 74/100
+  Discovered: Broken statue
+  Discovered: Old banner
+Guardian eligible: Matron of the Catacombs | fixed level 8 | suggested readiness 8.
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+0. Leave room
+
+Room action:
+> 5
+
+=== SHIMMER SKILLS | free points 10/12 ===
+1. Pulsus Luminis cost 2 cooldown 5 [EQUIPPED]
+   Deal 900% ATK as a focused Shimmer strike.
+
+Shimmer loadout: select skill to equip/unequip, 0 return.
+> 0
+
+=== ROOM: Entrance Hall ===
+QA_CPP | Level 1 | HP 114/120 | ATK 20 DEF 11 SPD 100 | XP 74/100
+  Discovered: Broken statue
+  Discovered: Old banner
+Guardian eligible: Matron of the Catacombs | fixed level 8 | suggested readiness 8.
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+0. Leave room
+
+Room action:
+> 2
+A major presence emerges: Matron of the Catacombs. Fixed level 8; prepare around level 8. You can withdraw and continue investigating.
+[81] Encounter begins: Matron of the Catacombs (level 8, Boss).
+[82] QA_CPP (level 1, HP 114) faces Matron of the Catacombs.
+[83] QA_CPP's action begins (gauge 1000).
+[84] Waiting for QA_CPP to choose an action.
+QA_CPP | Level 1 | HP 114/120 | ATK 20 DEF 11 SPD 100 | XP 74/100
+Enemy: Matron of the Catacombs | Level 8 Boss | HP 524/524 DEF 37 SPD 94
+Acting: QA_CPP
+1. Attack
+2. Consumable
+3. Shimmer
+4. Flee
+5. Full encounter log
+6. Toggle fast presentation
+
+Combat action:
+> 4
+[85] Waiting for QA_CPP to choose an action.
+[86] QA_CPP retreats from the encounter.
+[87] Encounter complete: fled.
+
+=== ROOM: Entrance Hall ===
+QA_CPP | Level 1 | HP 114/120 | ATK 20 DEF 11 SPD 100 | XP 74/100
+  Discovered: Broken statue
+  Discovered: Old banner
+Guardian eligible: Matron of the Catacombs | fixed level 8 | suggested readiness 8.
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+0. Leave room
+
+Room action:
+> 1
+A hostile presence emerges: Devotee Acolyte (Basic, level 1).
+[88] Encounter begins: Devotee Acolyte (level 1, Basic).
+[89] QA_CPP (level 1, HP 114) faces Devotee Acolyte.
+[90] QA_CPP's action begins (gauge 1000).
+[91] Waiting for QA_CPP to choose an action.
+QA_CPP | Level 1 | HP 114/120 | ATK 20 DEF 11 SPD 100 | XP 74/100
+Enemy: Devotee Acolyte | Level 1 Basic | HP 54/54 DEF 6 SPD 89
+Acting: QA_CPP
+1. Attack
+2. Consumable
+3. Shimmer
+4. Flee
+5. Full encounter log
+6. Toggle fast presentation
+
+Combat action:
+> 3
+1. Pulsus Luminis cooldown 0
+
+Choose combat Shimmer, 0 cancel:
+> 1
+[92] Waiting for QA_CPP to choose an action.
+[93] QA_CPP uses Shimmer skill Pulsus Luminis on Devotee Acolyte.
+[94] Pulsus Luminis hits Devotee Acolyte.
+[95] QA_CPP -> Devotee Acolyte: 180 requested damage; mitigated 0; barrier absorbs 0; 54 actual HP damage. HP: 0.
+[96] Devotee Acolyte has been defeated.
+[97] XP gained: +10.
+[98] Found: old_ritual_robe.
+[99] Encounter complete: victory.
+
+=== ROOM: Entrance Hall ===
+QA_CPP | Level 1 | HP 114/120 | ATK 20 DEF 11 SPD 100 | XP 84/100
+  Discovered: Broken statue
+  Discovered: Old banner
+Guardian eligible: Matron of the Catacombs | fixed level 8 | suggested readiness 8.
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+0. Leave room
+
+Room action:
+> 3
+
+=== INVENTORY page 1/2 ===
+1. old_ritual_robe [Common] Torso def+8% instance=17
+2. old_ritual_band [Common] Head hp+10% instance=16
+3. dusty_prayer_shawl [Common] Head hp+11% instance=15
+4. cellar_rations [Common] x1
+5. cellar_rations [Common] x1
+6. cellar_rations [Common] x1
+7. basic_choir_dress [Common] Torso def+9% instance=11
+8. cellar_rations [Common] x1
+9. dusty_linen_gown [Common] Torso def+8% instance=9
+10. cellar_rations [Common] x1
+11. faded_sanctum_gown [Common] Torso def+11% instance=7 [EQUIPPED]
+12. first_nuns_diary [Legendary] x1 [STORY]
+
+Inventory: select item; 13 next, 14 previous, 15 sort (newest/rarity/name), 0 return.
+> 1
+old_ritual_robe: Micare def equipment.
+Main: DEF +8%
+After equip/unequip: HP 120 -> 120, ATK 20 -> 20, DEF 11 -> 11, SPD 100 -> 100
+ACC 0 -> 0, RES 0 -> 0, Crit 5% -> 5%
+
+Item action: 1 equip/unequip or use, 2 lock/unlock this instance, 3 discard this instance/stack, 0 cancel.
+> 0
+
+=== INVENTORY page 1/2 ===
+1. old_ritual_robe [Common] Torso def+8% instance=17
+2. old_ritual_band [Common] Head hp+10% instance=16
+3. dusty_prayer_shawl [Common] Head hp+11% instance=15
+4. cellar_rations [Common] x1
+5. cellar_rations [Common] x1
+6. cellar_rations [Common] x1
+7. basic_choir_dress [Common] Torso def+9% instance=11
+8. cellar_rations [Common] x1
+9. dusty_linen_gown [Common] Torso def+8% instance=9
+10. cellar_rations [Common] x1
+11. faded_sanctum_gown [Common] Torso def+11% instance=7 [EQUIPPED]
+12. first_nuns_diary [Legendary] x1 [STORY]
+
+Inventory: select item; 13 next, 14 previous, 15 sort (newest/rarity/name), 0 return.
+> 13
+
+=== INVENTORY page 2/2 ===
+1. storage_key [Common] x1 [STORY]
+2. purification_salts [Uncommon] x1
+3. cellar_rations [Common] x1
+4. plain_rosary [Common] Accessory hp+8% instance=2 [EQUIPPED]
+5. linen_veil [Common] Head hp+12% instance=1 [EQUIPPED]
+
+Inventory: select item; 13 next, 14 previous, 15 sort (newest/rarity/name), 0 return.
+> 0
+
+=== ROOM: Entrance Hall ===
+QA_CPP | Level 1 | HP 114/120 | ATK 20 DEF 11 SPD 100 | XP 84/100
+  Discovered: Broken statue
+  Discovered: Old banner
+Guardian eligible: Matron of the Catacombs | fixed level 8 | suggested readiness 8.
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+0. Leave room
+
+Room action:
+> 5
+
+=== SHIMMER SKILLS | free points 10/12 ===
+1. Pulsus Luminis cost 2 cooldown 5 [EQUIPPED]
+   Deal 900% ATK as a focused Shimmer strike.
+
+Shimmer loadout: select skill to equip/unequip, 0 return.
+> 0
+
+=== ROOM: Entrance Hall ===
+QA_CPP | Level 1 | HP 114/120 | ATK 20 DEF 11 SPD 100 | XP 84/100
+  Discovered: Broken statue
+  Discovered: Old banner
+Guardian eligible: Matron of the Catacombs | fixed level 8 | suggested readiness 8.
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+0. Leave room
+
+Room action:
+> 2
+You discover supplies hidden in the room.
+Found: cellar_rations.
+
+=== ROOM: Entrance Hall ===
+QA_CPP | Level 1 | HP 114/120 | ATK 20 DEF 11 SPD 100 | XP 84/100
+  Discovered: Broken statue
+  Discovered: Old banner
+Guardian eligible: Matron of the Catacombs | fixed level 8 | suggested readiness 8.
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+0. Leave room
+
+Room action:
+> 3
+
+=== INVENTORY page 1/2 ===
+1. cellar_rations [Common] x1
+2. old_ritual_robe [Common] Torso def+8% instance=17
+3. old_ritual_band [Common] Head hp+10% instance=16
+4. dusty_prayer_shawl [Common] Head hp+11% instance=15
+5. cellar_rations [Common] x1
+6. cellar_rations [Common] x1
+7. cellar_rations [Common] x1
+8. basic_choir_dress [Common] Torso def+9% instance=11
+9. cellar_rations [Common] x1
+10. dusty_linen_gown [Common] Torso def+8% instance=9
+11. cellar_rations [Common] x1
+12. faded_sanctum_gown [Common] Torso def+11% instance=7 [EQUIPPED]
+
+Inventory: select item; 13 next, 14 previous, 15 sort (newest/rarity/name), 0 return.
+> 0
+
+=== ROOM: Entrance Hall ===
+QA_CPP | Level 1 | HP 114/120 | ATK 20 DEF 11 SPD 100 | XP 84/100
+  Discovered: Broken statue
+  Discovered: Old banner
+Guardian eligible: Matron of the Catacombs | fixed level 8 | suggested readiness 8.
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+0. Leave room
+
+Room action:
+> 1
+A major presence emerges: Matron of the Catacombs. Fixed level 8; prepare around level 8. You can withdraw and continue investigating.
+[100] Encounter begins: Matron of the Catacombs (level 8, Boss).
+[101] QA_CPP (level 1, HP 114) faces Matron of the Catacombs.
+[102] QA_CPP's action begins (gauge 1000).
+[103] Waiting for QA_CPP to choose an action.
+QA_CPP | Level 1 | HP 114/120 | ATK 20 DEF 11 SPD 100 | XP 84/100
+Enemy: Matron of the Catacombs | Level 8 Boss | HP 524/524 DEF 37 SPD 94
+Acting: QA_CPP
+1. Attack
+2. Consumable
+3. Shimmer
+4. Flee
+5. Full encounter log
+6. Toggle fast presentation
+
+Combat action:
+> 4
+[104] Waiting for QA_CPP to choose an action.
+[105] QA_CPP retreats from the encounter.
+[106] Encounter complete: fled.
+
+=== ROOM: Entrance Hall ===
+QA_CPP | Level 1 | HP 114/120 | ATK 20 DEF 11 SPD 100 | XP 84/100
+  Discovered: Broken statue
+  Discovered: Old banner
+Guardian eligible: Matron of the Catacombs | fixed level 8 | suggested readiness 8.
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+0. Leave room
+
+Room action:
+> 2
+You piece together a useful detail about the cathedral.
+Investigation gained 11 XP.
+
+=== ROOM: Entrance Hall ===
+QA_CPP | Level 1 | HP 114/120 | ATK 20 DEF 11 SPD 100 | XP 95/100
+  Discovered: Broken statue
+  Discovered: Old banner
+Guardian eligible: Matron of the Catacombs | fixed level 8 | suggested readiness 8.
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+0. Leave room
+
+Room action:
+> 1
+A major presence emerges: Matron of the Catacombs. Fixed level 8; prepare around level 8. You can withdraw and continue investigating.
+[107] Encounter begins: Matron of the Catacombs (level 8, Boss).
+[108] QA_CPP (level 1, HP 114) faces Matron of the Catacombs.
+[109] QA_CPP's action begins (gauge 1000).
+[110] Waiting for QA_CPP to choose an action.
+QA_CPP | Level 1 | HP 114/120 | ATK 20 DEF 11 SPD 100 | XP 95/100
+Enemy: Matron of the Catacombs | Level 8 Boss | HP 524/524 DEF 37 SPD 94
+Acting: QA_CPP
+1. Attack
+2. Consumable
+3. Shimmer
+4. Flee
+5. Full encounter log
+6. Toggle fast presentation
+
+Combat action:
+> 4
+[111] Waiting for QA_CPP to choose an action.
+[112] QA_CPP retreats from the encounter.
+[113] Encounter complete: fled.
+
+=== ROOM: Entrance Hall ===
+QA_CPP | Level 1 | HP 114/120 | ATK 20 DEF 11 SPD 100 | XP 95/100
+  Discovered: Broken statue
+  Discovered: Old banner
+Guardian eligible: Matron of the Catacombs | fixed level 8 | suggested readiness 8.
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+0. Leave room
+
+Room action:
+> 2
+A major presence emerges: Matron of the Catacombs. Fixed level 8; prepare around level 8. You can withdraw and continue investigating.
+[114] Encounter begins: Matron of the Catacombs (level 8, Boss).
+[115] QA_CPP (level 1, HP 114) faces Matron of the Catacombs.
+[116] QA_CPP's action begins (gauge 1000).
+[117] Waiting for QA_CPP to choose an action.
+QA_CPP | Level 1 | HP 114/120 | ATK 20 DEF 11 SPD 100 | XP 95/100
+Enemy: Matron of the Catacombs | Level 8 Boss | HP 524/524 DEF 37 SPD 94
+Acting: QA_CPP
+1. Attack
+2. Consumable
+3. Shimmer
+4. Flee
+5. Full encounter log
+6. Toggle fast presentation
+
+Combat action:
+> 4
+[118] Waiting for QA_CPP to choose an action.
+[119] QA_CPP retreats from the encounter.
+[120] Encounter complete: fled.
+
+=== ROOM: Entrance Hall ===
+QA_CPP | Level 1 | HP 114/120 | ATK 20 DEF 11 SPD 100 | XP 95/100
+  Discovered: Broken statue
+  Discovered: Old banner
+Guardian eligible: Matron of the Catacombs | fixed level 8 | suggested readiness 8.
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+0. Leave room
+
+Room action:
+> 1
+You discover supplies hidden in the room.
+Found: cellar_rations.
+
+=== ROOM: Entrance Hall ===
+QA_CPP | Level 1 | HP 114/120 | ATK 20 DEF 11 SPD 100 | XP 95/100
+  Discovered: Broken statue
+  Discovered: Old banner
+Guardian eligible: Matron of the Catacombs | fixed level 8 | suggested readiness 8.
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+0. Leave room
+
+Room action:
+> 3
+
+=== INVENTORY page 1/2 ===
+1. cellar_rations [Common] x1
+2. cellar_rations [Common] x1
+3. old_ritual_robe [Common] Torso def+8% instance=17
+4. old_ritual_band [Common] Head hp+10% instance=16
+5. dusty_prayer_shawl [Common] Head hp+11% instance=15
+6. cellar_rations [Common] x1
+7. cellar_rations [Common] x1
+8. cellar_rations [Common] x1
+9. basic_choir_dress [Common] Torso def+9% instance=11
+10. cellar_rations [Common] x1
+11. dusty_linen_gown [Common] Torso def+8% instance=9
+12. cellar_rations [Common] x1
+
+Inventory: select item; 13 next, 14 previous, 15 sort (newest/rarity/name), 0 return.
+> 0
+
+=== ROOM: Entrance Hall ===
+QA_CPP | Level 1 | HP 114/120 | ATK 20 DEF 11 SPD 100 | XP 95/100
+  Discovered: Broken statue
+  Discovered: Old banner
+Guardian eligible: Matron of the Catacombs | fixed level 8 | suggested readiness 8.
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+0. Leave room
+
+Room action:
+> 2
+You piece together a useful detail about the cathedral.
+Investigation gained 11 XP.
+Level up! QA_CPP is now level 2. Five equipment rewards were added.
+
+Level-up Shimmer reward:
+1. Prism Step
+2. Gleam Needle
+3. Phōteinòs Thṓrax
+
+Choose a level-up skill, or 0 to decide later.
+> 1
+Shimmer skill unlocked: Prism Step.
+
+=== ROOM: Entrance Hall ===
+QA_CPP | Level 2 | HP 150/150 | ATK 35 DEF 22 SPD 100 | XP 6/110
+  Discovered: Broken statue
+  Discovered: Old banner
+Guardian eligible: Matron of the Catacombs | fixed level 8 | suggested readiness 8.
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+0. Leave room
+
+Room action:
+> 3
+
+=== INVENTORY page 1/2 ===
+1. old_choir_pendant [Common] Accessory hp+8% instance=24
+2. faded_sanctum_boots [Common] Boots spd+4 instance=23
+3. dusty_prayer_book [Common] Hand atk+11% instance=22
+4. basic_choir_dress [Common] Torso def+8% instance=21
+5. worn_lace_headwrap [Common] Head hp+12% instance=20
+6. cellar_rations [Common] x1
+7. cellar_rations [Common] x1
+8. old_ritual_robe [Common] Torso def+8% instance=17
+9. old_ritual_band [Common] Head hp+10% instance=16
+10. dusty_prayer_shawl [Common] Head hp+11% instance=15
+11. cellar_rations [Common] x1
+12. cellar_rations [Common] x1
+
+Inventory: select item; 13 next, 14 previous, 15 sort (newest/rarity/name), 0 return.
+> 1
+old_choir_pendant: Micare hp equipment.
+Main: HP +8%
+After equip/unequip: HP 150 -> 150, ATK 35 -> 35, DEF 22 -> 22, SPD 100 -> 100
+ACC 0 -> 0, RES 0 -> 0, Crit 5% -> 5%
+
+Item action: 1 equip/unequip or use, 2 lock/unlock this instance, 3 discard this instance/stack, 0 cancel.
+> 0
+
+=== INVENTORY page 1/2 ===
+1. old_choir_pendant [Common] Accessory hp+8% instance=24
+2. faded_sanctum_boots [Common] Boots spd+4 instance=23
+3. dusty_prayer_book [Common] Hand atk+11% instance=22
+4. basic_choir_dress [Common] Torso def+8% instance=21
+5. worn_lace_headwrap [Common] Head hp+12% instance=20
+6. cellar_rations [Common] x1
+7. cellar_rations [Common] x1
+8. old_ritual_robe [Common] Torso def+8% instance=17
+9. old_ritual_band [Common] Head hp+10% instance=16
+10. dusty_prayer_shawl [Common] Head hp+11% instance=15
+11. cellar_rations [Common] x1
+12. cellar_rations [Common] x1
+
+Inventory: select item; 13 next, 14 previous, 15 sort (newest/rarity/name), 0 return.
+> 2
+faded_sanctum_boots: Micare spd equipment.
+Main: SPD +4 flat
+After equip/unequip: HP 150 -> 150, ATK 35 -> 35, DEF 22 -> 22, SPD 100 -> 104
+ACC 0 -> 0, RES 0 -> 0, Crit 5% -> 5%
+
+Item action: 1 equip/unequip or use, 2 lock/unlock this instance, 3 discard this instance/stack, 0 cancel.
+> 1
+Equipment updated: faded_sanctum_boots
+
+=== INVENTORY page 1/2 ===
+1. old_choir_pendant [Common] Accessory hp+8% instance=24
+2. faded_sanctum_boots [Common] Boots spd+4 instance=23 [EQUIPPED]
+3. dusty_prayer_book [Common] Hand atk+11% instance=22
+4. basic_choir_dress [Common] Torso def+8% instance=21
+5. worn_lace_headwrap [Common] Head hp+12% instance=20
+6. cellar_rations [Common] x1
+7. cellar_rations [Common] x1
+8. old_ritual_robe [Common] Torso def+8% instance=17
+9. old_ritual_band [Common] Head hp+10% instance=16
+10. dusty_prayer_shawl [Common] Head hp+11% instance=15
+11. cellar_rations [Common] x1
+12. cellar_rations [Common] x1
+
+Inventory: select item; 13 next, 14 previous, 15 sort (newest/rarity/name), 0 return.
+> 3
+dusty_prayer_book: Micare atk equipment.
+Main: ATK +11%
+After equip/unequip: HP 150 -> 150, ATK 35 -> 39, DEF 22 -> 22, SPD 104 -> 104
+ACC 0 -> 0, RES 0 -> 0, Crit 5% -> 5%
+
+Item action: 1 equip/unequip or use, 2 lock/unlock this instance, 3 discard this instance/stack, 0 cancel.
+> 1
+Equipment updated: dusty_prayer_book
+
+=== INVENTORY page 1/2 ===
+1. old_choir_pendant [Common] Accessory hp+8% instance=24
+2. faded_sanctum_boots [Common] Boots spd+4 instance=23 [EQUIPPED]
+3. dusty_prayer_book [Common] Hand atk+11% instance=22 [EQUIPPED]
+4. basic_choir_dress [Common] Torso def+8% instance=21
+5. worn_lace_headwrap [Common] Head hp+12% instance=20
+6. cellar_rations [Common] x1
+7. cellar_rations [Common] x1
+8. old_ritual_robe [Common] Torso def+8% instance=17
+9. old_ritual_band [Common] Head hp+10% instance=16
+10. dusty_prayer_shawl [Common] Head hp+11% instance=15
+11. cellar_rations [Common] x1
+12. cellar_rations [Common] x1
+
+Inventory: select item; 13 next, 14 previous, 15 sort (newest/rarity/name), 0 return.
+> 4
+basic_choir_dress: Micare def equipment.
+Main: DEF +8%
+After equip/unequip: HP 150 -> 150, ATK 39 -> 39, DEF 22 -> 22, SPD 104 -> 104
+ACC 0 -> 0, RES 0 -> 0, Crit 5% -> 5%
+
+Item action: 1 equip/unequip or use, 2 lock/unlock this instance, 3 discard this instance/stack, 0 cancel.
+> 0
+
+=== INVENTORY page 1/2 ===
+1. old_choir_pendant [Common] Accessory hp+8% instance=24
+2. faded_sanctum_boots [Common] Boots spd+4 instance=23 [EQUIPPED]
+3. dusty_prayer_book [Common] Hand atk+11% instance=22 [EQUIPPED]
+4. basic_choir_dress [Common] Torso def+8% instance=21
+5. worn_lace_headwrap [Common] Head hp+12% instance=20
+6. cellar_rations [Common] x1
+7. cellar_rations [Common] x1
+8. old_ritual_robe [Common] Torso def+8% instance=17
+9. old_ritual_band [Common] Head hp+10% instance=16
+10. dusty_prayer_shawl [Common] Head hp+11% instance=15
+11. cellar_rations [Common] x1
+12. cellar_rations [Common] x1
+
+Inventory: select item; 13 next, 14 previous, 15 sort (newest/rarity/name), 0 return.
+> 5
+worn_lace_headwrap: Micare hp equipment.
+Main: HP +12%
+After equip/unequip: HP 150 -> 150, ATK 39 -> 39, DEF 22 -> 22, SPD 104 -> 104
+ACC 0 -> 0, RES 0 -> 0, Crit 5% -> 5%
+
+Item action: 1 equip/unequip or use, 2 lock/unlock this instance, 3 discard this instance/stack, 0 cancel.
+> 0
+
+=== INVENTORY page 1/2 ===
+1. old_choir_pendant [Common] Accessory hp+8% instance=24
+2. faded_sanctum_boots [Common] Boots spd+4 instance=23 [EQUIPPED]
+3. dusty_prayer_book [Common] Hand atk+11% instance=22 [EQUIPPED]
+4. basic_choir_dress [Common] Torso def+8% instance=21
+5. worn_lace_headwrap [Common] Head hp+12% instance=20
+6. cellar_rations [Common] x1
+7. cellar_rations [Common] x1
+8. old_ritual_robe [Common] Torso def+8% instance=17
+9. old_ritual_band [Common] Head hp+10% instance=16
+10. dusty_prayer_shawl [Common] Head hp+11% instance=15
+11. cellar_rations [Common] x1
+12. cellar_rations [Common] x1
+
+Inventory: select item; 13 next, 14 previous, 15 sort (newest/rarity/name), 0 return.
+> 13
+
+=== INVENTORY page 2/2 ===
+1. cellar_rations [Common] x1
+2. basic_choir_dress [Common] Torso def+9% instance=11
+3. cellar_rations [Common] x1
+4. dusty_linen_gown [Common] Torso def+8% instance=9
+5. cellar_rations [Common] x1
+6. faded_sanctum_gown [Common] Torso def+11% instance=7 [EQUIPPED]
+7. first_nuns_diary [Legendary] x1 [STORY]
+8. storage_key [Common] x1 [STORY]
+9. purification_salts [Uncommon] x1
+10. cellar_rations [Common] x1
+11. plain_rosary [Common] Accessory hp+8% instance=2 [EQUIPPED]
+12. linen_veil [Common] Head hp+12% instance=1 [EQUIPPED]
+
+Inventory: select item; 13 next, 14 previous, 15 sort (newest/rarity/name), 0 return.
+> 0
+
+=== ROOM: Entrance Hall ===
+QA_CPP | Level 2 | HP 150/150 | ATK 39 DEF 22 SPD 104 | XP 6/110
+  Discovered: Broken statue
+  Discovered: Old banner
+Guardian eligible: Matron of the Catacombs | fixed level 8 | suggested readiness 8.
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+0. Leave room
+
+Room action:
+> 5
+
+=== SHIMMER SKILLS | free points 10/12 ===
+1. Prism Step cost 1 cooldown 4
+   Gain a 500% max HP barrier and 20% damage reduction for 2 turns.
+2. Pulsus Luminis cost 2 cooldown 5 [EQUIPPED]
+   Deal 900% ATK as a focused Shimmer strike.
+
+Shimmer loadout: select skill to equip/unequip, 0 return.
+> 1
+Shimmer loadout updated.
+
+=== SHIMMER SKILLS | free points 9/12 ===
+1. Prism Step cost 1 cooldown 4 [EQUIPPED]
+   Gain a 500% max HP barrier and 20% damage reduction for 2 turns.
+2. Pulsus Luminis cost 2 cooldown 5 [EQUIPPED]
+   Deal 900% ATK as a focused Shimmer strike.
+
+Shimmer loadout: select skill to equip/unequip, 0 return.
+> 0
+
+=== ROOM: Entrance Hall ===
+QA_CPP | Level 2 | HP 150/150 | ATK 39 DEF 22 SPD 104 | XP 6/110
+  Discovered: Broken statue
+  Discovered: Old banner
+Guardian eligible: Matron of the Catacombs | fixed level 8 | suggested readiness 8.
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+0. Leave room
+
+Room action:
+> 6
+
+=== FULL ENCOUNTER LOG ===
+[114] Encounter begins: Matron of the Catacombs (level 8, Boss).
+[115] QA_CPP (level 1, HP 114) faces Matron of the Catacombs.
+[116] QA_CPP's action begins (gauge 1000).
+[117] Waiting for QA_CPP to choose an action.
+[118] Waiting for QA_CPP to choose an action.
+[119] QA_CPP retreats from the encounter.
+[120] Encounter complete: fled.
+=== END ENCOUNTER LOG ===
+
+=== ROOM: Entrance Hall ===
+QA_CPP | Level 2 | HP 150/150 | ATK 39 DEF 22 SPD 104 | XP 6/110
+  Discovered: Broken statue
+  Discovered: Old banner
+Guardian eligible: Matron of the Catacombs | fixed level 8 | suggested readiness 8.
+1. Investigate
+2. Search room
+3. Inventory
+4. Floor map
+5. Shimmer skills
+6. Last encounter log
+0. Leave room
+
+Room action:
+> 0
+
+=== MICARE: CATHEDRAL OF LIES ===
+QA_CPP | Level 2 | HP 150/150 | ATK 39 DEF 22 SPD 104 | XP 6/110
+Investigate, improve your equipment, and challenge each room's guardian.
+1. Fountain
+2. Entrance Hall
+3. Archive Room [LOCKED]
+4. Chapel [LOCKED]
+5. Storage Room [LOCKED]
+6. Inventory
+7. Shimmer skills
+8. Floor map
+9. Last encounter log
+0. Quit
+
+Destination or panel:
+> 0
+Session complete.

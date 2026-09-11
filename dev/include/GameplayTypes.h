@@ -126,6 +126,39 @@ enum class RoomType { Sanctuary, Entrance, Archive, Chapel, Storage };
 enum class ConsumableProfile { Restorative, Devotional, OccultMechanica, Ritual, SupplyCache };
 enum class EquipmentFamily { Plain, Choir, Occultist, Shimmer, Verdigris, Mechanica, Ironbound, Sanctum, Martyr, Clockwork };
 
+// Range validation for the enum values that cross a deserialization/catalogue
+// boundary. Callers previously cast raw integers and compared them to magic
+// bounds; these helpers centralize that check with a single source of truth.
+inline bool IsValidRarity(Rarity rarity) {
+	const int value = static_cast<int>(rarity);
+	return value >= static_cast<int>(Rarity::Common) && value <= static_cast<int>(Rarity::Artifact);
+}
+
+inline bool IsValidEquipSlot(EquipSlot slot) {
+	const int value = static_cast<int>(slot);
+	return value >= static_cast<int>(EquipSlot::Head) && value <= static_cast<int>(EquipSlot::None);
+}
+
+// The five wearable slots (Head..Accessory), excluding "None".
+inline bool IsWearableSlot(EquipSlot slot) {
+	return IsValidEquipSlot(slot) && slot != EquipSlot::None;
+}
+
+inline bool IsValidEnemyTier(EnemyTier tier) {
+	const int value = static_cast<int>(tier);
+	return value >= static_cast<int>(EnemyTier::Basic) && value <= static_cast<int>(EnemyTier::Boss);
+}
+
+inline bool IsValidEnemyFaction(EnemyFaction faction) {
+	const int value = static_cast<int>(faction);
+	return value >= static_cast<int>(EnemyFaction::Devotee) && value <= static_cast<int>(EnemyFaction::Verdigris);
+}
+
+inline bool IsValidItemCategory(ItemCategory category) {
+	const int value = static_cast<int>(category);
+	return value >= static_cast<int>(ItemCategory::Equippable) && value <= static_cast<int>(ItemCategory::ShimmerSkill);
+}
+
 struct WeightedEnemyEntry {
 	std::string enemyId;
 	int weight = 1;

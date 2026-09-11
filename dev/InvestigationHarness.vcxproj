@@ -31,6 +31,11 @@
     <ClInclude Include="tests\StatusResolutionTests.h" />
     <ClInclude Include="tests\ShimmerDamageTests.h" />
     <ClInclude Include="tests\CombatActionTests.h" />
+    <ClInclude Include="tests\StorageFarmingTests.h" />
+    <ClInclude Include="tests\CombatMenuPaginationTests.h" />
+    <ClInclude Include="tests\AccelerationSkillTests.h" />
+    <ClInclude Include="tests\LegendarySetTests.h" />
+    <ClInclude Include="tests\TestDiagnostics.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>

@@ -77,7 +77,7 @@ void MapManager::GenerateFloor1() {
     storage.AddInteractable("Supply shelf");
     storage.SetClues(true);
     storage.SetItems(true);
-    storage.SetSpawnCondition(EnemySpawnCondition::None);
+    storage.SetSpawnCondition(EnemySpawnCondition::Low);
 
 }
 

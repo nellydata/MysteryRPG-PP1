@@ -13,6 +13,20 @@ bool ViolatesTheme(const Item& item) {
     }
     return false;
 }
+
+bool IsLegendarySet(const std::string& setName) {
+    return setName == "Choir of Verdigris" || setName == "Shimmer Ascendant" ||
+        setName == "Automaton Overlord";
+}
+
+int CountSetPieces(const Item* const equipment[5], const std::string& setName) {
+    if (setName.empty()) return 0;
+    int count = 0;
+    for (int slot = 0; slot < 5; ++slot) {
+        if (equipment[slot] && equipment[slot]->getSetName() == setName) ++count;
+    }
+    return count;
+}
 }
 
 Player::Player(const std::string& name, int maxHp, int maxSp)
@@ -226,25 +240,20 @@ bool Player::Equip(Item& item) {
     return true;
 }
 
+int Player::GetSetPieceCount(const std::string& setName) const {
+    const Item* equipment[5];
+    for (int slot = 0; slot < 5; ++slot) equipment[slot] = equipped_[slot];
+    return CountSetPieces(equipment, setName);
+}
+
 std::vector<std::string> Player::GetActiveSets() const {
     std::vector<std::string> activeSets;
     for (const Item* item : equipped_) {
-        if (item == nullptr || item->getSetName().empty()) continue;
-        bool alreadySeen = false;
-        for (const std::string& setName : activeSets) {
-            if (setName == item->getSetName()) {
-                alreadySeen = true;
-                break;
-            }
-        }
-        if (alreadySeen) continue;
-
-        int pieces = 0;
-        for (const Item* equipped : equipped_) {
-            if (equipped != nullptr && equipped->getSetName() == item->getSetName()) ++pieces;
-        }
-        const bool hasCompleteSet = pieces >= 5;
-        if (hasCompleteSet) activeSets.push_back(item->getSetName());
+        if (!item || item->getSetName().empty()) continue;
+        const std::string& name = item->getSetName();
+        if (std::find(activeSets.begin(), activeSets.end(), name) != activeSets.end()) continue;
+        const int activationThreshold = IsLegendarySet(name) ? 2 : 5;
+        if (GetSetPieceCount(name) >= activationThreshold) activeSets.push_back(name);
     }
     return activeSets;
 }
@@ -257,7 +266,7 @@ bool Player::HasActiveSet(const std::string& setName) const {
 }
 
 int Player::GetShimmerDamageMultiplierPercent() const {
-    return HasActiveSet("Shimmer Ascendant") ? 125 : 100;
+    return GetSetPieceCount("Shimmer Ascendant") >= 3 ? 135 : 100;
 }
 
 bool Player::HasBarrierAbsorptionSet() const {
@@ -265,7 +274,8 @@ bool Player::HasBarrierAbsorptionSet() const {
 }
 
 void Player::StartBattleEffects() {
-    if (HasActiveSet("Choir of Verdigris")) AddBarrier(maxHp_ / 4);
+    // Legendary sets apply their approved two/three-piece bonuses during stat
+    // aggregation. The obsolete five-piece Choir opening barrier is removed.
 }
 
 int Player::CleanseNegativeStatuses() {
@@ -375,23 +385,37 @@ Stats Player::CalculateEquipmentStats(const Item* const equipment[5]) const {
         EquipmentStats::Add(total, equipment[slot]->GetStatBonuses());
         if (!equipment[slot]->getSetName().empty()) sets.insert(equipment[slot]->getSetName());
     }
-    // Keep the existing five-piece set behavior until the separate approved
-    // set/Artifact phase; previews use the same counted loadout as equipment.
+    // Artifact behavior remains separate from the approved Legendary rules.
     for (const auto& setName : sets) {
-        int pieces = 0;
-        for (int slot = 0; slot < 5; ++slot)
-            if (equipment[slot] && equipment[slot]->getSetName() == setName) ++pieces;
-        if (pieces < 5) continue;
+        if (IsLegendarySet(setName) || CountSetPieces(equipment, setName) < 5) continue;
         Stats bonus;
-        if (setName == "Choir of Verdigris") bonus.healingReceived = 25;
-        else if (setName == "Automaton Overlord") { total.acc = 100; bonus.critDamage = 50; }
-        else if (setName == "Verdigris Matron") { bonus.healingPotency = 100; bonus.lifesteal = 50; bonus.barrierPotency = 25; }
+        if (setName == "Verdigris Matron") { bonus.healingPotency = 100; bonus.lifesteal = 50; bonus.barrierPotency = 25; }
         else if (setName == "Shimmer Reliquary") { bonus.barrierPotency = 50; bonus.healingReceived = 50; bonus.critRate = 25; }
         else if (setName == "Oracle Automaton") { bonus.atk = 50; bonus.acc = 30; bonus.critDamage = 75; }
-        else if (setName == "Shimmer Ascendant") { bonus.atk = 15; bonus.acc = 15; }
         EquipmentStats::Add(total, bonus);
     }
-    return EquipmentStats::Finalize(total);
+    total = EquipmentStats::Finalize(total);
+    // Apply final-stat set multipliers after all ordinary equipment flats and
+    // percentages have been aggregated. Previews use this exact same path.
+    const int choir = CountSetPieces(equipment, "Choir of Verdigris");
+    const int ascendant = CountSetPieces(equipment, "Shimmer Ascendant");
+    const int overlord = CountSetPieces(equipment, "Automaton Overlord");
+    if (choir >= 2) {
+        total.hp = EquipmentStats::ApplyPercent(total.hp, 35);
+        total.healingReceived = EquipmentStats::SaturatingAdd(total.healingReceived, 25);
+    }
+    if (choir >= 3) {
+        total.def = EquipmentStats::ApplyPercent(total.def, 30);
+        total.barrierPotency = EquipmentStats::SaturatingAdd(total.barrierPotency, 30);
+    }
+    if (ascendant >= 2) total.atk = EquipmentStats::ApplyPercent(total.atk, 30);
+    if (ascendant >= 3) total.dotPotency = EquipmentStats::SaturatingAdd(total.dotPotency, 25);
+    if (overlord >= 2) total.spd = EquipmentStats::ApplyPercent(total.spd, 20);
+    if (overlord >= 3) {
+        total.critRate = EquipmentStats::SaturatingAdd(total.critRate, 20);
+        total.critDamage = EquipmentStats::SaturatingAdd(total.critDamage, 50);
+    }
+    return total;
 }
 
 Stats Player::EffectiveStatsFor(const Stats& stats) const {

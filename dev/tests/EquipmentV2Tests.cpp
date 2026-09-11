@@ -2,11 +2,13 @@
 #include "Item.h"
 #include "Player.h"
 #include "EquipmentEconomyTests.h"
+#include "TestDiagnostics.h"
 #include <cassert>
 #include <memory>
 #include <set>
 
 int main() {
+	UseConsoleTestDiagnostics();
 	RunEquipmentEconomyTests();
 	const auto catalog = BuildEquippableCatalog();
 	assert(!catalog.empty());

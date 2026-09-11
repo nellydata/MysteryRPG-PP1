@@ -56,6 +56,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="tests\EquipmentEconomyTests.h" />
+    <ClInclude Include="tests\TestDiagnostics.h" />
   </ItemGroup>
   <PropertyGroup>
     <OutDir>$(ProjectDir)bin\$(Platform)\$(Configuration)\</OutDir>

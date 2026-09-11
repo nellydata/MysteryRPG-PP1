@@ -149,12 +149,14 @@
   <ItemGroup>
     <ClInclude Include="include\CombatMath.h" />
     <ClInclude Include="include\ContentCatalog.h" />
+    <ClInclude Include="include\Catalog.h" />
     <ClInclude Include="include\ConsumableEffects.h" />
     <ClInclude Include="include\EquipmentStats.h" />
     <ClInclude Include="include\RandomService.h" />
     <ClInclude Include="include\StatusRules.h" />
     <ClInclude Include="include\GameplayTypes.h" />
     <ClInclude Include="include\ConsoleUI.h" />
+    <ClInclude Include="include\ConsoleFormat.h" />
     <ClInclude Include="include\Area.h" />
     <ClInclude Include="include\Clue.h" />
     <ClInclude Include="include\CombatManager.h" />
@@ -175,6 +177,7 @@
     <ClCompile Include="src\ContentCatalog.cpp" />
     <ClCompile Include="src\ConsumableEffects.cpp" />
     <ClCompile Include="src\ConsoleUI.cpp" />
+    <ClCompile Include="src\ConsoleFormat.cpp" />
     <ClCompile Include="src\Area.cpp" />
     <ClCompile Include="src\Clue.cpp" />
     <ClCompile Include="src\CombatManager.cpp" />

@@ -123,4 +123,19 @@ private:
     void FinishPlayerAction(Player& player, Enemy& enemy);
     void ResolveDefeatReward(Player& player, Enemy& enemy, ProgressionManager* progression);
     void ForfeitEncounterRewards();
+
+    // Enemy-turn breakdown: each concern lives in its own short helper so the
+    // orchestrating enemyTurn() stays small and individually readable.
+    struct EnemySkillContext {
+        Player& player;
+        Enemy& enemy;
+        bool bonusAction;
+        std::vector<Enemy*>& party;
+    };
+    void FinishEnemyAction(Player& player, Enemy& enemy, bool bonusAction, bool extraTurn);
+    bool AttemptEnemySkillAttack(const EnemySkillDefinition& skill, EnemySkillContext& context);
+    Enemy* FindLivingAlly(Enemy& enemy) const;
+    void ApplyEnemyDebuff(Player& player, Enemy& enemy, StatusType type, const EnemySkillDefinition& skill);
+    void ApplyEnemySkillEffect(EnemySkillContext& context, const EnemySkillDefinition& skill, bool landed);
+    bool RunEnemySkillIndex(EnemySkillContext& context, std::size_t index);
 };

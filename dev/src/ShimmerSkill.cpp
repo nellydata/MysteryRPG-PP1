@@ -17,8 +17,9 @@ int DirectShimmerDamage(const Player& player, int powerPercent) {
 class DefinedShimmerSkill final : public ShimmerSkill {
 public:
 	DefinedShimmerSkill(const std::string& name, int equipCost, int cooldown, const std::string& description,
-		const std::string& effect, int powerPercent = 0, int duration = 0)
-		: ShimmerSkill(name, equipCost, cooldown, description, effect, powerPercent, duration) {}
+		const std::string& effect, int powerPercent = 0, int duration = 0,
+		const CombatBuff& combatBuff = CombatBuff{})
+		: ShimmerSkill(name, equipCost, cooldown, description, effect, powerPercent, duration, combatBuff) {}
 
 	void apply(Player& player, Enemy& enemy) override {
 		if (!player.isAlive() || (targetType_ != TargetType::Self && !enemy.isAlive())) return;
@@ -62,13 +63,15 @@ public:
 			enemy.ApplyDirectDamage(DirectShimmerDamage(player, powerPercent_));
 			enemyStatus(StatusType::DefenseDown, duration_, (std::max)(20, powerPercent_ / 10));
 		} else if (effect_ == "stat_boost") {
-			const int duration = duration_ > 0 ? duration_ : 2;
-			selfStatus(StatusType::AttackUp, duration, 25);
-			selfStatus(StatusType::DefenseUp, duration, 25);
-			selfStatus(StatusType::SpeedUp, duration, 25);
-			selfStatus(StatusType::CritUp, duration, 15);
-			selfStatus(StatusType::CritDamageUp, duration, 25);
-			selfStatus(StatusType::DamageReduction, duration, 15);
+			const auto buff = [&](StatusType type, int potency) {
+				if (potency > 0) selfStatus(type, duration_, potency);
+			};
+			buff(StatusType::AttackUp, combatBuff_.attackPercent);
+			buff(StatusType::DefenseUp, combatBuff_.defensePercent);
+			buff(StatusType::SpeedUp, combatBuff_.speedPercent);
+			buff(StatusType::CritUp, combatBuff_.critRatePoints);
+			buff(StatusType::CritDamageUp, combatBuff_.critDamagePoints);
+			buff(StatusType::DamageReduction, combatBuff_.damageReductionPoints);
 		} else if (effect_ == "revive") {
 			player.AddBarrier(CombatMath::Scale(player.getMaxHP(), powerPercent_), 1);
 		}
@@ -83,8 +86,12 @@ ShimmerSkill::ShimmerSkill(const std::string& name, int equipCost, int cooldown,
 
 ShimmerSkill::ShimmerSkill(const std::string& name, int equipCost, int cooldown, const std::string& description,
 	const std::string& effect, int powerPercent, int duration)
+	: ShimmerSkill(name, equipCost, cooldown, description, effect, powerPercent, duration, CombatBuff{}) {}
+
+ShimmerSkill::ShimmerSkill(const std::string& name, int equipCost, int cooldown, const std::string& description,
+	const std::string& effect, int powerPercent, int duration, const CombatBuff& combatBuff)
 	: name_(name), description_(description), effect_(effect), equipCost_(equipCost), cooldown_(cooldown),
-	  powerPercent_(powerPercent), duration_(duration), remainingCooldown_(0) {
+	  powerPercent_(powerPercent), duration_(duration), combatBuff_(combatBuff), remainingCooldown_(0) {
 	if (effect_ == "barrier" || effect_ == "heal_hot" || effect_ == "cleanse_resist" || effect_ == "defensive_buff" || effect_ == "stat_boost" || effect_ == "revive")
 		targetType_ = TargetType::Self;
 	else if (effect_ == "all_damage" || effect_ == "all_burn") targetType_ = TargetType::AllEnemies;
@@ -103,6 +110,7 @@ int ShimmerSkill::getEquipCost() const { return equipCost_; }
 int ShimmerSkill::getCooldown() const { return cooldown_; }
 int ShimmerSkill::getPowerPercent() const { return powerPercent_; }
 int ShimmerSkill::getDuration() const { return duration_; }
+const ShimmerSkill::CombatBuff& ShimmerSkill::getCombatBuff() const { return combatBuff_; }
 ShimmerSkill::TargetType ShimmerSkill::getTargetType() const { return targetType_; }
 int ShimmerSkill::getRemainingCooldown() const { return remainingCooldown_; }
 bool ShimmerSkill::IsReady() const { return remainingCooldown_ == 0; }
@@ -125,9 +133,12 @@ std::unique_ptr<ShimmerSkill> ShimmerSkill::Create(const std::string& skillName)
 	if (skillName == "Siphon Lux") return std::make_unique<DefinedShimmerSkill>(skillName, 4, 6, "Deal 1800% ATK and restore 25% of damage dealt.", "damage_lifesteal", 1800, 0);
 	if (skillName == "Lux Aegis") return std::make_unique<DefinedShimmerSkill>(skillName, 5, 12, "Gain a 3000% max HP barrier and 20% damage reduction for 3 turns.", "defensive_buff", 3000, 3);
 	if (skillName == "Refraction Cataclysm") return std::make_unique<DefinedShimmerSkill>(skillName, 5, 12, "Deal 3600% ATK as defense-ignoring damage.", "damage_ignore", 3600, 0);
-	if (skillName == "Lux Ascension" || skillName == "Onus Coruscum" || skillName == "Resonantia Chori") return std::make_unique<DefinedShimmerSkill>(skillName, 5, 10, "Gain major ATK, DEF, SPD, critical, and damage-resistance buffs for 3 turns.", "stat_boost", 0, 3);
+	if (skillName == "Lux Ascension" || skillName == "Onus Coruscum" || skillName == "Resonantia Chori") return std::make_unique<DefinedShimmerSkill>(skillName, 5, 10, "Gain 25% ATK, DEF and SPD, 15pp critical rate, 25pp critical damage and 15pp damage reduction for 3 turns.", "stat_boost", 0, 3, CombatBuff{25, 25, 25, 15, 25, 15, 0});
 	if (skillName == "Pulsus Luminis") return std::make_unique<DefinedShimmerSkill>(skillName, 2, 5, "Deal 900% ATK as a focused Shimmer strike.", "damage_ignore", 900, 0);
-	if (skillName == "Gradus Coruscus" || skillName == "Mutatio Horologii") return std::make_unique<DefinedShimmerSkill>(skillName, 2, 4, "Gain 40% combat stats and accelerate the next action for 2 turns.", "stat_boost", 800, 2);
+	// The existing authored 800 value was previously unused damage metadata.
+	// Interpret it explicitly as next-action gauge progress, separately from
+	// the approved 40% core-stat buff. It is a single cast effect, not a tick.
+	if (skillName == "Gradus Coruscus" || skillName == "Mutatio Horologii") return std::make_unique<DefinedShimmerSkill>(skillName, 2, 4, "Gain 40% ATK, DEF and SPD for your next 2 normal actions; immediately add 800/1000 gauge progress toward your next action.", "stat_boost", 0, 2, CombatBuff{40, 40, 40, 0, 0, 0, 800});
 	if (skillName == "Lucerna Echo" || skillName == "Catena Aeruginis") return std::make_unique<DefinedShimmerSkill>(skillName, 3, 6, "Deal 1300% ATK and attempt to stun the enemy for 2 turns.", "damage_stun", 1300, 2);
 	if (skillName == "Fulgur Aurorae") return std::make_unique<DefinedShimmerSkill>(skillName, 4, 8, "Deal 2000% ATK as a heavy defense-ignoring strike.", "damage_ignore", 2000, 0);
 	if (skillName == "Flos Aeruginis") return std::make_unique<DefinedShimmerSkill>(skillName, 3, 6, "Deal 1500% ATK and apply Burn for 3 turns.", "damage_burn", 1500, 3);

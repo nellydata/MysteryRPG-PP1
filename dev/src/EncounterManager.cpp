@@ -81,7 +81,11 @@ InvestigationResult EncounterManager::ResolveInvestigation(Area& area, Player& p
     case 0:
         result.type = InvestigationEventType::EnemyEncounter;
         result.spawnedEnemy = CreateRoomEnemy(*definition, rng(), level, area.HasBossBeenDefeated());
-        if (!result.spawnedEnemy) throw std::logic_error("Eligible enemy pool produced no enemy");
+        // A room marked eligible should always fill its pool, but an empty or
+        // exhausted pool must not crash the run: fall back to a safe default
+        // guardian so the encounter still resolves with a valid enemy.
+        if (!result.spawnedEnemy) result.spawnedEnemy = CreateCatalogueEnemy("Devotee Acolyte", level);
+        if (!result.spawnedEnemy) throw std::logic_error("No eligible enemy could be constructed for an encounter");
         result.enemyId = result.spawnedEnemy->getName();
         result.narrative = "A hostile presence emerges: " + result.enemyId + " (" +
             EnemyTierName(result.spawnedEnemy->getTier()) + ", level " + std::to_string(result.spawnedEnemy->getLevel()) + ").";
@@ -253,14 +257,36 @@ bool EncounterManager::Explore(Area& area, Player& player, ProgressionManager& p
                         if (entry->getCategory() == ItemCategory::Consumable && entry.quantity > 0)
                             consumables.push_back(entry->getInstanceId());
                     if (consumables.empty()) { ui.ShowMessage("No consumables available."); continue; }
-                    for (std::size_t index = 0; index < consumables.size(); ++index)
-                        ui.ShowMessage(std::to_string(index + 1) + ". " +
-                            player.GetInventory().FindItem(consumables[index])->getName() + " x" +
-                            std::to_string(player.GetInventory().GetQuantity(consumables[index])) +
-                            (player.GetInventory().IsLocked(consumables[index]) ? " [LOCKED]" : ""));
-                    const int selected = ui.Prompt("Choose consumable, 0 cancel:", 0, static_cast<int>(consumables.size()));
-                    if (!selected) continue;
-                    combat.UseConsumable(consumables[selected - 1], player, *enemy, &progression);
+                    constexpr std::size_t pageSize = 12;
+                    std::size_t page = 0;
+                    while (std::cin) {
+                        const std::size_t first = page * pageSize;
+                        const std::size_t count = (std::min)(pageSize, consumables.size() - first);
+                        ui.ShowMessage("Consumables page " + std::to_string(page + 1) + "/" +
+                            std::to_string((consumables.size() + pageSize - 1) / pageSize) +
+                            ". 13 next page, 14 previous page.");
+                        for (std::size_t offset = 0; offset < count; ++offset) {
+                            const auto instanceId = consumables[first + offset];
+                            ui.ShowMessage(std::to_string(offset + 1) + ". " +
+                                player.GetInventory().FindItem(instanceId)->getName() + " x" +
+                                std::to_string(player.GetInventory().GetQuantity(instanceId)) +
+                                (player.GetInventory().IsLocked(instanceId) ? " [LOCKED]" : ""));
+                        }
+                        const int selected = ui.Prompt("Choose consumable, 0 cancel:", 0, 14);
+                        if (!selected || !std::cin) break;
+                        if (selected == 13) {
+                            if (first + count < consumables.size()) ++page;
+                            else ui.ShowMessage("No next consumable page.");
+                            continue;
+                        }
+                        if (selected == 14) { if (page > 0) --page; continue; }
+                        if (selected > static_cast<int>(count)) {
+                            ui.ShowMessage("That consumable is not on this page.");
+                            continue;
+                        }
+                        combat.UseConsumable(consumables[first + selected - 1], player, *enemy, &progression);
+                        break;
+                    }
                 } else if (choice == 3) {
                     const auto equipped = progression.GetEquippedShimmerSkills();
                     if (equipped.empty()) { ui.ShowMessage("Equip a Shimmer skill from the room's Skills menu first."); continue; }

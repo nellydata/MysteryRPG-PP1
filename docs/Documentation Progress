@@ -115,5 +115,171 @@ Spent ~1 hour wrangling scaffolding and resolving small issues to ensure everyth
 •	Added guards for invalid rooms, stale enemies, and repeated command handling.
 •	Fixed the executable build successfully after the changes.
 
+•	Added a data-driven enemy catalogue for Devotee, Automata, and Verdigris factions.
+•	Added Basic, Rare, Epic, Elite, and Boss enemy tiers with catalogue skill and drop metadata.
+•	Added tier-specific HP, ATK, and DEF scaling with fixed archetype SPD values.
+•	Migrated Win32 and console enemy spawning to catalogue definitions.
+•	Added enemy skill cooldowns, faction skill effects, boss phase transitions, and structured combat events.
+•	Added elite encounter escalation from seeded Shimmer Surge events.
+•	Added tier-aware elite and boss reward selection.
+•	Added Shimmer unlock triggers and a 10-point Shimmer loadout tracker.
+•	Added enemy faction, tier, and phase details to the combat view.
+•	Validated the catalogue expansion with a successful Debug x64 build.
+
+•	Added immediate-previous-page navigation for Back and inventory access from investigation.
+•	Cleared combat ownership and event history when leaving battles so later investigations start fresh.
+•	Limited enemy encounters by room faction, room spawn condition, player level, and maximum catalogue tier.
+•	Prevented level 1 players from encountering Rare, Epic, Elite, or Boss enemies.
+•	Routed opening-turn, status, hazard, and combat deaths to the fountain recovery choices immediately.
+•	Blocked navigation, investigation, fleeing, and combat actions while the player is at 0 HP.
+•	Updated combat events to identify specific Bleed, Burn, and Poison effects and immediate status deaths.
+•	Replaced unsupported combat-log symbols with readable ASCII event labels.
+•	Recorded the navigation, encounter, recovery, and event-log changes for version-control tracking.
+•	Added metadata-driven Shimmer skill descriptions and effects to the Skills view.
+•	Added Shimmer skill equip and unequip controls using the progression loadout budget.
+•	Displayed equipped Shimmer skills in the player equipment panel.
 
 
+• Added [`docs/Micare-System-Design.md`](Micare-System-Design.md), documenting the current C++17 architecture.
+• Documented class responsibilities for Player, Enemy, Area, MapManager, CombatManager, Inventory, ContentCatalog, ProgressionManager, EncounterManager, GameManager, and Win32UI.
+• Documented `std::vector` usage for deterministic room order, owned runtime objects, statuses, skills, combat events, and UI views.
+• Documented `std::unique_ptr`, references, raw non-owning pointers, and value semantics, including ownership and lifetime boundaries.
+• Added source links to the relevant files under [`dev/include`](../dev/include/) and [`dev/src`](../dev/src/).
+• Added C++17, Win32, GDI, Visual Studio, smart-pointer, vector, and Git reference sources to the design documentation.
+•	Added selectable equipped Shimmer skills to combat and connected selections to combat resolution.
+•	Validated the Shimmer loadout update with a successful Debug x64 build.
+Version 0.4.1
+•	Changed the desktop Skills heading to “SKILLS” and unlocked the starter Shimmer skill during player initialization.
+•	Replaced runaway absolute-level enemy scaling with bounded level-relative HP, ATK, and DEF formulas.
+•	Cleared player and enemy statuses when battles end and kept enemy-only Verdigris Mark out of the player panel.
+•	Added turn-gated combat controls, living-target selection, and deterministic groups of up to three ordinary enemies.
+•	Added level-weighted enemy tier selection, bounded level disparity, exact “Nothing Was Found.” investigation feedback, and active equipment-set status names.
+•	Validated the correction pass with a successful Debug x64 build.
+
+Version 0.4.2
+•	Reworked the Skills screen into separate skill-inventory and skill-information panels with selectable equip buttons.
+•	Added skill sorting by A-Z or cost and filtering by offense or support.
+•	Removed redundant single-enemy target presentation and kept target buttons for multi-enemy encounters.
+•	Converted equipment main-stat bonuses to level-scaled percentages while retaining flat SPD substats.
+•	Made investigation consumable outcomes reachable and room-aware, then validated the update with a successful Debug x64 build.
+
+Cleanup pass
+
+• Fixed the player speed regression by preserving the normalized 100 SPD baseline during level initialization.
+• Normalized boot rarity values to 5/8/12/16/20/25 and applied flat equipment main-stat values during player stat recalculation.
+• Wired healing received, barrier potency, damage reduction, lifesteal, resistance, evasion, slow, and debuff-duration reduction into runtime mechanics.
+• Implemented typed enemy buffs, barriers, cleanses, healing resistance, enemy hit checks, evasion, critical attacks, and stun-before-AI handling.
+• Replaced hard-coded boss and progression rules with room-definition interactable completion, boss IDs, spawn chances, farm weights, and next-room IDs.
+• Corrected boss/elite loot rarity, added consumable drops, applied equipment-family roll offsets, and preserved separate same-name item instances.
+• Replaced permanent Shimmer stat mutation and fake revival behavior with temporary defensive statuses.
+• Added explicit Floor I completion messaging and removed exact enemy HP numbers from desktop combat cards.
+• Validated the cleanup with a successful Debug x64 build, `MICARE_VALIDATE=1`, and `git diff --check`.
+
+
+9/7
+
+•	Deleted unused Automata, Boss, and Nun source/header files.
+•	Removed stale includes and verified project metadata no longer references them.
+•	Removed the legacy name-based Enemy constructor and speed sniffing.
+•	Added Area::ResourcePool for clue/item state and introduced SetHealingRoom(bool).
+•	Updated MapManager to explicitly mark the Fountain as the healing room.
+•	Replaced Inventory’s parallel vectors with std::vector<ItemEntry>.
+•	Merged Enemy::ProcessStatuses overloads and added SumStatusBonus.
+•	Added CombatManager::AdvanceTurn for repeated gauge transitions.
+•	Replaced direct CombatManager.cpp std::cout calls with CombatEvent logging.
+•	Fountain no longer heals on room entry.
+•	Fountain remains sealed until investigated.
+•	Win32 exposes a Fountain action only after discovery.
+•	Console has an equivalent Fountain recovery action.
+•	Investigation drops now announce exact item names.
+•	Repeat searches can drop consumables more commonly and equipment less commonly, with rarity rolls.
+•	Active status effects now display with potency.
+•	Negative statuses display red; beneficial statuses display blue.
+•	Active Attack, Defense, Speed, Accuracy, Crit, and Healing modifiers now affect calculated player/enemy stats.
+•	Phthorá uses typed DefenseDown rather than Verdigris Mark
+entralized Win32 and console investigation through ResolveInvestigation.
+•	Replaced fixed room-name investigation RNG with advancing per-room RNG.
+•	Removed duplicate console room-entry enemy spawning.
+•	Ensured item and clue outcomes are removed from weighted rolls when unavailable.
+•	Item investigation events now consume finite room item resources.
+•	Added stable discovery IDs for clue and interactable revelations.
+•	Preserved Fountain guardian discovery, healing unlock, and room progression.
+•	Removed the remaining fixed room-name seed from post-combat loot generation.
+•	Confirmed UI no longer directly grants investigation XP, rolls loot, consumes clues, or applies investigation damage.
+•	Added InvestigationHarness.vcxproj as a separate deterministic test target.
+•	Fresh investigation/combat harness build and execution passed.
+
+9/8 - 9/9
+
+* Converted **Micare** from the GUI build into a fully course-compliant **C++ console application**.
+* Moved the full Visual Studio solution and project structure inside the required `dev` folder.
+* Preserved the old GUI version separately on the archive branch instead of deleting it.
+* Repaired project paths, include paths, output folders, debugger paths, and VS Code build/debug configuration after the restructure.
+* Removed Win32/graphical startup code and kept the assessed version console-only.
+* Verified the console build launches with no GUI window and no Python dependency.
+* Added/connected a playable console interface for navigation, rooms, inventory, Shimmer skills, combat, maps, and encounter logs.
+* Improved console input handling so malformed or out-of-range input does not break menu flow.
+* Added a complete fresh-character gameplay loop starting at the Fountain and progressing through the rooms.
+* Reworked investigation so it uses a single weighted outcome system for enemies, items, XP, clues, beneficial events, and hazards.
+* Preserved the intended investigation probabilities and repeat-investigation behavior.
+* Added required-discovery pity so players do not get stuck waiting indefinitely for room progression.
+* Kept first-clear bosses as fixed progression checks rather than scaling them to the player.
+* Preserved the **50% first-clear boss appearance chance** once eligible.
+* Preserved the separate **8% farm-boss chance** after a room has been cleared.
+* Added explicit first-clear boss levels and XP rewards for each room.
+* Reworked enemy selection so rarity/tier is chosen first, then an eligible enemy from that room/tier is selected.
+* Added/validated the intended enemy rarity curve from Level 1 through Level 100.
+* Rebalanced early enemies so starter fights are actually survivable and closer to intended action counts.
+* Improved combat logging with sequence IDs and actual HP damage rather than only requested damage.
+* Added barrier absorption, barrier break, healing, status, critical, skill, and death information to the combat event log.
+* Preserved complete encounter history after defeat instead of wiping it immediately.
+* Added a defeat review screen and acknowledgment before returning to the Fountain.
+* Fixed cases where dead players could incorrectly receive victory XP.
+* Fixed Shimmer reward queue issues that could create stale choices or stall progression after multiple level-ups.
+* Added working level-up rewards, including five equipment rewards and Shimmer choices.
+* Added console inventory management with equip/unequip, locking, discarding, sorting, pagination, and exact item instances.
+* Added Shimmer loadout management with the 12-point equipment budget.
+* Added Fountain healing after the tutorial guardian is defeated.
+* Added room unlocking, first-clear tracking, repeat farming, and final Floor I completion behavior.
+* Expanded automated validation with combat tests, investigation tests, equipment tests, content validation, and progression simulations.
+* Ran a real console smoke test through Fountain, Entrance Hall, boss defeat/retry, Shimmer use, equipment, XP, and room unlocking.
+* Started a much larger **fresh-character endurance playthrough** through the real executable.
+* Successfully cleared every required Floor I guardian using normal gameplay.
+* Reached **Level 100 legitimately** through console play rather than injected XP or test shortcuts.
+* Used all **31 Shimmer skills** during the endurance run.
+* Recorded hundreds of encounters, deliberate flees, and a real defeat/recovery path during live testing.
+* Continued Level-100 farming through thousands of investigations and more than 2,500 encounters without obvious state corruption.
+* Legitimately obtained at least **eight distinct Artifact items** during the soak test.
+* Confirmed a previous long-run timeout was caused by the input automation driver, not Micare itself.
+* Added a regression test for the Storage Room ordinary-encounter problem.
+* Established tested checkpoint commit `74540af` for the earlier combat/correctness work.
+* Began separating issues into **correctness bugs, balance problems, presentation issues, and unverified features** instead of treating everything as the same kind of failure.
+
+Confirmed and known issues
+
+* **Storage Room ordinary farming is disabled** even though the room already has an enemy pool configured.
+* **Legendary set bonuses are missing or not activating according to the approved 2-piece/3-piece rules.**
+* Some older code still uses the previous **five-piece set logic** instead of the newer Legendary and Artifact thresholds.
+* **Acceleration Shimmer skills advertise 40% stat bonuses but currently apply 25%.**
+* Some Shimmer descriptions and actual runtime effects are still inconsistent.
+* Equipment main-stat math is not fully aligned with the approved Equipment V2 rules.
+* Early ATK/DEF equipment has been capable of granting extremely large flat bonuses, such as a Common weapon giving around +80 to +120 ATK to a character starting at 20 ATK.
+* Because of that equipment scaling issue, a low-level player was able to defeat the fixed Level-8 Matron much earlier than intended.
+* Inventory item-detail output can show mostly zeroes even when the item has a real percentage-based main stat.
+* Equipment comparison/display still needs to show the actual effective stat changes rather than only the raw `Stats` structure.
+* `RollLootInstance` needs continued review to ensure randomized rolls do not erase intentionally authored fixed bonuses or unique effects.
+* The approved Legendary/Artifact set overhaul is not yet fully verified in live gameplay.
+* Only eight distinct Artifacts have been naturally obtained so far, so several Artifact unique effects still lack live-play verification.
+* Some Artifact mechanics may currently exist only as strings/placeholders or older simplified behavior and need deterministic testing.
+* Combat still contains some older deterministic hit/status roll logic that should be replaced or fully standardized around seedable RNG.
+* Consumable handling still needs a full audit for effect parsing, valid targeting, quantities, failed uses, and exact turn consumption.
+* Large inventories make automated testing slower and can overwhelm the input driver, although the game itself did not hang in the reproduced case.
+* Inventory locking/removal behavior should still be checked carefully when multiple copies of the same item exist.
+* The exact Basic-enemy gear pity implementation still needs full live verification across long farming runs.
+* Full rarity progression needs continued verification, especially Legendary and Artifact drops at high levels.
+* Not every enemy skill/status combination has been exercised through live play yet.
+* Not every individual Artifact trigger has been activated in a real naturally progressed run yet.
+* The console presentation is still intentionally rough: no polished health bars, status icons, rarity colors, compact combat HUD, or improved spacing yet.
+* The mystery/narrative side of the game is still mostly placeholder content compared with the much more developed combat/progression systems.
+* Release/x86 configurations have not been as thoroughly runtime-tested as Debug x64.
+* The newest endurance-run fixes and validation work may still be **uncommitted** because Codex hit its usage limit while staging/continuing the run.

@@ -7,6 +7,10 @@ class Item {
 public:
     Item(const std::string& name = "", const std::string& description = "");
     explicit Item(const ItemDefinition& definition);
+    Item(const Item&) = delete;
+    Item& operator=(const Item&) = delete;
+    Item(Item&&) = delete;
+    Item& operator=(Item&&) = delete;
     ~Item();
 
     const std::string& getName() const;
@@ -15,9 +19,23 @@ public:
     Rarity getRarity() const;
     EquipSlot getSlot() const;
     const Stats& getStats() const;
+    Stats GetStatBonuses() const;
+    std::vector<std::string> GetStatLines() const;
+    int GetStatContribution(ItemStat stat, const Stats& referenceStats) const;
     const std::string& getEffect() const;
     const std::string& getUniqueEffect() const;
+    const std::string& getTheme() const;
+    const std::string& getMainStat() const;
+    int getMainStatPercent() const;
+    int getMainStatValue() const;
+    const std::vector<std::pair<ItemStat, int>>& getSubstats() const;
+    const std::vector<ItemStat>& getAllowedSubstats() const;
+    const std::vector<ItemStat>& getForbiddenStats() const;
+    const std::string& getSetName() const;
+    const std::string& getPassive() const;
+    const std::string& getSetPassive() const;
     bool isEquippable() const;
+    unsigned long long getInstanceId() const;
 
 private:
     std::string name_;
@@ -28,4 +46,16 @@ private:
     Stats stats_;
     std::string effect_;
     std::string uniqueEffect_;
+    std::string theme_;
+    std::string mainStat_;
+    int mainStatValue_;
+    int mainStatPercent_;
+    std::vector<ItemStat> allowedSubstats_;
+    std::vector<std::pair<ItemStat, int>> substats_;
+    std::vector<ItemStat> forbiddenStats_;
+    std::string setName_;
+    std::string passive_;
+    std::string setPassive_;
+    unsigned long long instanceId_;
+    static unsigned long long nextInstanceId_;
 };

@@ -1,82 +1,22 @@
 # Micare - Cathedral of Lies
 
-Micare is a C++17 noir roguelike RPG with both a native Win32 desktop UI and a console mode. The player chooses an investigator name, explores a cathedral overtaken by the Shimmer, discovers clues and items, encounters NPCs, and fights enemies while progressing through Floor 1.
+Micare is a standard C++17 console RPG for the course deliverable. Open [dev/COS-PP1.slnx](dev/COS-PP1.slnx) in Visual Studio and build **Debug x64**, with **COS-PP1** as the startup project.
 
-## Project Structure
+The complete Visual Studio solution, all source/header files, and build outputs are inside `dev`. The application uses keyboard input and console output; it has no GUI or Python dependency.
 
-- `dev/include/` - C++ header files
-- `dev/src/` - C++ source files and program entry point
-- `docs/` - project and course documentation
-- `COS-PP1.vcxproj` - Visual Studio project
+- [Build instructions and keyboard controls](dev/README.md)
+- [Shared gameplay architecture](docs/Micare-System-Design.md)
+- [Milestone 2 changelog](docs/NAyoola_Milestone2.md)
 
-## Current Features
+The gameplay loop includes Fountain recovery, room navigation, weighted investigations, items and equipment, ordinary combat, XP and level-up rewards, Shimmer loadouts, fixed first-clear bosses, room unlocks, and farming in cleared rooms. Combat events and defeat history remain reviewable in the console.
 
-- Deterministic Floor 1 map with Entrance Hall, Archive Room, Chapel, and Storage Room
-- Interactable rooms with neutral environmental descriptions
-- Deterministic enemy spawning
-- Combat with Attack, Shimmer, Interrogate, Expose Weakness, and Flee
-- Health, attack, defense, XP, and level progression
-- Item and clue inventory listing
-- NPC placeholders and input validation
-- Typed HP, DEF, SPD, ATK, ACC, RES, critical rate, and critical damage stats
-- Equipment slots, rarity metadata, artifact effects, consumables, clues, and crux items
-- Bleed, burn, poison, stun, healing-over-time, barrier, and mark status processing
-- Percentage-based defense reduction, deterministic critical hits, and turn cooldowns
-- Fifteen concrete shimmer skills with Latin display names and specification cooldowns
-- Structured console UI with a persistent player panel, exploration/combat views, inventory overlay, map, and shimmer bar
-- ASCII-safe rendering for Windows consoles, with optional ANSI color styling
-- Hidden developer panel enabled with `MICARE_DEVELOPER_MODE=1`
-- Native Windows desktop UI with clickable room, investigation, inventory, map, shimmer, and combat controls
-- Player-selected name displayed in the character panel, combat messages, turn order, status messages, and event log
-- Inventory paging with aligned item buttons, item details, rarity colors, sorting, locking, discarding, equipping, and consumable use
-- Battle result reporting with defeat messages, XP rewards, and item drops
-- Defensive state validation for room selection, stale enemies, and repeated command handling
-- Deferred Win32 control refresh to prevent command-handler re-entry and UI freezes
-- Completion-mode level cap and guarded XP progression to prevent infinite level-up loops
+The pre-conversion gameplay and graphical implementation are preserved at Git checkpoint `fa9bc0b` on branch `archive/gui-before-course-conversion`. Graphical components are absent from the assessed build. Existing course/reference documents remain under `docs` and illustrations under `images`; neither is a runtime dependency.
 
-## Building and Running
+## Milestone 2 stand-up
+**Overview.** This week I continued the console conversion of Micare. I refactored the combat turn engine out of one oversized function into named helpers, split the console presentation into a pure formatting module (`ConsoleFormat`), added a shared catalogue-lookup helper (`Catalog`) used by both the enemy and item catalogues, and tightened enum validation at the catalogue boundaries in `GameplayTypes`.
 
-Open `COS-PP1.vcxproj` in Visual Studio and build Debug x64. The project uses C++17 and no external libraries.
+**Challenges.** The main obstacle was a linking failure introduced when `ConsoleUI` began depending on the new `ConsoleFormat` translation unit — the test/harness projects that compiled `ConsoleUI.cpp` no longer linked. I resolved it by making the dependency explicit, then simplified the repository by removing the generated capture folder and the standalone test projects so the solution builds as a single clean deliverable. Keeping combat behaviour identical while extracting helpers was the other challenge; I verified each change with MSVC C++17 `/permissive-` compile checks and a full clean rebuild.
 
-## Milestone Stand-Up
+**Accomplishments.** I levelled up on separating pure logic from I/O — `ConsoleFormat` has no console dependency, so panel text is now testable in isolation. I also learned to validate enum values at the deserialization boundary instead of scattering magic number casts, and to consolidate duplicated catalogue code into one header. The codebase is noticeably cleaner as a result.
 
-### Overview
-
-This milestone focused on building the Micare architecture, a playable console prototype, and a native Win32 desktop experience. I organized the project into separate header and source folders, created the core classes, and connected map, encounter, combat, progression, player, enemy, inventory, and UI systems.
-
-### Challenges
-
-The main challenges were keeping the project structure consistent with Visual Studio, separating room exploration from combat, and keeping native Win32 controls aligned across different window sizes. I also diagnosed UI freezes caused by synchronous refresh paths and an infinite level-up loop when the XP threshold was zero.
-
-### Accomplishments
-
-I built a deterministic Floor 1 map, added four interactable rooms, created basic enemy types, implemented combat actions, added XP and level progression, created readable item and clue inventory output, and added a clickable desktop UI. The project builds successfully with the Visual Studio project configuration.
-
-### Next Steps
-
-The core catalog and gameplay systems are now data-driven through `ContentCatalog`, while the room loop remains deterministic and console-friendly. Further work can expand NPC dialogue, procedural room generation, save/load support, and narrative branches without changing the core stat or item APIs.
-
-## UI Controls
-
-The main dashboard keeps the chosen investigator's live stats, statuses, and equipped items visible while navigating:
-
-- `1`-`4` - enter a Floor I room
-- `5` - open inventory
-- `6` - view Latin shimmer skills and cooldown state
-- `7` - view the Floor I map
-- `0` - leave the cathedral or return from a panel
-
-Inside a room, the UI provides environment inspection, room search, inventory, and map actions. During combat, the player panel remains visible above enemy stats, turn order, and combat actions.
-
-Set `MICARE_NO_COLOR=1` for plain output. Set `MICARE_DEVELOPER_MODE=1` to reveal the hidden developer-mode panel.
-
-## Desktop UI
-
-The normal build launches **Micare - Cathedral of Lies** with a name prompt before the native Windows UI opens. The entered investigator name is shown throughout the character panel, combat turn order, and gameplay messages. Its layout uses the reference-inspired hierarchy of a persistent character/equipment panel, a central gameplay viewport, an event log, and action buttons:
-
-- Room buttons enter Floor I locations.
-- Investigation buttons inspect individual objects and immediately update the clue log.
-- Search, inventory item, map, and shimmer buttons operate without numeric console input.
-- Combat buttons perform Attack, Shimmer, and Flee actions while refreshing enemy/player state.
-
-For debugging or environments where a window is not available, set `MICARE_CONSOLE_MODE=1` before launching. The repository currently contains no local image asset files, so the desktop UI uses native drawing and the supplied visual references for its dark, brass, verdigris, and shimmer composition.
+**Next Steps.** Before Week 3 I plan to add disk-based save/load so progress persists across sessions, expand the ability catalogue, and finish the usability pass on combat prompts and error messages.

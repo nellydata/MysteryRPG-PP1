@@ -3,9 +3,9 @@
 #include <algorithm>
 
 Area::Area(const std::string& name)
-    : name_(name), hasNPC_(false), hasClues_(false), hasItems_(false),
-      spawnCondition_(EnemySpawnCondition::None), unlocked_(false), searchCount_(0),
-      discoveredNPC_(false), bossDefeated_(false), bossEncountered_(false) {}
+    : name_(name), hasNPC_(false),
+      spawnCondition_(EnemySpawnCondition::None), unlocked_(false), searchCount_(0), investigationSeed_(2166136261u),
+      discoveredNPC_(false), bossDefeated_(false), bossEncountered_(false), healingUnlocked_(false), healingRoom_(false) {}
 
 Area::~Area() = default;
 
@@ -13,14 +13,49 @@ void Area::addEnemy(std::unique_ptr<Enemy> enemy) {
     if (enemy) enemies_.push_back(std::move(enemy));
 }
 
+bool Area::AreAllRequiredInteractablesRevealed() const {
+    return visibleInteractables_.size() >= interactables_.size();
+}
+
+const std::vector<std::unique_ptr<Enemy>>& Area::GetEnemies() const { return enemies_; }
+
 bool Area::IsUnlocked() const { return unlocked_; }
 void Area::SetUnlocked(bool unlocked) { unlocked_ = unlocked; }
 int Area::GetSearchCount() const { return searchCount_; }
 void Area::RecordSearch() { ++searchCount_; }
+unsigned Area::NextInvestigationSeed() {
+    investigationSeed_ ^= static_cast<unsigned>(searchCount_ + 1) * 747796405u;
+    investigationSeed_ = investigationSeed_ * 1664525u + 1013904223u;
+    return investigationSeed_;
+}
 
 bool Area::RevealNextInteractable() {
-    if (visibleInteractables_.size() >= interactables_.size()) return false;
-    visibleInteractables_.push_back(interactables_[visibleInteractables_.size()]);
+    for (const auto& name : interactables_)
+        if (RevealInteractable(name)) return true;
+    return false;
+}
+
+bool Area::RevealInteractable(const std::string& name) {
+    if (std::find(interactables_.begin(), interactables_.end(), name) == interactables_.end() ||
+        std::find(visibleInteractables_.begin(), visibleInteractables_.end(), name) != visibleInteractables_.end()) return false;
+    visibleInteractables_.push_back(name);
+    return true;
+}
+
+bool Area::CanBeIlluminated() const { return name_ == "Archive Room" || name_ == "Chapel"; }
+bool Area::IsIlluminated() const { return std::chrono::steady_clock::now() < illuminatedUntil_; }
+void Area::IlluminateFor(std::chrono::seconds duration) {
+    if (CanBeIlluminated() && duration.count() > 0)
+        illuminatedUntil_ = std::chrono::steady_clock::now() + duration;
+}
+bool Area::HasRustedLock() const {
+    return !rustedLockUnlocked_ && name_ == "Archive Room" &&
+        std::find(interactables_.begin(), interactables_.end(), "Locked cabinet") != interactables_.end();
+}
+bool Area::IsRustedLockUnlocked() const { return rustedLockUnlocked_; }
+bool Area::UnlockRustedLock() {
+    if (!HasRustedLock()) return false;
+    rustedLockUnlocked_ = true;
     return true;
 }
 
@@ -37,6 +72,10 @@ bool Area::HasDiscoveredNPC() const { return discoveredNPC_; }
 void Area::DiscoverNPC() { if (hasNPC_) discoveredNPC_ = true; }
 bool Area::HasBossBeenDefeated() const { return bossDefeated_; }
 void Area::SetBossDefeated(bool defeated) { bossDefeated_ = defeated; }
+bool Area::IsHealingUnlocked() const { return healingUnlocked_; }
+bool Area::IsHealingRoom() const { return healingRoom_; }
+void Area::SetHealingUnlocked(bool unlocked) { healingUnlocked_ = unlocked; }
+void Area::SetHealingRoom(bool healingRoom) { healingRoom_ = healingRoom; }
 bool Area::HasBossBeenEncountered() const { return bossEncountered_; }
 void Area::MarkBossEncountered() { bossEncountered_ = true; }
 void Area::SetCleared(bool cleared) {
@@ -46,6 +85,8 @@ void Area::SetCleared(bool cleared) {
     discoveredNPC_ = hasNPC_;
     bossDefeated_ = true;
     bossEncountered_ = false;
+    cluePool_.Set(false, 0);
+    discoveryFailures_ = 0;
 }
 
 bool Area::hasEnemies() const {
@@ -71,29 +112,35 @@ void Area::removeDeadEnemies() {
         }), enemies_.end());
 }
 
+void Area::ClearEnemies() {
+    enemies_.clear();
+}
+
 void Area::AddInteractable(const std::string& interactable) {
     if (!interactable.empty()) interactables_.push_back(interactable);
 }
 
 void Area::SetNPC(bool hasNPC) { hasNPC_ = hasNPC; }
-void Area::SetClues(bool hasClues) { hasClues_ = hasClues; }
-void Area::SetItems(bool hasItems) { hasItems_ = hasItems; }
+void Area::SetClues(bool hasClues) {
+    cluePool_.Set(hasClues, static_cast<int>(interactables_.size()));
+}
+void Area::SetItems(bool hasItems) {
+    itemPool_.Set(hasItems, static_cast<int>(interactables_.size()));
+}
 void Area::SetSpawnCondition(EnemySpawnCondition condition) { spawnCondition_ = condition; }
 
 const std::vector<std::string>& Area::GetInteractables() const { return interactables_; }
 bool Area::HasNPC() const { return hasNPC_; }
-bool Area::HasClues() const { return hasClues_; }
-bool Area::HasItems() const { return hasItems_; }
+bool Area::HasClues() const { return cluePool_.Has(); }
+bool Area::HasItems() const { return itemPool_.Has(); }
+bool Area::HasAllClues() const { return cluePool_.HasAll(); }
+bool Area::HasAllItems() const { return itemPool_.HasAll(); }
 EnemySpawnCondition Area::GetSpawnCondition() const { return spawnCondition_; }
 
 bool Area::ConsumeClue() {
-    if (!hasClues_) return false;
-    hasClues_ = false;
-    return true;
+    return cluePool_.Consume();
 }
 
 bool Area::ConsumeItem() {
-    if (!hasItems_) return false;
-    hasItems_ = false;
-    return true;
+    return itemPool_.Consume();
 }

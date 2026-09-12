@@ -4,6 +4,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <chrono>
 
 enum class EnemySpawnCondition {
     None,
@@ -26,7 +27,9 @@ public:
     const std::string& getName() const;
 
     Enemy* getFirstAliveEnemy();
+    const std::vector<std::unique_ptr<Enemy>>& GetEnemies() const;
     void removeDeadEnemies();
+    void ClearEnemies();
 
     void AddInteractable(const std::string& interactable);
     void SetNPC(bool hasNPC);
@@ -38,6 +41,8 @@ public:
     bool HasNPC() const;
     bool HasClues() const;
     bool HasItems() const;
+    bool HasAllClues() const;
+    bool HasAllItems() const;
     EnemySpawnCondition GetSpawnCondition() const;
     bool ConsumeClue();
     bool ConsumeItem();
@@ -45,29 +50,70 @@ public:
     void SetUnlocked(bool unlocked);
     int GetSearchCount() const;
     void RecordSearch();
+    int GetDiscoveryFailures() const { return discoveryFailures_; }
+    void RecordDiscoveryAttempt(bool success) { discoveryFailures_ = success ? 0 : discoveryFailures_ + 1; }
+    unsigned NextInvestigationSeed();
     bool RevealNextInteractable();
+    bool RevealInteractable(const std::string& name);
+    bool CanBeIlluminated() const;
+    bool IsIlluminated() const;
+    void IlluminateFor(std::chrono::seconds duration);
+    bool HasRustedLock() const;
+    bool IsRustedLockUnlocked() const;
+    bool UnlockRustedLock();
     const std::vector<std::string>& GetVisibleInteractables() const;
     bool IsFullySearched() const;
+    bool AreAllRequiredInteractablesRevealed() const;
     bool HasDiscoveredNPC() const;
     void DiscoverNPC();
     bool HasBossBeenDefeated() const;
     void SetBossDefeated(bool defeated);
+    bool IsHealingUnlocked() const;
+    bool IsHealingRoom() const;
+    void SetHealingUnlocked(bool unlocked);
+    void SetHealingRoom(bool healingRoom);
     bool HasBossBeenEncountered() const;
     void MarkBossEncountered();
     void SetCleared(bool cleared);
 
 private:
+    struct ResourcePool {
+        bool available = false;
+        int remaining = 0;
+
+        void Set(bool hasResource, int count) {
+            available = hasResource && count > 0;
+            remaining = hasResource ? count : 0;
+        }
+
+        bool Has() const { return available; }
+        bool HasAll() const { return remaining == 0; }
+
+        bool Consume() {
+            if (!available || remaining <= 0) return false;
+            --remaining;
+            available = remaining > 0;
+            return true;
+        }
+    };
+
     std::string name_;
     std::vector<std::unique_ptr<Enemy>> enemies_;
     std::vector<std::string> interactables_;
     bool hasNPC_;
-    bool hasClues_;
-    bool hasItems_;
     EnemySpawnCondition spawnCondition_;
     bool unlocked_;
     int searchCount_;
+    int discoveryFailures_ = 0;
+    unsigned investigationSeed_;
     std::vector<std::string> visibleInteractables_;
     bool discoveredNPC_;
     bool bossDefeated_;
     bool bossEncountered_;
+    bool healingUnlocked_;
+    bool healingRoom_;
+    ResourcePool cluePool_;
+    ResourcePool itemPool_;
+    std::chrono::steady_clock::time_point illuminatedUntil_{};
+    bool rustedLockUnlocked_ = false;
 };

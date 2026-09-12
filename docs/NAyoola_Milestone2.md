@@ -1,50 +1,64 @@
-# Nelson Ayoola — Milestone 2
+# Milestone 2 - Micare: Cathedral of Lies
 
-## Overview
+## changes this week
 
-This milestone continued the console conversion of **Micare: Cathedral of Lies** and focused on making the existing program cleaner, more structured, and easier to extend, while adding a usability improvement to the console interface.
+this week was mostly focused on getting the systems i already had working together correctly instead of continuing to pile more stuff on top of broken systems.
 
-Work completed this week:
+- converted the class version of the project into a normal C++ console application and reorganized the Visual Studio project inside the dev folder
+- kept the older GUI version separate so it can still be worked on later without affecting the version for class
+- expanded the combat system with clearer damage, healing, barrier, status, cooldown and encounter tracking
+- improved the inventory and equipment systems so individual item instances, locking, equipping, discarding and stat calculations are handled more safely
+- reworked equipment stat generation because some of the early values were way higher than intended
+- added proper equipment rarity ranges, main stats, substats and validation
+- improved the leveling system, XP rewards and Shimmer skill rewards
+- expanded room progression, investigations, boss encounters and farming after rooms are cleared
+- added and tested consumable effects for combat and exploration
+- fixed the Storage Room so its normal enemy pool can actually be used during investigations
+- added more testing for combat, equipment, progression and longer playthroughs
 
-- **Refactored the combat turn engine.** `CombatManager::enemyTurn` had grown into a single ~170-line function that mixed attack rolls, status application, buff/heal/barrier handling, and turn cleanup. It is now split into named helpers (`AttemptEnemySkillAttack`, `RunEnemySkillIndex`, `ApplyEnemySkillEffect`, `ApplyEnemyDebuff`, `FindLivingAlly`, `FinishEnemyAction`), each under 80 lines. The orchestrating function is short and readable, and each helper can be reasoned about on its own.
-- **Removed duplicated logic.** The wording and event creation for "receives / resists / does not receive" status results was copy-pasted in both the Shimmer and consumable paths. It now lives in two shared helpers (`DescribeStatusApplication` and `StatusApplicationKind`).
-- **Extracted a pure formatting module.** Console panel text was built inline with `std::cout` throughout `ConsoleUI.cpp`. I moved the pure string builders (player panel line, slot/rarity names, equip-preview stat block, page header) into a new `ConsoleFormat` module with no console dependency, so presentation text is now testable in isolation.
-- **Consolidated catalogue code.** The enemy catalogue and the item/content catalogue each had their own name-lookup and "reject unnamed entries" logic. Both now use shared helpers (`Catalog::FindByName`, `Catalog::AllNamed`) in a single `Catalog.h`.
-- **Tightened type safety at catalogue boundaries.** Added `IsValidRarity`, `IsValidEquipSlot`, `IsWearableSlot`, `IsValidEnemyTier`, `IsValidEnemyFaction`, and `IsValidItemCategory` to `GameplayTypes.h`, and replaced the scattered magic-number casts (`static_cast<int>(rarity) < 0 || ... > 5`) in `ContentCatalog.cpp` with these single-source-of-truth checks.
-- **Cleanup.** Removed the one-off generated capture folder (`dev/validation`, ~379 MB of console transcripts) and the standalone test/harness projects, so the solution now builds as a single clean deliverable. Updated `.gitignore`, both README files, and the design docs to match.
+## code structure updates
 
-## Updates to code structure
+a lot of this week was also cleanup and separating responsibilities between systems.
 
-| Change | Before | After |
-| --- | --- | --- |
-| Combat turn logic | One ~170-line `enemyTurn` function | `enemyTurn` orchestrator + 6 focused helpers |
-| Status result messaging | Duplicated in two code paths | `DescribeStatusApplication` / `StatusApplicationKind` |
-| Console formatting | Inline `std::cout` in `ConsoleUI.cpp` | Pure `ConsoleFormat` module (`ConsoleFormat.h/.cpp`) |
-| Catalogue lookup | Duplicated loops in two catalogues | Shared `Catalog::FindByName` / `Catalog::AllNamed` |
-| Enum validation | Magic-number casts across the catalogue | Named `IsValid*` helpers in `GameplayTypes.h` |
+console formatting was moved into its own helper instead of putting all of the formatting directly into the UI code. consumable behavior was also separated into its own effect system instead of having all of the item behavior mixed into the Player class.
 
-## Usability improvement
+equipment stat calculation and validation were also reorganized so the item, player and loot systems are using the same rules instead of each part interpreting stats differently.
 
-**What changed:** the console presentation layer was separated into a pure formatting module and the panel/stat text was made consistent and self-describing. Specifically:
+the game is still split between classes for things like the player, enemies, areas, inventory, items, progression, encounters and combat.
 
-- The player summary line and the equipment comparison block are now produced by one function each, so every panel shows the **same** layout and the inventory "after equip/unequip" preview always lists HP, ATK, DEF, SPD, ACC, RES, and Crit in the same order.
-- Catalogue input is validated before use, so a malformed rarity/slot can no longer silently index out of range and produce a confusing crash; `--validate` reports the specific offending entry instead.
-- `--help` now prints a clear usage line, and `--validate` prints an explicit "Micare content validation passed." confirmation.
+## usability improvements
 
-**Why:** the previous inline formatting made it easy for the dashboard, room, and inventory panels to drift out of sync, and a bad catalogue value would surface as a raw crash rather than a readable message. Centralizing the formatting and validating the enum boundaries makes the interface predictable for the player and the failures diagnosable for the developer.
+the console is still not where i want it visually, but i focused on making it understandable and usable before making it look better.
 
-## Challenges
+some of the usability changes this week were:
 
-The main obstacle was a linking failure: once `ConsoleUI` began depending on the new `ConsoleFormat` translation unit, any project that compiled `ConsoleUI.cpp` but not `ConsoleFormat.cpp` failed to link. I made the dependency explicit everywhere it was needed, then simplified the repository by removing the generated capture folder and the standalone test projects so the solution builds as one clean target. Keeping combat behaviour byte-for-byte identical while extracting helpers was the other challenge — I verified each change with MSVC C++17 `/permissive-` syntax checks and a full clean rebuild of the game.
+- numbered menus for navigation and combat
+- input validation for menu choices
+- clearer messages when rooms are locked or actions are unavailable
+- complete encounter logs so i can see what happened during combat
+- defeat review before returning to the Fountain
+- inventory sorting and pagination
+- clearer equipment information
+- equipment stat previews so i can see how my stats would change before equipping something
+- cooldown information for skills
+- clearer room and boss progression information
 
-## Accomplishments
+## testing and debugging
 
-I levelled up on separating pure logic from I/O. `ConsoleFormat` has no console dependency, so the panel text is now something I can reason about and test in isolation. I also learned to validate values at the deserialization boundary instead of scattering casts, and to consolidate duplicated code into one shared header rather than copying it. The codebase is noticeably cleaner and the combat engine is far easier to follow.
+one of the bigger things i changed this week was how i test the project.
 
-## Next steps
+instead of only checking whether the program compiles, i started doing full playthroughs through the actual console application.
 
-Before Week 3 I plan to:
+during testing i played from a fresh character through the full first floor, tested losing and fleeing from encounters, leveling, equipment, consumables, Shimmer skills, boss fights and farming.
 
-1. Add disk-based save/load so session progress survives between runs.
-2. Expand the Shimmer skill and enemy ability catalogues using the newly structured helpers.
-3. Continue the usability pass on combat prompts and error messages.
+i also ran a longer endurance test that reached level 100 through normal gameplay. that exposed issues that shorter tests did not show, including equipment math, set bonuses and one room not spawning normal enemies.
+
+the main thing ive learned from this part is that "it compiles" and "it works" are very different things.
+
+## next steps
+
+going into the next milestone i want to continue cleaning up the remaining gameplay bugs and then start improving the console presentation.
+
+once the underlying systems are stable i want to make the console easier to read with things like health bars, status indicators, cleaner combat information and better spacing.
+
+the mystery/narrative side of the game is also still behind the combat and RPG systems because most of this milestone was focused on getting the core gameplay loop working correctly.

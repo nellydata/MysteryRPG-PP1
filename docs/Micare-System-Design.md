@@ -158,7 +158,7 @@ The content builders and validation functions in [`ContentCatalog.h`](../dev/inc
 
 ## Build and reference sources
 
-Build with Visual Studio using the C++17 configuration in [`COS-PP1.vcxproj`](../dev/COS-PP1.vcxproj). The course solution is inside `dev`, uses the C++ standard library, and has no GUI or Python dependency. See [the validated conversion report](../dev/validation/course-conversion.md).
+Build with Visual Studio using the C++17 configuration in [`COS-PP1.vcxproj`](../dev/COS-PP1.vcxproj). The course solution is inside `dev`, uses the C++ standard library, and has no GUI or Python dependency.
 
 - [C++17 language support](https://learn.microsoft.com/cpp/overview/visual-cpp-language-conformance)
 - [Visual Studio C++ projects and build systems](https://learn.microsoft.com/cpp/build/projects-and-build-systems-cpp)
@@ -180,4 +180,4 @@ The current cleanup pass aligned the runtime with the catalogue and UI promises:
 - Shimmer stat boosts are temporary statuses, and the former fake long-duration revival has been replaced with a timed emergency barrier.
 - The console combat view displays current HP, enemy level and tier, the acting character, and the shared event history.
 
-Validation completed with a successful Visual Studio Debug x64 solution build, both standalone test executables, `COS-PP1.exe --validate`, and an actual keyboard-driven console playthrough. Captured results are in [the conversion report](../dev/validation/course-conversion.md).
+Validation completed with a successful Visual Studio Debug x64 solution build, `COS-PP1.exe --validate`, and an actual keyboard-driven console playthrough.

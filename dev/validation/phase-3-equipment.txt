@@ -1,2 +1,0 @@
-Equipment rolls: 9664 validated across all catalogue items and rarities.
-Equipment percentage, fixed bonus, preview, display and sorting regressions passed.

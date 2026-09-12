@@ -1,6 +1,6 @@
 # Progression repair validation
 
-This report preserves the September 7 progression baseline. The September 8 course deliverable is console-only and has passed an actual keyboard-driven smoke test. Current results and build commands are in [the conversion report](../dev/validation/course-conversion.md); the original Win32 implementation is preserved on the GUI archive branch.
+This report preserves the September 7 progression baseline. The September 8 course deliverable is console-only and has passed an actual keyboard-driven smoke test. Build commands are in [dev/README.md](../dev/README.md); the original Win32 implementation is preserved on the GUI archive branch.
 
 ## Reproduced baseline
 
@@ -27,7 +27,7 @@ The rosary adds 5% HP, explaining the difference from naked player HP of 100, 20
 
 ## Automated coverage
 
-`dev/tests/ProgressionRepairTests.h` extends the existing InvestigationHarness entry point without replacing its correctness checks.
+The progression-repair regressions extended the former InvestigationHarness entry point without replacing its correctness checks.
 
 - 100,000 seeded ordinary catalogue selections at each of Levels 1, 5, 10, 20, 40, 70, and 100; observed tier frequencies; enemy minimum levels; no ordinary bosses; room membership; faction restrictions; empty-tier normalization; interpolation; selection trace fields.
 - 20,000 independent fresh-room and 20,000 exhausted repeat-room investigations; event frequencies and category split; actual inventory quantity mutation; exact XP mutation; replayed deterministic seeds for all six weighted outcomes; fifth eligible search discovery pity; continued item and XP discoveries after finite rewards are exhausted.
@@ -39,4 +39,4 @@ Simulation policy: basic Attack only, no Shimmer and no consumable use; item upg
 
 ## Current verification
 
-Open `dev/COS-PP1.slnx` and build Debug x64. Both standalone test targets and the game passed. See [dev/README.md](../dev/README.md) for commands and [the current numeric report](../dev/validation/progression-validation.txt) for all observed distributions and simulations. The earlier manual Win32 checklist is superseded by the completed [actual console smoke](../dev/validation/console-smoke.txt).
+Open `dev/COS-PP1.slnx` and build Debug x64. See [dev/README.md](../dev/README.md) for the current build and content-validation commands.

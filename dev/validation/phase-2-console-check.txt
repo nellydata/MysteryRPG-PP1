@@ -1,3 +1,0 @@
-Console smoke passed: exit 0; PE subsystem 3; GUI handle 0.
-Keyboard paths: fresh initialization, exact item lock/use/unlock, equipment previews and equip, consumable combat use, ordinary attacks, single Fountain loot/XP/unlock, recovery, protected discard, Shimmer toggle, next-room entry and exit.
-Transcript: C:\Users\WorkPc\Desktop\COS-PP1\dev\validation\phase-2-console.txt

@@ -143,8 +143,7 @@
     </Manifest>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <None Include="InvestigationHarness.vcxproj" />
-    <None Include="README.md" />
+     <None Include="README.md" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\CombatMath.h" />

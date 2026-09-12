@@ -1,4 +1,0 @@
-
-  InvestigationHarness.vcxproj -> C:\Users\WorkPc\Desktop\COS-PP1\dev\bin\x64\Debug\InvestigationHarness.exe
-  EquipmentV2Tests.vcxproj -> C:\Users\WorkPc\Desktop\COS-PP1\dev\bin\x64\Debug\EquipmentV2Tests.exe
-  COS-PP1.vcxproj -> C:\Users\WorkPc\Desktop\COS-PP1\dev\bin\x64\Debug\COS-PP1.exe

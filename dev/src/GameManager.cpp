@@ -11,7 +11,7 @@
 
 void GameManager::Run() {
     ConsoleUI ui;
-    std::cout << "MICARE - console edition\nInvestigator name (Enter for Adelaide):\n> " << std::flush;
+    std::cout << "MICARE - console edition\nInvestigator name:\n> " << std::flush;
     std::string name;
     if (!std::getline(std::cin, name)) return;
     if (name.empty()) name = "Adelaide";

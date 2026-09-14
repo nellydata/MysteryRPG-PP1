@@ -1,6 +1,6 @@
 # Micare course console application
 
-Open **COS-PP1.slnx in this folder** with Visual Studio, select **Debug / x64**, and use **COS-PP1** as the startup project. The game uses C++17, `int main`, and standard console input/output. No Python, GUI framework, or Win32 UI is required.
+Open **COS-PP1.slnx in this folder** with Visual Studio 2026 (version 18), with the **Desktop development with C++** workload installed. Select **Debug / x64**, use **COS-PP1** as the startup project, and press **Ctrl+F5** to build and play or **F5** to debug. The game uses C++17, `int main`, and standard console input/output. No Python, GUI framework, or Win32 UI is required.
 
 All solution files, game sources, headers, and build outputs are contained in `dev`. The existing graphical version is preserved in Git on `archive/gui-before-course-conversion` at checkpoint `fa9bc0b`; it is absent from this course build.
 
@@ -26,9 +26,11 @@ msbuild COS-PP1.slnx /m /p:Configuration=Debug /p:Platform=x64
 .\bin\x64\Debug\COS-PP1.exe
 ```
 
-`--validate` runs the content-safety checks (`ValidateMicareContent`) over the enemy, item, and room catalogues and exits 0 when every entry is well formed. `--fast` disables the 300 ms presentation pause. `--help` prints the usage line. The repository's VS Code task directly runs the installed Visual Studio 18 Community MSBuild executable; update that task's executable path if a different Visual Studio edition or location is used.
+`--validate` runs the content-safety checks (`ValidateMicareContent`) over the enemy, item, and room catalogues and exits 0 when every entry is well formed. `--fast` disables the 300 ms presentation pause. `--help` prints the usage line.
 
-For VS Code, open the repository root and install the recommended Microsoft **C/C++** extension (`ms-vscode.cpptools`). It supplies the `cppvsdbg` debugger used by **Debug COS-PP1 (x64)**. If VS Code reports that `cppvsdbg` is unsupported, install/enable that extension and run **Developer: Reload Window**. To play directly in the terminal, use **Tasks: Run Task > Run COS-PP1 (console)**; this builds the solution and starts the game without a debugger.
+For VS Code, open the repository's `COS-PP1` folder. Press **Ctrl+Shift+P**, choose **Tasks: Run Task**, then **Run Micare (console)**. This builds the solution and starts the game in the terminal without a debugger extension. The tasks directly execute MSBuild and the C++ game; they contain no shell scripts. Their MSBuild path targets the installed Visual Studio 18 Community edition; update `.vscode/tasks.json` if your installation differs.
+
+To debug in VS Code, select **Debug Micare (x64)** in Run and Debug, then press **F5**. This uses the Microsoft C/C++ extension (`ms-vscode.cpptools`) and the game executable, regardless of the active editor tab. If VS Code still says `cppvsdbg` is unsupported, enable that extension and run **Developer: Reload Window**. A `.slnx` or `COMMIT_EDITMSG` file is not a runnable program. The course project remains a standard C++ console application using MSVC `v145` and the Windows SDK.
 
 ## Keyboard controls
 

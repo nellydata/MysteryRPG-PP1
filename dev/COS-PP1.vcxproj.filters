@@ -18,6 +18,12 @@
     <None Include="README.md" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="include\Catalog.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ConsoleFormat.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="include\ContentCatalog.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -89,6 +95,9 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\ConsoleFormat.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="src\ContentCatalog.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>

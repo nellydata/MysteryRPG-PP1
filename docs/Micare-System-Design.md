@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Micare - Cathedral of Lies is a C++17 noir roguelike RPG with two presentation paths: a native Win32 desktop interface and a console mode. The game is organized around small manager and model classes, deterministic Floor 1 content, catalogue-driven enemies and items, and a combat event stream that can be displayed by either interface.
+Micare - Cathedral of Lies is a C++17 console noir roguelike RPG. The game is organized around small manager and model classes, deterministic Floor 1 content, catalogue-driven enemies and items, and a combat event stream displayed through the keyboard-driven console interface.
 
 This document describes the current implementation. Historical progress notes may describe earlier prototypes; the source files linked below are the implementation authority.
 
@@ -38,9 +38,9 @@ These structures are intentionally simple value types. They can be copied when a
 
 The class exposes gameplay operations such as damage, healing, status processing, equipment, consumable use, and stat recalculation. UI code reads through getters rather than directly changing fields.
 
-### Enemy hierarchy and catalogue
+### Enemy model and catalogue
 
-[`Enemy.h`](../dev/include/Enemy.h) defines the runtime enemy model. It stores health, combat stats, statuses, faction, tier, phase, skill definitions, and skill cooldowns. The virtual destructor and virtual `takeDamage` method preserve polymorphic use for specialised enemy classes such as [`Automata`](../dev/include/Automata.h), [`Nun`](../dev/include/Nun.h), and [`Boss`](../dev/include/Boss.h).
+[`Enemy.h`](../dev/include/Enemy.h) defines the runtime enemy model. Each `Enemy` is constructed from an `EnemyDefinition` in [`GameplayTypes.h`](../dev/include/GameplayTypes.h), and stores health, combat stats, statuses, faction, tier, phase, skills, and skill cooldowns. `EnemyFaction` distinguishes Devotee, Automata, and Verdigris enemies; `EnemyTier` identifies Basic through Boss enemies. First-clear and farming flags distinguish boss reward behavior within the same runtime class.
 
 [`EnemyCatalog.h`](../dev/include/EnemyCatalog.h) and [`EnemyCatalog.cpp`](../dev/src/EnemyCatalog.cpp) provide data-driven enemy definitions and room-compatible creation. The catalogue supplies tier scaling, roles, skills, cooldowns, passives, and loot metadata while `Enemy` owns the live battle state.
 

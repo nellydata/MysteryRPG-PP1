@@ -1,0 +1,17 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug Micare (x64)",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/dev/bin/x64/Debug/COS-PP1.exe",
+            "args": [],
+            "cwd": "${workspaceFolder}/dev",
+            "stopAtEntry": false,
+            "console": "integratedTerminal",
+            "internalConsoleOptions": "neverOpen",
+            "preLaunchTask": "Build Micare (Debug x64)"
+        }
+    ]
+}

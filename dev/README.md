@@ -28,7 +28,9 @@ msbuild COS-PP1.slnx /m /p:Configuration=Debug /p:Platform=x64
 
 `--validate` runs the content-safety checks (`ValidateMicareContent`) over the enemy, item, and room catalogues and exits 0 when every entry is well formed. `--fast` disables the 300 ms presentation pause. `--help` prints the usage line.
 
-For VS Code, use a terminal initialized with the Visual Studio developer tools, change into `dev`, and run the same build and executable commands above. The project uses the installed MSVC `v145` toolset and Windows SDK.
+For VS Code, open the repository's `COS-PP1` folder. Press **Ctrl+Shift+P**, choose **Tasks: Run Task**, then **Run Micare (console)**. This builds the solution and starts the game in the terminal without a debugger extension. The tasks directly execute MSBuild and the C++ game; they contain no shell scripts. Their MSBuild path targets the installed Visual Studio 18 Community edition; update `.vscode/tasks.json` if your installation differs.
+
+To debug in VS Code, select **Debug Micare (x64)** in Run and Debug, then press **F5**. This uses the Microsoft C/C++ extension (`ms-vscode.cpptools`) and the game executable, regardless of the active editor tab. If VS Code still says `cppvsdbg` is unsupported, enable that extension and run **Developer: Reload Window**. A `.slnx` or `COMMIT_EDITMSG` file is not a runnable program. The course project remains a standard C++ console application using MSVC `v145` and the Windows SDK.
 
 ## Keyboard controls
 

@@ -214,6 +214,149 @@ VictoryResult EncounterManager::ResolveVictory(Area& area, Player& player, Progr
     return result;
 }
 
+void EncounterManager::BeginEncounter(Player& player, Enemy& enemy,
+                                       ProgressionManager& progression, CombatManager& combat) {
+    combat.BeginEncounter(player, enemy, progression.GetLevel());
+    combat.PrepareTurn(player, enemy);
+}
+
+void EncounterManager::UseConsumable(Player& player, Enemy& enemy,
+                                     ProgressionManager& progression, CombatManager& combat,
+                                     ConsoleUI& ui) {
+    std::vector<unsigned long long> consumables;
+    for (const auto& entry : player.GetInventory().GetItems())
+        if (entry->getCategory() == ItemCategory::Consumable && entry.quantity > 0)
+            consumables.push_back(entry->getInstanceId());
+    if (consumables.empty()) {
+        ui.ShowMessage("No consumables available.");
+        return;
+    }
+
+    constexpr std::size_t pageSize = 12;
+    std::size_t page = 0;
+    while (std::cin) {
+        const std::size_t first = page * pageSize;
+        const std::size_t count = (std::min)(pageSize, consumables.size() - first);
+        ui.ShowMessage("Consumables page " + std::to_string(page + 1) + "/" +
+            std::to_string((consumables.size() + pageSize - 1) / pageSize) +
+            ". 13 next page, 14 previous page.");
+        for (std::size_t offset = 0; offset < count; ++offset) {
+            const auto instanceId = consumables[first + offset];
+            ui.ShowMessage(std::to_string(offset + 1) + ". " +
+                player.GetInventory().FindItem(instanceId)->getName() + " x" +
+                std::to_string(player.GetInventory().GetQuantity(instanceId)) +
+                (player.GetInventory().IsLocked(instanceId) ? " [LOCKED]" : ""));
+        }
+        const int selected = ui.Prompt("Choose consumable, 0 cancel:", 0, 14);
+        if (!selected || !std::cin) return;
+        if (selected == 13) {
+            if (first + count < consumables.size()) ++page;
+            else ui.ShowMessage("No next consumable page.");
+            continue;
+        }
+        if (selected == 14) {
+            if (page > 0) --page;
+            continue;
+        }
+        if (selected > static_cast<int>(count)) {
+            ui.ShowMessage("That consumable is not on this page.");
+            continue;
+        }
+        combat.UseConsumable(consumables[first + selected - 1], player, enemy, &progression);
+        return;
+    }
+}
+
+void EncounterManager::UseShimmer(Player& player, Enemy& enemy,
+                                  ProgressionManager& progression, CombatManager& combat,
+                                  ConsoleUI& ui) {
+    const auto equipped = progression.GetEquippedShimmerSkills();
+    if (equipped.empty()) {
+        ui.ShowMessage("Equip a Shimmer skill from the room's Skills menu first.");
+        return;
+    }
+    for (std::size_t index = 0; index < equipped.size(); ++index)
+        ui.ShowMessage(std::to_string(index + 1) + ". " + equipped[index] + " cooldown " +
+            std::to_string(combat.GetSkillCooldown(equipped[index])));
+    const int selected = ui.Prompt("Choose combat Shimmer, 0 cancel:", 0,
+                                   static_cast<int>(equipped.size()));
+    if (!selected) return;
+    auto skill = ShimmerSkill::Create(equipped[selected - 1]);
+    combat.resolve(CombatAction::Shimmer, player, enemy, skill.get(), &progression);
+}
+
+bool EncounterManager::HandlePlayerTurn(Player& player, Enemy& enemy,
+                                        ProgressionManager& progression, CombatManager& combat,
+                                        ConsoleUI& ui) {
+    const int choice = ui.Prompt("Combat action:", 1, 6);
+    if (!std::cin) return false;
+    if (choice == 5) {
+        ui.ShowBattleHistory(combat);
+    } else if (choice == 6) {
+        ConsoleUI::SetFast(!ConsoleUI::IsFast());
+        ui.ShowMessage(ConsoleUI::IsFast() ? "Fast presentation enabled." : "Normal presentation enabled.");
+    } else if (choice == 4) {
+        combat.resolve(CombatAction::Flee, player, enemy);
+        ui.PresentEvents(combat);
+        return true;
+    } else if (choice == 2) {
+        UseConsumable(player, enemy, progression, combat, ui);
+    } else if (choice == 3) {
+        UseShimmer(player, enemy, progression, combat, ui);
+    } else {
+        combat.resolve(CombatAction::Attack, player, enemy, nullptr, &progression);
+    }
+    return false;
+}
+
+void EncounterManager::CompleteVictory(Area& area, Player& player, Enemy& enemy,
+                                       ProgressionManager& progression, CombatManager& combat,
+                                       MapManager& map, ConsoleUI& ui) {
+    const auto victory = ResolveVictory(area, player, progression, map, enemy);
+    for (const auto& message : victory.messages) combat.RecordReward(message);
+    for (const auto& item : victory.items) combat.RecordReward("Found: " + item.name + ".");
+    combat.CompleteEncounter("victory");
+    ui.PresentEvents(combat);
+    CleanupEncounter(area, player, combat, false);
+    area.removeDeadEnemies();
+
+    const auto* room = map.GetRoomDefinition(area);
+    if (room && room->nextRoomId.empty() && area.HasBossBeenDefeated())
+        ui.ShowMessage("Floor I cleared. The cathedral falls silent.");
+    ui.PresentLevelUpRewards(progression);
+}
+
+void EncounterManager::ProcessInvestigation(Area& area, Player& player,
+                                            ProgressionManager& progression, CombatManager& combat,
+                                            ConsoleUI& ui) {
+    auto result = ResolveInvestigation(area, player, progression);
+    ui.ShowMessage(result.narrative);
+    if (result.xpAwarded > 0)
+        ui.ShowMessage("Investigation gained " + std::to_string(result.xpAwarded) + " XP.");
+    for (const auto& item : result.items) ui.ShowMessage("Found: " + item.name + ".");
+    if (result.hpDelta < 0)
+        ui.ShowMessage("Investigation damage: " + std::to_string(-result.hpDelta) + " HP.");
+    if (result.spawnedEnemy) area.addEnemy(std::move(result.spawnedEnemy));
+    if (!player.isAlive()) combat.RecordEnvironmentalDefeat("Falling masonry", player);
+    progression.CheckLevelUp(player);
+    if (player.isAlive()) ui.PresentLevelUpRewards(progression);
+}
+
+void EncounterManager::CleanupEncounter(Area& area, Player& player, CombatManager& combat,
+                                        bool clearEnemies) {
+    combat.ResetEncounter();
+    player.ClearStatuses();
+    if (clearEnemies) area.ClearEnemies();
+}
+
+void EncounterManager::HandleDefeat(Area& area, Player& player, CombatManager& combat,
+                                    ConsoleUI& ui) {
+    combat.CompleteEncounter("defeat");
+    ui.ShowDefeat(player, combat);
+    // Keep the completed event snapshot; reset only temporary combat state after acknowledgment.
+    CleanupEncounter(area, player, combat, true);
+}
+
 bool EncounterManager::Explore(Area& area, Player& player, ProgressionManager& progression,
                                CombatManager& combat, MapManager* map) {
     ConsoleUI ui;
@@ -224,8 +367,7 @@ bool EncounterManager::Explore(Area& area, Player& player, ProgressionManager& p
         Enemy* enemy = area.getFirstAliveEnemy();
         if (enemy) {
             if (encounterEnemy != enemy) {
-                combat.BeginEncounter(player, *enemy, progression.GetLevel());
-                combat.PrepareTurn(player, *enemy);
+                BeginEncounter(player, *enemy, progression, combat);
                 encounterEnemy = enemy;
             }
             ui.PresentEvents(combat);
@@ -233,88 +375,16 @@ bool EncounterManager::Explore(Area& area, Player& player, ProgressionManager& p
             ui.RenderCombat(player, progression, *enemy, combat);
             if (!combat.IsPlayerTurn()) {
                 combat.enemyTurn(player, *enemy, &progression);
-            } else {
-                const int choice = ui.Prompt("Combat action:", 1, 6);
-                if (!std::cin) break;
-                if (choice == 5) { ui.ShowBattleHistory(combat); continue; }
-                if (choice == 6) {
-                    ConsoleUI::SetFast(!ConsoleUI::IsFast());
-                    ui.ShowMessage(ConsoleUI::IsFast() ? "Fast presentation enabled." : "Normal presentation enabled.");
-                    continue;
-                }
-                if (choice == 4) {
-                    combat.resolve(CombatAction::Flee, player, *enemy);
-                    ui.PresentEvents(combat);
-                    combat.ResetEncounter();
-                    player.ClearStatuses();
-                    area.ClearEnemies();
-                    encounterEnemy = nullptr;
-                    continue;
-                }
-                if (choice == 2) {
-                    std::vector<unsigned long long> consumables;
-                    for (const auto& entry : player.GetInventory().GetItems())
-                        if (entry->getCategory() == ItemCategory::Consumable && entry.quantity > 0)
-                            consumables.push_back(entry->getInstanceId());
-                    if (consumables.empty()) { ui.ShowMessage("No consumables available."); continue; }
-                    constexpr std::size_t pageSize = 12;
-                    std::size_t page = 0;
-                    while (std::cin) {
-                        const std::size_t first = page * pageSize;
-                        const std::size_t count = (std::min)(pageSize, consumables.size() - first);
-                        ui.ShowMessage("Consumables page " + std::to_string(page + 1) + "/" +
-                            std::to_string((consumables.size() + pageSize - 1) / pageSize) +
-                            ". 13 next page, 14 previous page.");
-                        for (std::size_t offset = 0; offset < count; ++offset) {
-                            const auto instanceId = consumables[first + offset];
-                            ui.ShowMessage(std::to_string(offset + 1) + ". " +
-                                player.GetInventory().FindItem(instanceId)->getName() + " x" +
-                                std::to_string(player.GetInventory().GetQuantity(instanceId)) +
-                                (player.GetInventory().IsLocked(instanceId) ? " [LOCKED]" : ""));
-                        }
-                        const int selected = ui.Prompt("Choose consumable, 0 cancel:", 0, 14);
-                        if (!selected || !std::cin) break;
-                        if (selected == 13) {
-                            if (first + count < consumables.size()) ++page;
-                            else ui.ShowMessage("No next consumable page.");
-                            continue;
-                        }
-                        if (selected == 14) { if (page > 0) --page; continue; }
-                        if (selected > static_cast<int>(count)) {
-                            ui.ShowMessage("That consumable is not on this page.");
-                            continue;
-                        }
-                        combat.UseConsumable(consumables[first + selected - 1], player, *enemy, &progression);
-                        break;
-                    }
-                } else if (choice == 3) {
-                    const auto equipped = progression.GetEquippedShimmerSkills();
-                    if (equipped.empty()) { ui.ShowMessage("Equip a Shimmer skill from the room's Skills menu first."); continue; }
-                    for (std::size_t index = 0; index < equipped.size(); ++index)
-                        ui.ShowMessage(std::to_string(index + 1) + ". " + equipped[index] + " cooldown " +
-                            std::to_string(combat.GetSkillCooldown(equipped[index])));
-                    const int selected = ui.Prompt("Choose combat Shimmer, 0 cancel:", 0, static_cast<int>(equipped.size()));
-                    if (!selected) continue;
-                    auto skill = ShimmerSkill::Create(equipped[selected - 1]);
-                    combat.resolve(CombatAction::Shimmer, player, *enemy, skill.get(), &progression);
-                } else combat.resolve(CombatAction::Attack, player, *enemy, nullptr, &progression);
+            } else if (HandlePlayerTurn(player, *enemy, progression, combat, ui)) {
+                CleanupEncounter(area, player, combat, true);
+                encounterEnemy = nullptr;
+                continue;
             }
             ui.PresentEvents(combat);
             if (!player.isAlive()) break;
             if (!enemy->isAlive()) {
-                const auto victory = ResolveVictory(area, player, progression, activeMap, *enemy);
-                for (const auto& message : victory.messages) combat.RecordReward(message);
-                for (const auto& item : victory.items) combat.RecordReward("Found: " + item.name + ".");
-                combat.CompleteEncounter("victory");
-                ui.PresentEvents(combat);
-                combat.ResetEncounter();
-                player.ClearStatuses();
-                area.removeDeadEnemies();
+                CompleteVictory(area, player, *enemy, progression, combat, activeMap, ui);
                 encounterEnemy = nullptr;
-                const auto* room = activeMap.GetRoomDefinition(area);
-                if (room && room->nextRoomId.empty() && area.HasBossBeenDefeated())
-                    ui.ShowMessage("Floor I cleared. The cathedral falls silent.");
-                ui.PresentLevelUpRewards(progression);
             }
             continue;
         }
@@ -331,26 +401,10 @@ bool EncounterManager::Explore(Area& area, Player& player, ProgressionManager& p
             ui.ShowMessage("The Fountain restores you to full health.");
             continue;
         }
-        auto result = ResolveInvestigation(area, player, progression);
-        ui.ShowMessage(result.narrative);
-        if (result.xpAwarded > 0) ui.ShowMessage("Investigation gained " + std::to_string(result.xpAwarded) + " XP.");
-        for (const auto& item : result.items) ui.ShowMessage("Found: " + item.name + ".");
-        if (result.hpDelta < 0) ui.ShowMessage("Investigation damage: " + std::to_string(-result.hpDelta) + " HP.");
-        if (result.spawnedEnemy) area.addEnemy(std::move(result.spawnedEnemy));
-        if (!player.isAlive()) {
-            combat.RecordEnvironmentalDefeat("Falling masonry", player);
-        }
-        progression.CheckLevelUp(player);
-        if (player.isAlive()) ui.PresentLevelUpRewards(progression);
+        ProcessInvestigation(area, player, progression, combat, ui);
     }
-    if (!player.isAlive()) {
-        combat.CompleteEncounter("defeat");
-        ui.ShowDefeat(player, combat);
-    }
-    // Keep the event snapshot; reset only temporary combat state after acknowledgment.
-    combat.ResetEncounter();
-    player.ClearStatuses();
-    area.ClearEnemies();
+    if (!player.isAlive()) HandleDefeat(area, player, combat, ui);
+    else CleanupEncounter(area, player, combat, true);
     return false;
 }
 

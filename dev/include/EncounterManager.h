@@ -9,6 +9,8 @@
 
 class Area;
 class CombatManager;
+class ConsoleUI;
+class Enemy;
 class Player;
 class ProgressionManager;
 class MapManager;
@@ -56,5 +58,22 @@ public:
     bool explore(Area& area, Player& player, CombatManager& combat,
                  ProgressionManager& progression);
 private:
+    void BeginEncounter(Player& player, Enemy& enemy, ProgressionManager& progression,
+                        CombatManager& combat);
+    bool HandlePlayerTurn(Player& player, Enemy& enemy, ProgressionManager& progression,
+                          CombatManager& combat, ConsoleUI& ui);
+    void UseConsumable(Player& player, Enemy& enemy, ProgressionManager& progression,
+                       CombatManager& combat, ConsoleUI& ui);
+    void UseShimmer(Player& player, Enemy& enemy, ProgressionManager& progression,
+                    CombatManager& combat, ConsoleUI& ui);
+    void CompleteVictory(Area& area, Player& player, Enemy& enemy,
+                         ProgressionManager& progression, CombatManager& combat,
+                         MapManager& map, ConsoleUI& ui);
+    void ProcessInvestigation(Area& area, Player& player, ProgressionManager& progression,
+                              CombatManager& combat, ConsoleUI& ui);
+    void CleanupEncounter(Area& area, Player& player, CombatManager& combat,
+                          bool clearEnemies);
+    void HandleDefeat(Area& area, Player& player, CombatManager& combat, ConsoleUI& ui);
+
     int basicGearMisses_ = 0;
 };

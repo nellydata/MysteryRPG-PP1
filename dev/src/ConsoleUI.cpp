@@ -63,11 +63,32 @@ void ConsoleUI::RenderRoom(const Area& area, const Player& player, const Progres
 
 void ConsoleUI::RenderCombat(const Player& player, const ProgressionManager& progression,
                              const Enemy& enemy, const CombatManager& combat) const {
-    PrintPlayerPanel(player, progression);
-    std::cout << "Enemy: " << enemy.getName() << " | Level " << enemy.getLevel() << ' ' << EnemyTierName(enemy.getTier())
-              << " | HP " << enemy.getHP() << '/' << enemy.getMaxHP() << " DEF " << enemy.getDefense()
-              << " SPD " << enemy.getSpeed() << '\n';
-    std::cout << "Acting: " << (combat.IsPlayerTurn() ? player.getName() : enemy.getName()) << '\n';
+    std::cout << "\n=== COMBAT ===\n"
+              << player.getName() << " | Level " << progression.GetLevel() << '\n'
+              << "HP " << ConsoleFormat::HealthBar(player.getHP(), player.getMaxHP());
+    if (player.GetBarrier() > 0) std::cout << " | Barrier " << player.GetBarrier();
+    std::cout << "\nStatuses: " << ConsoleFormat::StatusSummary(player.GetStatuses()) << "\n\n"
+              << enemy.getName() << " | Level " << enemy.getLevel() << " | "
+              << EnemyTierName(enemy.getTier()) << '\n'
+              << "HP " << ConsoleFormat::HealthBar(enemy.getHP(), enemy.getMaxHP());
+    if (enemy.GetBarrier() > 0) std::cout << " | Barrier " << enemy.GetBarrier();
+    std::cout << "\nStatuses: " << ConsoleFormat::StatusSummary(enemy.GetStatuses()) << '\n'
+              << "Readiness: " << player.getName() << ' ' << combat.GetPlayerGauge()
+              << "/1000 | " << enemy.getName() << ' ' << combat.GetEnemyGauge() << "/1000\n"
+              << "Acting: " << (combat.IsPlayerTurn() ? player.getName() : enemy.getName()) << "\n"
+              << "Shimmer:\n";
+    const auto equipped = progression.GetEquippedShimmerSkills();
+    if (equipped.empty()) {
+        std::cout << "  None equipped\n";
+    } else {
+        for (std::size_t index = 0; index < equipped.size(); ++index) {
+            const int cooldown = combat.GetSkillCooldown(equipped[index]);
+            std::cout << "  " << index + 1 << ". " << equipped[index] << " [";
+            if (cooldown == 0) std::cout << "READY";
+            else std::cout << cooldown << (cooldown == 1 ? " turn" : " turns");
+            std::cout << "]\n";
+        }
+    }
     if (combat.IsPlayerTurn())
         std::cout << "1. Attack\n2. Consumable\n3. Shimmer\n4. Flee\n5. Full encounter log\n6. Toggle fast presentation\n";
 }

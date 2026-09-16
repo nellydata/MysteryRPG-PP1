@@ -77,6 +77,8 @@ public:
                            ProgressionManager* progression = nullptr);
     const ShimmerSkill* GetDefaultSkill() const;
     bool IsPlayerTurn() const;
+    int GetPlayerGauge() const { return playerGauge_; }
+    int GetEnemyGauge() const { return enemyGauge_; }
     bool HasUsedConsumableThisTurn() const;
     const std::vector<CombatEvent>& GetEvents() const;
     void RecordInfo(const std::string& message);

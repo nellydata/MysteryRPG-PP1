@@ -1,4 +1,6 @@
 #include "ConsoleFormat.h"
+#include <algorithm>
+#include <map>
 #include <sstream>
 
 namespace ConsoleFormat
@@ -28,6 +30,58 @@ namespace ConsoleFormat
             << " | ATK " << attack << " DEF " << defense
             << " SPD " << speed << " | XP " << xp
             << '/' << xpToNext << '\n';
+        return out.str();
+    }
+
+    std::string HealthBar(int current, int maximum, std::size_t width)
+    {
+        const int safeMaximum = (std::max)(0, maximum);
+        const int safeCurrent = (std::clamp)(current, 0, safeMaximum);
+        const std::size_t filled = safeMaximum > 0
+            ? static_cast<std::size_t>((static_cast<long long>(safeCurrent) * width) / safeMaximum)
+            : 0;
+        return "[" + std::string(filled, '#') + std::string(width - filled, '-') + "] " +
+            std::to_string(safeCurrent) + "/" + std::to_string(safeMaximum);
+    }
+
+    std::string StatusSummary(const std::vector<StatusEffect>& statuses)
+    {
+        static const char* names[] = {
+            "Stun", "Bleed", "Burn", "Poison", "Heal over time", "Slow",
+            "Verdigris Mark", "Damage reduction", "Barrier", "ATK up", "ATK down",
+            "DEF up", "DEF down", "SPD up", "Accuracy up", "Accuracy down",
+            "Crit up", "Crit damage up", "Guaranteed crit", "DOT up",
+            "Healing potency up", "DOT reduction", "Heal resistance", "Accuracy floor"
+        };
+        struct StatusGroup {
+            int count = 0;
+            std::vector<int> durations;
+        };
+        std::map<StatusType, StatusGroup> groups;
+        for (const auto& status : statuses) {
+            if (status.type == StatusType::Barrier || status.turns <= 0) continue;
+            auto& group = groups[status.type];
+            ++group.count;
+            group.durations.push_back(status.turns);
+        }
+        if (groups.empty()) return "None";
+
+        std::ostringstream out;
+        bool first = true;
+        for (const auto& entry : groups) {
+            if (!first) out << ", ";
+            first = false;
+            const int index = static_cast<int>(entry.first);
+            out << (index >= 0 && index < static_cast<int>(std::size(names)) ? names[index] : "Unknown status");
+            if (entry.second.count > 1) out << " x" << entry.second.count;
+            out << " (";
+            for (std::size_t duration = 0; duration < entry.second.durations.size(); ++duration) {
+                if (duration) out << '/';
+                out << entry.second.durations[duration];
+            }
+            out << (entry.second.durations.size() == 1 && entry.second.durations.front() == 1
+                ? " turn)" : " turns)");
+        }
         return out.str();
     }
 

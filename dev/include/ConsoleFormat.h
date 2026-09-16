@@ -17,6 +17,10 @@ std::string PlayerPanel(const std::string& name, int level, int hp, int maxHp,
                         int attack, int defense, int speed,
                         std::int64_t xp, std::int64_t xpToNext);
 
+// Compact combat-state builders. Both are pure and safe to call repeatedly.
+std::string HealthBar(int current, int maximum, std::size_t width = 12);
+std::string StatusSummary(const std::vector<StatusEffect>& statuses);
+
 // "After equip/unequip" comparison block for the inventory detail view.
 std::string StatPreview(const Stats& before, const Stats& after);
 

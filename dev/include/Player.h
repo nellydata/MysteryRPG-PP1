@@ -32,6 +32,7 @@ public:
     void RestoreHealth(int amount);
     int GetBarrier() const;
     int AddBarrier(int amount, int duration = 0);
+    int GrantCappedBarrier(int finalAmount, int cap);
     int AbsorbDamage(int amount);
     int ApplyDamageOverTime(int amount);
     void ReduceBarrier(int amount);
@@ -84,10 +85,11 @@ public:
     bool ApplyStatus(const StatusEffect& status, int accuracy = 100);
     void ProcessStatuses();
     void BeginStatusTurn(std::vector<std::pair<StatusType, int>>& damageEvents = EmptyDamageEvents(), int& healing = EmptyHealing());
-    void EndStatusTurn();
+    void EndStatusTurn(bool normalAction = true);
     void ProcessStatuses(std::vector<std::pair<StatusType, int>>& damageEvents, int& healing);
     void ClearStatuses();
     int CleanseNegativeStatuses();
+    int CleanseOneNegativeStatus();
     void ModifyStats(const Stats& delta);
     const Inventory& GetInventory() const;
     Inventory& GetInventory();
@@ -97,6 +99,17 @@ public:
     int GetSetPieceCount(const std::string& setName) const;
     std::vector<std::string> GetActiveSets() const;
     bool HasActiveSet(const std::string& setName) const;
+    bool HasArtifact(const std::string& itemName) const;
+    std::uint64_t GetEquipmentRevision() const { return equipmentRevision_; }
+    void BeginArtifactBattle();
+    void BeginArtifactTurn();
+    void OnNegativeStatusResisted(StatusType type);
+    int GetArtifactAttackStacks() const { return artifactAttackStacks_; }
+    int GetArtifactDefenseStacks() const { return artifactDefenseStacks_; }
+    int GetArtifactSpeedStacks() const { return artifactSpeedStacks_; }
+    void AddArtifactAttackStack();
+    void AddArtifactDefenseStack();
+    void AddArtifactSpeedStack();
     int GetShimmerDamageMultiplierPercent() const;
     bool HasBarrierAbsorptionSet() const;
     void StartBattleEffects();
@@ -121,10 +134,16 @@ private:
     Inventory inventory_;
     std::vector<StatusEffect> statuses_;
     Item* equipped_[5];
+    std::uint64_t equipmentRevision_ = 0;
+    int artifactAttackStacks_ = 0;
+    int artifactDefenseStacks_ = 0;
+    int artifactSpeedStacks_ = 0;
+    bool artifactNegativeTriggerUsed_ = false;
+    bool artifactStunProtectionUsed_ = false;
 
     void RecalculateStats();
     Stats CalculateEquipmentStats(const Item* const equipment[5]) const;
-    Stats EffectiveStatsFor(const Stats& stats) const;
+    Stats EffectiveStatsFor(const Stats& stats, const Item* const equipment[5] = nullptr) const;
     int SumStatusBonus(StatusType type) const;
     static std::vector<std::pair<StatusType, int>>& EmptyDamageEvents();
     static int& EmptyHealing();

@@ -83,6 +83,26 @@ int Enemy::ApplyDamageOverTime(int amount) {
         (std::min)(75, SumStatusBonus(StatusType::DotReduction)));
     return lastDamageResult_.hpDamage;
 }
+std::vector<StatusDamageResolution> Enemy::DetonateDots(std::uint64_t sourceId) {
+    std::vector<StatusDamageResolution> results;
+    if (!isAlive()) return results;
+    const auto active = statuses_;
+    for (const auto& status : active) {
+        if (!isAlive()) break;
+        if (status.sourceId != sourceId || (status.type != StatusType::Bleed &&
+            status.type != StatusType::Burn && status.type != StatusType::Poison)) continue;
+        const int tick = StatusRules::DotDamage(status, maxHp_, active);
+        for (int remaining = 0; remaining < status.turns && isAlive(); ++remaining) {
+            ApplyDamageOverTime(tick);
+            results.push_back({status.type, lastDamageResult_, status.source, status.sourceId});
+        }
+    }
+    statuses_.erase(std::remove_if(statuses_.begin(), statuses_.end(), [&](const StatusEffect& status) {
+        return status.sourceId == sourceId && (status.type == StatusType::Bleed ||
+            status.type == StatusType::Burn || status.type == StatusType::Poison);
+    }), statuses_.end());
+    return results;
+}
 void Enemy::BeginStatusTurn(std::vector<std::pair<StatusType, int>>& damageEvents, int& healing) {
     if (statusTurnOpen_) return;
     statusTurnOpen_ = true;
@@ -145,7 +165,9 @@ const std::vector<StatusApplicationResolution>& Enemy::GetStatusApplications() c
 int Enemy::getDefense() const { return CombatMath::Scale(defense_, CombatMath::Saturate(100LL + SumStatusBonus(StatusType::DefenseUp) - SumStatusBonus(StatusType::DefenseDown))); }
 int Enemy::getSpeed() const {
 	const int slow = SumStatusBonus(StatusType::Slow);
-    return (std::max)(1, CombatMath::Scale(speed_, CombatMath::Saturate(100LL + SumStatusBonus(StatusType::SpeedUp) - (std::min)(75, slow))));
+    const int ordinary = CombatMath::Scale(speed_, CombatMath::Saturate(100LL +
+        SumStatusBonus(StatusType::SpeedUp) - (std::min)(75, slow)));
+    return (std::max)(1, artifactSpeedSuppressed_ ? CombatMath::Scale(ordinary, 75) : ordinary);
 }
 int Enemy::getLevel() const { return level_; }
 int Enemy::getResistance() const { return resistance_; }

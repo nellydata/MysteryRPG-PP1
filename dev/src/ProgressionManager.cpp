@@ -245,11 +245,11 @@ bool ProgressionManager::EquipShimmerSkill(const std::string& skillName, int cos
 
 bool ProgressionManager::UnlockShimmerFromTrigger(const std::string& trigger) {
     static const std::pair<const char*, const char*> unlocks[] = {
-        {"mirror", "Phragmós Phōtós"}, {"Matron of the Catacombs", "Therapeía Anakláseōs"},
-        {"Catacombs", "Anástasis Phōtós"}, {"corpse", "Siphon Lux"},
-        {"statue", "Phthorá Phōtós"}, {"Overlord-Prime", "Refractio Ultima"},
-        {"light-spear", "Lumen Spiculum"}, {"relic", "Phōteinḕ Kátharsis"},
-        {"vortex", "Lux Vortex"}, {"Oracle Core", "Phōteinòs Thṓrax"}
+        {"mirror", "Claustrum Lucis"}, {"Matron of the Catacombs", "Curatio Refractionis"},
+        {"Catacombs", "Praesidium Lucis"}, {"corpse", "Siphon Lucis"},
+        {"statue", "Corruptio Lucis"}, {"Overlord-Prime", "Refractio Ultima"},
+        {"light-spear", "Lumen Spiculum"}, {"relic", "Purgatio Lucis"},
+        {"vortex", "Vortex Lucis"}, {"Oracle Core", "Lorica Lucis"}
     };
     for (const auto& unlock : unlocks) if (trigger.find(unlock.first) != std::string::npos) return UnlockShimmerSkill(unlock.second);
     return false;

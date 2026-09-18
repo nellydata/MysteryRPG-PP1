@@ -18,6 +18,7 @@ public:
     virtual void takeDamage(int amount);
     const DamageResolution& ApplyDirectDamage(int rawDamage, bool ignoreDefense = false);
     int ApplyDamageOverTime(int amount);
+    std::vector<StatusDamageResolution> DetonateDots(std::uint64_t sourceId);
     const HealResolution& GetLastHealResult() const { return lastHealResult_; }
     int GetBarrier() const { return StatusRules::Barriers(statuses_); }
     std::uint64_t GetCombatantId() const { return combatantId_; }
@@ -41,6 +42,7 @@ public:
     const std::vector<StatusApplicationResolution>& GetStatusApplications() const;
     int getDefense() const;
     int getSpeed() const;
+    void SetArtifactSpeedSuppression(bool active) { artifactSpeedSuppressed_ = active; }
     int getLevel() const;
     int getResistance() const;
     int getCritRate() const;
@@ -75,6 +77,7 @@ protected:
     std::int64_t xpReward_;
     int defense_;
     int speed_;
+    bool artifactSpeedSuppressed_ = false;
     int phaseBaseAtk_;
     int phaseBaseDefense_;
     int phaseBaseSpeed_;

@@ -70,6 +70,7 @@ struct StatusEffect {
 	std::string source;
     std::uint64_t sourceId = 0;
     std::uint64_t applicationId = 0;
+    bool normalActionsOnly = false;
 };
 
 enum class StackPolicy {

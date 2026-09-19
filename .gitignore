@@ -460,3 +460,4 @@ dev/validation/
 !dev/validation/
 dev/validation/*
 !dev/validation/CompatibilityPass.md
+!dev/validation/full-playthrough-report.md

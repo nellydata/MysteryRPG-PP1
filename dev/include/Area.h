@@ -75,6 +75,7 @@ public:
     bool HasBossBeenEncountered() const;
     void MarkBossEncountered();
     void SetCleared(bool cleared);
+    void UnlockDeveloperContent();
 
 private:
     struct ResourcePool {

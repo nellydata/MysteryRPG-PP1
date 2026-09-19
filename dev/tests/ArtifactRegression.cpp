@@ -1,13 +1,18 @@
 #include "CombatManager.h"
 #include "CombatMath.h"
+#include "ConsoleFormat.h"
 #include "ContentCatalog.h"
+#include "DeveloperMode.h"
 #include "Enemy.h"
 #include "Item.h"
+#include "MapManager.h"
 #include "Player.h"
+#include "ProgressionManager.h"
 #include "ShimmerSkill.h"
 #include <algorithm>
 #include <iostream>
 #include <memory>
+#include <set>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -133,6 +138,18 @@ void CheckPlayerHooks() {
         player.BeginArtifactTurn();
         player.ApplyStatus({StatusType::Bleed, 2}, 100);
         Require(player.GetBarrier() > barrier, "Gown did not refresh next turn");
+        player.BeginArtifactTurn();
+        const int barrierBeforeNonDot = player.GetBarrier();
+        const int hpBeforeNonDot = player.getHP();
+        Require(player.ApplyStatus({StatusType::Stun, 2}, 100), "Gown non-DOT fixture");
+        player.CleanseNegativeStatuses();
+        Require(player.GetBarrier() == barrierBeforeNonDot && player.getHP() == hpBeforeNonDot,
+            "Gown triggered on non-DOT cleanse");
+        player.BeginArtifactTurn();
+        Require(player.ApplyStatus({StatusType::Poison, 2}, 100), "Gown DOT cleanse fixture");
+        const int beforeCleanse = player.GetBarrier();
+        Require(player.CleanseNegativeStatuses() == 1 && player.GetBarrier() > beforeCleanse,
+            "Gown did not trigger on negative DOT cleanse");
     }
     {
         Player player;
@@ -143,10 +160,20 @@ void CheckPlayerHooks() {
             "Boots Slow immunity/SpeedUp");
         player.ApplyStatus({StatusType::Slow, 2, 50}, 100);
         Require(player.getSpeed() == CombatMath::ApplyPercent(base, 25), "Boots speed duplicated");
+        std::vector<std::pair<StatusType, int>> damage;
+        int healing = 0;
+        player.BeginStatusTurn(damage, healing);
+        player.EndStatusTurn(true);
+        Require(player.getSpeed() == CombatMath::ApplyPercent(base, 25), "Boots expired after one action");
+        player.BeginStatusTurn(damage, healing);
+        player.EndStatusTurn(true);
+        Require(player.getSpeed() == base, "Boots survived two normal actions");
     }
     {
         Player player;
         Equip(player, "choirs_eternal_reliquary");
+        player.heal(1);
+        Require(player.GetBarrier() == 0, "Choir ordinary healing made barrier");
         player.takeDamage(1);
         player.heal(1000);
         Require(player.GetBarrier() > 0 && player.GetBarrier() <= player.getMaxHP(),
@@ -310,7 +337,14 @@ void CheckDirectCombatHooks() {
             Has(enemy.GetStatuses(), StatusType::VerdigrisMark), "Verdigris five-piece attack Mark");
         Require(enemy.ApplyStatus({StatusType::Burn, 3, 0, player.getAttack(), player.getDotPotency(), 0,
             player.getName(), player.GetCombatantId()}), "Verdigris detonation DOT fixture");
+        int cooldownBeforeDetonation = -1;
         for (const char* name : {"Acus Fulgoris", "Pulsus Luminis", "Nota Luminosa"}) {
+            if (std::string(name) == "Nota Luminosa") {
+                combat.PrepareTurn(player, enemy);
+                for (int wait = 0; wait < 50 && !combat.IsPlayerTurn(); ++wait)
+                    combat.enemyTurn(player, enemy);
+                cooldownBeforeDetonation = combat.GetSkillCooldown("Pulsus Luminis");
+            }
             auto skill = ShimmerSkill::Create(name);
             Require(Act(combat, player, enemy, CombatAction::Shimmer, skill.get()), "Verdigris marked Shimmer");
         }
@@ -325,6 +359,14 @@ void CheckDirectCombatHooks() {
                 return event.message.find("reduces ") != std::string::npos &&
                     event.message.find("cooldown") != std::string::npos;
             }), "Halo detonation cooldown reduction");
+        // One scheduled turn-start tick occurs as resolve prepares the third
+        // action; the other decrement is the single Halo detonation trigger.
+        Require(cooldownBeforeDetonation > 1 &&
+            combat.GetSkillCooldown("Pulsus Luminis") == cooldownBeforeDetonation - 2,
+            "Halo did not reduce the longest offensive cooldown by exactly one: Pulsus " +
+            std::to_string(combat.GetSkillCooldown("Pulsus Luminis")) + " Acus " +
+            std::to_string(combat.GetSkillCooldown("Acus Fulgoris")) + " before " +
+            std::to_string(cooldownBeforeDetonation));
     }
     {
         Player player("Adelaide", 1000);
@@ -359,6 +401,25 @@ void CheckDirectCombatHooks() {
             "Tome guaranteed more than first attack");
     }
     {
+        bool observedMissThenCritical = false;
+        for (unsigned seed = 1; seed <= 60 && !observedMissThenCritical; ++seed) {
+            Player player;
+            Equip(player, "choirs_eternal_tome");
+            EnemyDefinition definition{"Evasive test target", EnemyFaction::Devotee,
+                EnemyTier::Basic, 1000000, 1, 0, 1, 1};
+            definition.evasion = 45;
+            Enemy enemy(definition, 1);
+            CombatManager combat(seed);
+            if (!Act(combat, player, enemy, CombatAction::Attack) ||
+                EventCount(combat, CombatManager::CombatEvent::Kind::Miss) == 0) continue;
+            for (int attempt = 0; attempt < 12 && EventCount(combat, CombatManager::CombatEvent::Kind::Hit) +
+                EventCount(combat, CombatManager::CombatEvent::Kind::Critical) == 0; ++attempt)
+                Require(Act(combat, player, enemy, CombatAction::Attack), "Tome post-miss attack");
+            observedMissThenCritical = EventCount(combat, CombatManager::CombatEvent::Kind::Critical) == 1;
+        }
+        Require(observedMissThenCritical, "Tome miss consumed guaranteed critical");
+    }
+    {
         Player player;
         Equip(player, "verdigris_saint_relic");
         auto enemy = Target();
@@ -373,6 +434,8 @@ void CheckDirectCombatHooks() {
         });
         Require(burn != statuses.end() && StatusRules::DotDamage(*burn, enemy.getMaxHP(), statuses) ==
             CombatMath::Scale(CombatMath::Scale(player.getAttack(), 60), 120), "Relic same-source DOT mark");
+        for (int turn = 0; turn < 3; ++turn) enemy.ProcessStatuses();
+        Require(!Has(enemy.GetStatuses(), StatusType::VerdigrisMark), "Relic Mark did not expire");
     }
     {
         Player player;
@@ -473,6 +536,82 @@ void CheckDirectCombatHooks() {
             "Oracle third-action gauge bonus");
     }
 }
+
+void CheckDeveloperMode() {
+    Require(DeveloperMode::IsDeveloperName("") && DeveloperMode::IsDeveloperName("  ") &&
+        DeveloperMode::IsDeveloperName("Adelaide") && DeveloperMode::IsDeveloperName("adelaide") &&
+        !DeveloperMode::IsDeveloperName("Clara"), "developer name trigger");
+    const auto rainbow = ConsoleFormat::RainbowName("Adelaide");
+    Require(rainbow.find("\x1b[91mA") != std::string::npos &&
+        rainbow.find("\x1b[93md") != std::string::npos &&
+        rainbow.find("\x1b[0m") != std::string::npos &&
+        ConsoleFormat::RainbowName("Clara") == "Clara", "Adelaide-only rainbow output");
+    Player player;
+    MapManager map;
+    ProgressionManager progression;
+    DeveloperMode::Initialize(player, progression, map);
+    Require(progression.GetLevel() == 100 && player.getHP() == player.getMaxHP(),
+        "developer level/health");
+    progression.GrantXP(1000000);
+    Require(!progression.CheckLevelUp(player) && progression.GetLevel() == 100 && progression.GetXP() == 0,
+        "developer level exceeded cap or accepted XP");
+    for (const auto& room : map.GetRooms())
+        Require(room.IsUnlocked() && room.AreAllRequiredInteractablesRevealed() &&
+            !room.HasBossBeenDefeated(), "developer room access without forced clear");
+    Require(map.GetRooms().front().IsHealingUnlocked(), "developer Fountain access");
+    Require(map.GetRooms().at(2).IsRustedLockUnlocked(), "developer Archive cabinet access");
+    for (const auto& definition : BuildEquippableCatalog())
+        Require(player.FindItem(definition.name) != nullptr, "developer equipment unlock " + definition.name);
+    for (const auto& definition : BuildConsumableCatalog())
+        Require(player.FindItem(definition.name) != nullptr, "developer consumable unlock " + definition.name);
+    for (const auto& definition : BuildClueCatalog())
+        Require(player.FindItem(definition.name) != nullptr, "developer clue unlock " + definition.name);
+    for (const auto& definition : BuildCruxCatalog())
+        Require(player.FindItem(definition.name) != nullptr && progression.HasCrux(definition.name),
+            "developer Crux unlock " + definition.name);
+    for (const auto& name : BuildLatinShimmerSkillNames())
+        Require(progression.HasShimmerSkill(name), "developer Shimmer unlock " + name);
+    std::set<unsigned long long> instanceIds;
+    std::set<Rarity> equipmentRarities;
+    int artifactCount = 0;
+    for (const auto& entry : player.GetInventory().GetItems()) {
+        Require(entry.item && instanceIds.insert(entry->getInstanceId()).second,
+            "developer inventory duplicate instance ID");
+        if (entry->getCategory() == ItemCategory::Equippable) {
+            equipmentRarities.insert(entry->getRarity());
+            artifactCount += entry->getRarity() == Rarity::Artifact;
+        }
+    }
+    Require(equipmentRarities.size() == 6 && artifactCount == 15,
+        "developer inventory missing an equipment rarity or Artifact unique");
+    const auto initializedItems = player.GetInventory().GetItemCount();
+    DeveloperMode::Initialize(player, progression, map);
+    Require(player.GetInventory().GetItemCount() == initializedItems,
+        "developer initialization duplicated catalogue items");
+    for (const auto& definition : BuildEquippableCatalog()) {
+        Item* item = player.FindItem(definition.name);
+        Require(item && player.Equip(*item) && player.ToggleEquip(*item),
+            "developer catalogue item cannot equip/unequip " + definition.name);
+    }
+    const auto beforeItems = player.GetInventory().GetItemCount();
+    const auto& room = MapManager::GetFloor1Definitions().at(4);
+    const auto sample = DeveloperMode::SampleRoom(room, 100, DeveloperDropSource::Boss, 5000, 13);
+    Require(sample.rolls == 5000 && sample.gear > 16000 && sample.gear < 19000 &&
+        sample.rarity[static_cast<int>(Rarity::Artifact)] > 500 &&
+        player.GetInventory().GetItemCount() == beforeItems,
+        "developer boss simulator distribution or side effect");
+    const auto cache = DeveloperMode::SampleRoom(room, 100, DeveloperDropSource::Investigation, 100, 42);
+    Require(cache.rolls == 100 && cache.gear + cache.consumables == 100 &&
+        cache.rarity[static_cast<int>(Rarity::Legendary)] == 0 &&
+        cache.rarity[static_cast<int>(Rarity::Artifact)] == 0,
+        "developer investigation simulator rarity gate");
+    Require(!DeveloperMode::RollRoom(room, 100, DeveloperDropSource::Boss, 13).empty(),
+        "developer single boss roll");
+    bool rejected = false;
+    try { DeveloperMode::RollRoom(MapManager::GetFloor1Definitions().front(), 100,
+        DeveloperDropSource::Boss, 1); } catch (const std::invalid_argument&) { rejected = true; }
+    Require(rejected, "Fountain boss simulator should be unavailable");
+}
 }
 
 void RunArtifactRegression() {
@@ -480,6 +619,7 @@ void RunArtifactRegression() {
     CheckPlayerHooks();
     CheckSetStats();
     CheckDirectCombatHooks();
+    CheckDeveloperMode();
     std::cout << "Artifact catalogue, player hooks, caps, and set-stat regression passed.\n";
 }
 

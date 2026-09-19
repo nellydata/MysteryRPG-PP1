@@ -11,6 +11,8 @@ namespace ConsoleFormat {
 
 const char* SlotName(EquipSlot slot);
 const char* RarityName(Rarity rarity);
+std::string RainbowName(const std::string& name);
+std::string RainbowAdelaideIn(const std::string& text);
 
 // One-line player summary used by every panel header.
 std::string PlayerPanel(const std::string& name, int level, int hp, int maxHp,

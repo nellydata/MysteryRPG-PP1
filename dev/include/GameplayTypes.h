@@ -227,6 +227,8 @@ struct EnemyDefinition {
 	EnemyRole role = EnemyRole::Balanced;
 	std::string lootTag;
 	int minimumLevel = 1;
+	// Defaults preserve existing enemies; authored evasion supports hit/miss fixtures.
+	int evasion = 0;
 };
 
 enum class ItemStat {

@@ -6,6 +6,33 @@
 namespace ConsoleFormat
 {
 
+    std::string RainbowName(const std::string& name)
+    {
+        if (name != "Adelaide") return name;
+        static const char* colors[] = {"\x1b[91m", "\x1b[93m", "\x1b[92m", "\x1b[96m",
+                                       "\x1b[94m", "\x1b[95m", "\x1b[91m", "\x1b[93m"};
+        std::string result;
+        for (std::size_t index = 0; index < name.size(); ++index) {
+            result += colors[index];
+            result += name[index];
+        }
+        return result + "\x1b[0m";
+    }
+
+    std::string RainbowAdelaideIn(const std::string& text)
+    {
+        const std::string needle = "Adelaide";
+        std::string result;
+        std::size_t cursor = 0;
+        while (true) {
+            const auto found = text.find(needle, cursor);
+            if (found == std::string::npos) return result + text.substr(cursor);
+            result += text.substr(cursor, found - cursor);
+            result += RainbowName(needle);
+            cursor = found + needle.size();
+        }
+    }
+
     const char *SlotName(EquipSlot slot)
     {
         static const char *names[] = {"Head", "Torso", "Boots", "Hand", "Accessory", "None"};

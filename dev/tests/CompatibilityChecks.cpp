@@ -33,6 +33,16 @@ void CheckLoot() {
         {EnemyTier::Boss, 3, .50, 1.0}
     };
     constexpr int samples = 5000;
+    for (const auto& expectation : {std::pair<int, double>{1, .85}, {15, .85 + .15 * 14 / 29.0}, {30, 1.0}}) {
+        LootContext basic;
+        basic.playerLevel = expectation.first;
+        basic.enemyTier = EnemyTier::Basic;
+        int gearWins = 0;
+        for (unsigned seed = 1; seed <= samples; ++seed)
+            gearWins += GearCount(GenerateLoot(basic, seed)) > 0;
+        Check(std::abs(gearWins / double(samples) - expectation.second) < .035,
+            "Basic gear level scaling");
+    }
     for (const auto& tier : tiers) {
         int extras = 0, consumables = 0;
         LootContext context;
@@ -66,6 +76,11 @@ void CheckLoot() {
                                   {Rarity::Artifact, .05}})
         Check(std::abs(rarity[static_cast<int>(expected.first)] / double(total) - expected.second) < .025,
             "Level-100 boss rarity distribution");
+    std::cout << "L100 boss gear sample n=" << total << " (5000 independent encounters): Rare "
+        << 100.0 * rarity[static_cast<int>(Rarity::Rare)] / total << "%, Epic "
+        << 100.0 * rarity[static_cast<int>(Rarity::Epic)] / total << "%, Legendary "
+        << 100.0 * rarity[static_cast<int>(Rarity::Legendary)] / total << "%, Artifact "
+        << 100.0 * rarity[static_cast<int>(Rarity::Artifact)] / total << "%\n";
     for (int level : {1, 5, 10, 20, 40, 70}) {
         boss.playerLevel = level;
         const Rarity maximum = level >= 70 ? Rarity::Artifact : level >= 40 ? Rarity::Legendary :
@@ -163,6 +178,30 @@ void CheckRooms() {
     Check(!firstClearEncounters.ResolveVictory(entrance, firstClearPlayer,
         firstClearProgression, firstClearMap, *guardian, 77).resolved &&
         firstClearProgression.GetXP() == xpAfterClear, "Duplicate first-clear reward");
+    MapManager farmMap;
+    Area& farmEntrance = farmMap.GetRooms().at(1);
+    Player farmPlayer;
+    ProgressionManager farmProgression;
+    EncounterManager farmEncounters;
+    const auto* bossDefinition = FindEnemyDefinition(definitions[1].bossId);
+    Check(bossDefinition != nullptr, "Farm boss fixture missing");
+    Enemy farmBoss(*bossDefinition, 8, false, true);
+    farmBoss.takeDamage(1000000);
+    const auto farmResult = farmEncounters.ResolveVictory(farmEntrance, farmPlayer,
+        farmProgression, farmMap, farmBoss, 77);
+    Check(farmResult.resolved && !farmResult.firstClear && !farmEntrance.HasBossBeenDefeated() &&
+        !farmMap.GetRooms().at(2).IsUnlocked(), "Farm boss replayed first-clear unlock");
+    MapManager defeatMap;
+    Area& defeatEntrance = defeatMap.GetRooms().at(1);
+    Player defeatedPlayer;
+    defeatedPlayer.takeDamage(1000000);
+    ProgressionManager defeatProgression;
+    EncounterManager defeatEncounters;
+    auto defeatedBoss = CreateFirstClearBoss(definitions[1]);
+    defeatedBoss->takeDamage(1000000);
+    Check(!defeatEncounters.ResolveVictory(defeatEntrance, defeatedPlayer,
+        defeatProgression, defeatMap, *defeatedBoss, 77).resolved &&
+        !defeatEntrance.HasBossBeenDefeated(), "Defeat cleared boss");
     MapManager fleeMap;
     auto fledBoss = CreateFirstClearBoss(definitions[1]);
     fledBoss->ForfeitRewards();

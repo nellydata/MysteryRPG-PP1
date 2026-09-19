@@ -22,13 +22,14 @@ void ConsoleUI::SetFast(bool fast) { fastPresentation = fast; }
 bool ConsoleUI::IsFast() { return fastPresentation; }
 
 void ConsoleUI::PrintPlayerPanel(const Player& player, const ProgressionManager& progression) const {
-    std::cout << ConsoleFormat::PlayerPanel(player.getName(), progression.GetLevel(),
+    std::cout << ConsoleFormat::PlayerPanel(ConsoleFormat::RainbowName(player.getName()), progression.GetLevel(),
         player.getHP(), player.getMaxHP(), player.getAttack(), player.getDefense(),
         player.getSpeed(), progression.GetXP(), progression.GetXPToNextLevel());
 }
 
 void ConsoleUI::RenderDashboard(const Player& player, const ProgressionManager& progression,
-                                const std::vector<Area>& rooms, const std::string& context) const {
+                                const std::vector<Area>& rooms, const std::string& context,
+                                bool developerMode) const {
     std::cout << "\n=== MICARE: CATHEDRAL OF LIES ===\n";
     PrintPlayerPanel(player, progression);
     std::cout << context << '\n';
@@ -39,6 +40,7 @@ void ConsoleUI::RenderDashboard(const Player& player, const ProgressionManager& 
         std::cout << '\n';
     }
     std::cout << "6. Inventory\n7. Shimmer skills\n8. Floor map\n9. Last encounter log\n0. Quit\n";
+    if (developerMode) std::cout << "10. Room drop simulator (no combat)\n";
 }
 
 void ConsoleUI::RenderRoom(const Area& area, const Player& player, const ProgressionManager& progression) const {
@@ -64,7 +66,7 @@ void ConsoleUI::RenderRoom(const Area& area, const Player& player, const Progres
 void ConsoleUI::RenderCombat(const Player& player, const ProgressionManager& progression,
                              const Enemy& enemy, const CombatManager& combat) const {
     std::cout << "\n=== COMBAT ===\n"
-              << player.getName() << " | Level " << progression.GetLevel() << '\n'
+              << ConsoleFormat::RainbowName(player.getName()) << " | Level " << progression.GetLevel() << '\n'
               << "HP " << ConsoleFormat::HealthBar(player.getHP(), player.getMaxHP());
     if (player.GetBarrier() > 0) std::cout << " | Barrier " << player.GetBarrier();
     std::cout << "\nStatuses: " << ConsoleFormat::StatusSummary(player.GetStatuses()) << "\n\n"
@@ -73,9 +75,9 @@ void ConsoleUI::RenderCombat(const Player& player, const ProgressionManager& pro
               << "HP " << ConsoleFormat::HealthBar(enemy.getHP(), enemy.getMaxHP());
     if (enemy.GetBarrier() > 0) std::cout << " | Barrier " << enemy.GetBarrier();
     std::cout << "\nStatuses: " << ConsoleFormat::StatusSummary(enemy.GetStatuses()) << '\n'
-              << "Readiness: " << player.getName() << ' ' << combat.GetPlayerGauge()
+              << "Readiness: " << ConsoleFormat::RainbowName(player.getName()) << ' ' << combat.GetPlayerGauge()
               << "/1000 | " << enemy.getName() << ' ' << combat.GetEnemyGauge() << "/1000\n"
-              << "Acting: " << (combat.IsPlayerTurn() ? player.getName() : enemy.getName()) << "\n"
+              << "Acting: " << (combat.IsPlayerTurn() ? ConsoleFormat::RainbowName(player.getName()) : enemy.getName()) << "\n"
               << "Shimmer:\n";
     const auto equipped = progression.GetEquippedShimmerSkills();
     if (equipped.empty()) {
@@ -96,7 +98,7 @@ void ConsoleUI::RenderCombat(const Player& player, const ProgressionManager& pro
 void ConsoleUI::PresentEvents(const CombatManager& combat) const {
     for (const auto& event : combat.GetEvents()) {
         if (event.sequenceId <= lastEventSequence_) continue;
-        std::cout << '[' << event.sequenceId << "] " << event.message << '\n' << std::flush;
+        std::cout << '[' << event.sequenceId << "] " << ConsoleFormat::RainbowAdelaideIn(event.message) << '\n' << std::flush;
         lastEventSequence_ = event.sequenceId;
         // Console presentation alone waits; the resolver never uses wall-clock time.
         if (!fastPresentation && (event.kind == CombatManager::CombatEvent::Kind::Attack ||
@@ -108,22 +110,24 @@ void ConsoleUI::PresentEvents(const CombatManager& combat) const {
 void ConsoleUI::ShowBattleHistory(const CombatManager& combat) const {
     std::cout << "\n=== FULL ENCOUNTER LOG ===\n";
     if (combat.GetEvents().empty()) std::cout << "No encounter recorded.\n";
-    for (const auto& event : combat.GetEvents()) std::cout << '[' << event.sequenceId << "] " << event.message << '\n';
+    for (const auto& event : combat.GetEvents()) std::cout << '[' << event.sequenceId << "] " << ConsoleFormat::RainbowAdelaideIn(event.message) << '\n';
     std::cout << "=== END ENCOUNTER LOG ===\n";
 }
 
 void ConsoleUI::ShowDefeat(const Player& player, const CombatManager& combat) const {
     PresentEvents(combat);
-    std::cout << "\n=== DEFEAT: " << player.getName() << " ===\n";
+    std::cout << "\n=== DEFEAT: " << ConsoleFormat::RainbowName(player.getName()) << " ===\n";
     const auto& events = combat.GetEvents();
     for (auto event = events.rbegin(); event != events.rend(); ++event) {
         if (event->target == player.getName() && event->remainingHP == 0 && event->hpDamage > 0) {
-            std::cout << "Final cause: " << event->actor << " / " << event->skill << ". " << event->message << '\n';
+            std::cout << "Final cause: " << event->actor << " / " << event->skill << ". " <<
+                ConsoleFormat::RainbowAdelaideIn(event->message) << '\n';
             break;
         }
     }
     for (std::size_t index = events.size() > 8 ? events.size() - 8 : 0; index < events.size(); ++index)
-        std::cout << '[' << events[index].sequenceId << "] " << events[index].message << '\n';
+        std::cout << '[' << events[index].sequenceId << "] " <<
+            ConsoleFormat::RainbowAdelaideIn(events[index].message) << '\n';
     while (std::cin) {
         const int choice = Prompt("Defeat review: 1 full log, 0 acknowledge and return to the Fountain.", 0, 1);
         if (choice == 0) break;
@@ -223,7 +227,9 @@ void ConsoleUI::ShowMap(const std::vector<Area>& rooms) const {
         << (room.HasBossBeenDefeated() ? " [CLEARED]" : "") << '\n';
 }
 
-void ConsoleUI::ShowMessage(const std::string& message) const { std::cout << message << '\n'; }
+void ConsoleUI::ShowMessage(const std::string& message) const {
+    std::cout << ConsoleFormat::RainbowAdelaideIn(message) << '\n';
+}
 
 void ConsoleUI::PresentLevelUpRewards(ProgressionManager& progression) const {
     for (const auto& message : progression.ConsumeLevelUpMessages()) ShowMessage(message);

@@ -88,6 +88,15 @@ void Area::SetCleared(bool cleared) {
     cluePool_.Set(false, 0);
     discoveryFailures_ = 0;
 }
+void Area::UnlockDeveloperContent() {
+    unlocked_ = true;
+    visibleInteractables_ = interactables_;
+    discoveredNPC_ = hasNPC_;
+    cluePool_.Set(false, 0);
+    if (healingRoom_) healingUnlocked_ = true;
+    if (name_ == "Archive Room") rustedLockUnlocked_ = true;
+    // Keep guardians undefeated: developer mode can still test real fights.
+}
 
 bool Area::hasEnemies() const {
     for (const auto& enemy : enemies_) {

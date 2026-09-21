@@ -82,12 +82,14 @@ inline int Absorb(std::vector<StatusEffect>& statuses, int damage) {
     }), statuses.end());
     return remaining;
 }
-inline DamageResolution Damage(int& hp, std::vector<StatusEffect>& statuses, int raw, int defense, int reduction) {
+inline DamageResolution Damage(int& hp, std::vector<StatusEffect>& statuses, int raw, int defense,
+                               int reduction, int finalPercent = 100) {
     DamageResolution result;
     result.requestedDamage = (std::max)(0, raw);
     result.remainingHP = hp;
     if (raw <= 0 || hp <= 0) return result;
     int remaining = CombatMath::Scale(CombatMath::Mitigate(raw, defense), 100 - (std::clamp)(reduction, 0, 100));
+    remaining = CombatMath::Scale(remaining, (std::clamp)(finalPercent, 0, 100));
     result.mitigatedDamage = raw - remaining;
     const int barriers = Barriers(statuses);
     remaining = Absorb(statuses, remaining);
@@ -125,8 +127,10 @@ inline int DotDamage(const StatusEffect& status, int maxHP, const std::vector<St
     }
     return base;
 }
-inline void FinishTurn(std::vector<StatusEffect>& statuses, std::vector<std::uint64_t>& snapshot) {
+inline void FinishTurn(std::vector<StatusEffect>& statuses, std::vector<std::uint64_t>& snapshot,
+                       bool normalAction = true) {
     for (auto& status : statuses) if (status.turns > 0 &&
+        (normalAction || !status.normalActionsOnly) &&
         std::find(snapshot.begin(), snapshot.end(), status.applicationId) != snapshot.end()) --status.turns;
     statuses.erase(std::remove_if(statuses.begin(), statuses.end(), [&](const StatusEffect& status) {
         return (status.turns == 0 && status.type != StatusType::Barrier) ||

@@ -433,34 +433,49 @@ std::vector<ItemDefinition> BuildEquippableCatalog() {
 			}
 		}
 	}
-	result.push_back({"verdigris_halo_of_saint_adelaide", "Artifact headgear.", ItemCategory::Equippable, Rarity::Artifact, EquipSlot::Head, {12}, {}, "shimmer_cooldown_reduced_by_1"});
-	result.push_back({"choirs_eternal_mourning_veil", "Artifact headgear.", ItemCategory::Equippable, Rarity::Artifact, EquipSlot::Head, {12}, {}, "immune_to_stun_once_per_battle"});
-	result.push_back({"locket_crown_of_the_first_light", "Artifact headgear.", ItemCategory::Equippable, Rarity::Artifact, EquipSlot::Head, {12}, {}, "crit_hits_restore_5_percent_hp"});
-	result.push_back({"verdigris_saint_vestment", "Artifact torso gear.", ItemCategory::Equippable, Rarity::Artifact, EquipSlot::Torso, {0, 12}, {}, "reduces_damage_taken_by_10_percent"});
-	result.push_back({"choirs_eternal_ritual_gown", "Artifact torso gear.", ItemCategory::Equippable, Rarity::Artifact, EquipSlot::Torso, {0, 12}, {}, "immune_to_bleed"});
-	result.push_back({"first_light_sanctum_attire", "Artifact torso gear.", ItemCategory::Equippable, Rarity::Artifact, EquipSlot::Torso, {0, 12}, {}, "gain_5_percent_def_when_hit"});
-	result.push_back({"verdigris_saint_step", "Artifact boots.", ItemCategory::Equippable, Rarity::Artifact, EquipSlot::Boots, {0, 0, 12}, {}, "gain_extra_turn_every_12_actions"});
-	result.push_back({"choirs_eternal_boots", "Artifact boots.", ItemCategory::Equippable, Rarity::Artifact, EquipSlot::Boots, {0, 0, 12}, {}, "immune_to_slow"});
-	result.push_back({"first_light_sandals", "Artifact boots.", ItemCategory::Equippable, Rarity::Artifact, EquipSlot::Boots, {0, 0, 12}, {}, "spd_increases_by_1_each_turn"});
-	result.push_back({"verdigris_saint_relic", "Artifact hand gear.", ItemCategory::Equippable, Rarity::Artifact, EquipSlot::Hand, {0, 0, 0, 12}, {}, "attacks_apply_verdigris_mark_dealing_bonus_damage_over_time"});
-	result.push_back({"choirs_eternal_tome", "Artifact hand gear.", ItemCategory::Equippable, Rarity::Artifact, EquipSlot::Hand, {0, 0, 0, 12}, {}, "first_attack_each_battle_is_guaranteed_crit"});
-	result.push_back({"first_light_crucible", "Artifact hand gear.", ItemCategory::Equippable, Rarity::Artifact, EquipSlot::Hand, {0, 0, 0, 12}, {}, "gain_5_percent_atk_every_time_you_use_a_shimmer_skill"});
-	result.push_back({"verdigris_saint_reliquary", "Artifact accessory.", ItemCategory::Equippable, Rarity::Artifact, EquipSlot::Accessory, {12}, {}, "verdigris_set_lifesteal"});
-	result.push_back({"choirs_eternal_reliquary", "Artifact accessory.", ItemCategory::Equippable, Rarity::Artifact, EquipSlot::Accessory, {12}, {}, "choir_set_barrier"});
-	result.push_back({"first_light_reliquary", "Artifact accessory.", ItemCategory::Equippable, Rarity::Artifact, EquipSlot::Accessory, {12}, {}, "first_light_set_shimmer"});
+	result.push_back({"verdigris_halo_of_saint_adelaide", "Artifact headgear.", ItemCategory::Equippable, Rarity::Artifact, EquipSlot::Head, {12}, {}, "verdigris_halo_of_saint_adelaide"});
+	result.push_back({"choirs_eternal_mourning_veil", "Artifact headgear.", ItemCategory::Equippable, Rarity::Artifact, EquipSlot::Head, {12}, {}, "choirs_eternal_mourning_veil"});
+	result.push_back({"locket_crown_of_the_first_light", "Artifact headgear.", ItemCategory::Equippable, Rarity::Artifact, EquipSlot::Head, {12}, {}, "locket_crown_of_the_first_light"});
+	result.push_back({"verdigris_saint_vestment", "Artifact torso gear.", ItemCategory::Equippable, Rarity::Artifact, EquipSlot::Torso, {0, 12}, {}, "verdigris_saint_vestment"});
+	result.push_back({"choirs_eternal_ritual_gown", "Artifact torso gear.", ItemCategory::Equippable, Rarity::Artifact, EquipSlot::Torso, {0, 12}, {}, "choirs_eternal_ritual_gown"});
+	result.push_back({"first_light_sanctum_attire", "Artifact torso gear.", ItemCategory::Equippable, Rarity::Artifact, EquipSlot::Torso, {0, 12}, {}, "first_light_sanctum_attire"});
+	result.push_back({"verdigris_saint_step", "Artifact boots.", ItemCategory::Equippable, Rarity::Artifact, EquipSlot::Boots, {0, 0, 12}, {}, "verdigris_saint_step"});
+	result.push_back({"choirs_eternal_boots", "Artifact boots.", ItemCategory::Equippable, Rarity::Artifact, EquipSlot::Boots, {0, 0, 12}, {}, "choirs_eternal_boots"});
+	result.push_back({"first_light_sandals", "Artifact boots.", ItemCategory::Equippable, Rarity::Artifact, EquipSlot::Boots, {0, 0, 12}, {}, "first_light_sandals"});
+	result.push_back({"verdigris_saint_relic", "Artifact hand gear.", ItemCategory::Equippable, Rarity::Artifact, EquipSlot::Hand, {0, 0, 0, 12}, {}, "verdigris_saint_relic"});
+	result.push_back({"choirs_eternal_tome", "Artifact hand gear.", ItemCategory::Equippable, Rarity::Artifact, EquipSlot::Hand, {0, 0, 0, 12}, {}, "choirs_eternal_tome"});
+	result.push_back({"first_light_crucible", "Artifact hand gear.", ItemCategory::Equippable, Rarity::Artifact, EquipSlot::Hand, {0, 0, 0, 12}, {}, "first_light_crucible"});
+	result.push_back({"verdigris_saint_reliquary", "Artifact accessory.", ItemCategory::Equippable, Rarity::Artifact, EquipSlot::Accessory, {12}, {}, "verdigris_saint_reliquary"});
+	result.push_back({"choirs_eternal_reliquary", "Artifact accessory.", ItemCategory::Equippable, Rarity::Artifact, EquipSlot::Accessory, {12}, {}, "choirs_eternal_reliquary"});
+	result.push_back({"first_light_reliquary", "Artifact accessory.", ItemCategory::Equippable, Rarity::Artifact, EquipSlot::Accessory, {12}, {}, "first_light_reliquary"});
 	for (auto& item : result) {
 		if (item.rarity != Rarity::Artifact) continue;
+		// The stable catalogue slug is also the runtime-dispatched unique-effect ID.
 		const std::string artifactMainStat = item.slot == EquipSlot::Boots ? "spd" : item.slot == EquipSlot::Torso ? "def" : item.slot == EquipSlot::Head ? "hp" : item.slot == EquipSlot::Accessory ? "hp" : "atk";
 		SetSlotRules(item, item.slot, artifactMainStat);
 		item = RollLootInstance(item, TemplateSeed(item.name));
 		if (item.name.find("verdigris") != std::string::npos) item.setName = "Verdigris Matron";
 		else if (item.name.find("choir") != std::string::npos) item.setName = "Shimmer Reliquary";
 		else if (item.name.find("first_light") != std::string::npos) item.setName = "Oracle Automaton";
-		item.passive = item.uniqueEffect;
+		if (item.name == "verdigris_halo_of_saint_adelaide") item.passive = "Once per normal turn, detonating or consuming DOT reduces the longest offensive Shimmer cooldown by 1.";
+		else if (item.name == "verdigris_saint_vestment") item.passive = "10% final damage reduction; direct enemy hits apply 2-turn Bleed once per attacking enemy per normal turn.";
+		else if (item.name == "verdigris_saint_step") item.passive = "Every sixth completed normal action grants one immediate bonus action.";
+		else if (item.name == "verdigris_saint_relic") item.passive = "Successful direct attacks apply 3-turn Verdigris Mark; marked targets take 20% more Adelaide DOT damage.";
+		else if (item.name == "verdigris_saint_reliquary") item.passive = "+10 percentage points DOT healing; DOT overhealing becomes barrier, capped at 100% MaxHP.";
+		else if (item.name == "choirs_eternal_mourning_veil") item.passive = "Prevent the first successful Stun each battle and gain a 40% MaxHP barrier for 2 turns.";
+		else if (item.name == "choirs_eternal_ritual_gown") item.passive = "Bleed immunity; cleansing or resisting a negative DOT heals 8% MaxHP and grants 15% MaxHP barrier once per normal turn.";
+		else if (item.name == "choirs_eternal_boots") item.passive = "Slow immunity; cleansing or resisting a negative effect grants 25% final SPD for 2 normal turns, refreshing on repeat.";
+		else if (item.name == "choirs_eternal_tome") item.passive = "First successful direct attack each battle is guaranteed critical with +50 percentage points Crit Damage.";
+		else if (item.name == "choirs_eternal_reliquary") item.passive = "40% of effective overhealing becomes barrier, capped at 100% MaxHP.";
+		else if (item.name == "locket_crown_of_the_first_light") item.passive = "First direct critical each normal turn heals 8% MaxHP and reduces the longest cooldown by 1.";
+		else if (item.name == "first_light_sanctum_attire") item.passive = "Direct enemy damage grants +5% final DEF, up to +50%, once per enemy action.";
+		else if (item.name == "first_light_sandals") item.passive = "Start each normal turn with +3% final SPD for the battle, up to +30%.";
+		else if (item.name == "first_light_crucible") item.passive = "Each successful original Shimmer cast grants +5% final ATK for the battle, up to +50%.";
+		else if (item.name == "first_light_reliquary") item.passive = "Every third original offensive Shimmer arms a 40% actual-HP-damage echo on the next direct offensive Shimmer.";
 		item.theme = item.setName + ": " + item.theme;
-		if (item.setName == "Verdigris Matron") item.setPassive = "Five-piece: recover 25% max HP each turn, recover 50% of damage taken, convert excess recovery into barrier, and gain 100% healing potency.";
-		else if (item.setName == "Shimmer Reliquary") item.setPassive = "Five-piece: the first Shimmer skill each turn costs no cooldown and barriers absorb 50% more damage.";
-		else if (item.setName == "Oracle Automaton") item.setPassive = "Five-piece: gain 30% accuracy, 75% critical damage, and a chance to repeat offensive actions.";
+		if (item.setName == "Verdigris Matron") item.setPassive = "3 pieces: +35 pp DOT Potency; Adelaide DOT actual HP damage heals 10%. 5 pieces: direct attacks apply Mark; every third original offensive Shimmer against a marked target detonates remaining DOT.";
+		else if (item.setName == "Shimmer Reliquary") item.setPassive = "3 pieces: +40 pp Barrier Potency, +25 pp Healing Potency; barrier break heals 10% MaxHP and cleanses one negative effect once per normal turn. 5 pieces: first ready Shimmer each normal turn starts no cooldown; barriers are 50% stronger.";
+		else if (item.setName == "Oracle Automaton") item.setPassive = "3 pieces: every third completed normal action adds 20% action gauge. 5 pieces: +25% final Adelaide SPD and -25% final enemy SPD.";
 	}
 	return result;
 }
@@ -512,11 +527,11 @@ std::vector<ItemDefinition> BuildCruxCatalog() {
 
 std::vector<std::string> BuildLatinShimmerSkillNames() {
 	return {
-		"Pulsus Luminis", "Velum Radiāns", "Gradus Coruscus", "Lucerna Echo", "Fulgur Aurorae", "Flos Aeruginis",
+		"Pulsus Luminis", "Velum Radiāns", "Gradus Coruscus", "Echo Lucernae", "Fulgur Aurorae", "Flos Aeruginis",
 		"Resonantia Chori", "Requiem Mechanicum", "Scutum Coruscum", "Nota Luminosa", "Revelatio Occulta",
-		"Catena Aeruginis", "Onus Coruscum", "Lux Sanctorum", "Mutatio Horologii", "Phragmós Phōtós",
-		"Ray of Mercy", "Prism Step", "Gleam Needle", "Therapeía Anakláseōs", "Anástasis Phōtós",
-		"Phthorá Phōtós", "Phōteinḕ Kátharsis", "Phōteinòs Thṓrax", "Refractio Ultima", "Lumen Spiculum",
-		"Lux Vortex", "Siphon Lux", "Lux Aegis", "Refraction Cataclysm", "Lux Ascension"
+		"Catena Aeruginis", "Onus Coruscum", "Lux Sanctorum", "Mutatio Horologii", "Claustrum Lucis",
+		"Radius Misericordiae", "Gradus Prismatis", "Acus Fulgoris", "Curatio Refractionis", "Praesidium Lucis",
+		"Corruptio Lucis", "Purgatio Lucis", "Lorica Lucis", "Refractio Ultima", "Lumen Spiculum",
+		"Vortex Lucis", "Siphon Lucis", "Aegis Lucis", "Cataclysmus Refractionis", "Ascensio Lucis"
 	};
 }

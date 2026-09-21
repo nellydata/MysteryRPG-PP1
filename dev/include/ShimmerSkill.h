@@ -20,13 +20,19 @@ public:
 		// CombatManager owns the 1000-point threshold and applies the progress.
 		int nextActionGauge = 0;
 	};
+	struct EffectMetadata {
+		int statusPotency = 0;
+		int dotPotency = 0;
+		int healOverTimePercent = 0;
+		bool normalActionsOnly = false;
+	};
 	ShimmerSkill(const std::string& name, int equipCost, int cooldown,
 		const std::string& description = "", const std::string& effect = "");
 	ShimmerSkill(const std::string& name, int equipCost, int cooldown,
 		const std::string& description, const std::string& effect, int powerPercent, int duration);
 	ShimmerSkill(const std::string& name, int equipCost, int cooldown,
 		const std::string& description, const std::string& effect, int powerPercent, int duration,
-		const CombatBuff& combatBuff);
+		const CombatBuff& combatBuff, const EffectMetadata& effectMetadata = EffectMetadata{});
 	ShimmerSkill(const std::string& name, int cooldown,
 		const std::string& description, const std::string& effect);
 	virtual ~ShimmerSkill();
@@ -42,6 +48,7 @@ public:
 	int getPowerPercent() const;
 	int getDuration() const;
 	const CombatBuff& getCombatBuff() const;
+	const EffectMetadata& getEffectMetadata() const;
 	TargetType getTargetType() const;
 	int getRemainingCooldown() const;
 	bool IsReady() const;
@@ -58,6 +65,7 @@ protected:
 	int powerPercent_;
 	int duration_;
 	CombatBuff combatBuff_;
+	EffectMetadata effectMetadata_;
 	TargetType targetType_ = TargetType::SingleEnemy;
 	int remainingCooldown_;
 };

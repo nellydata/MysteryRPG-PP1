@@ -77,6 +77,8 @@ public:
                            ProgressionManager* progression = nullptr);
     const ShimmerSkill* GetDefaultSkill() const;
     bool IsPlayerTurn() const;
+    int GetPlayerGauge() const { return playerGauge_; }
+    int GetEnemyGauge() const { return enemyGauge_; }
     bool HasUsedConsumableThisTurn() const;
     const std::vector<CombatEvent>& GetEvents() const;
     void RecordInfo(const std::string& message);
@@ -113,6 +115,18 @@ private:
     std::map<std::string, int> shimmerCooldowns_;
     std::vector<Enemy*> currentEnemyParty_;
     std::set<Enemy*> seededEnemies_;
+    int normalActions_ = 0;
+    int offensiveShimmerCasts_ = 0;
+    int markedShimmerCasts_ = 0;
+    bool firstDirectAttackUsed_ = false;
+    bool firstCriticalThisTurn_ = false;
+    bool dotCooldownUsedThisTurn_ = false;
+    bool barrierBreakUsedThisTurn_ = false;
+    bool freeCooldownUsedThisTurn_ = false;
+    bool enemyHitTriggeredThisAction_ = false;
+    bool echoArmed_ = false;
+    bool bonusPlayerAction_ = false;
+    std::uint64_t artifactEquipmentRevision_ = 0;
 
     CombatEvent& AddEvent(CombatEvent::Kind kind, const std::string& message, int value = 0);
     void RecordDamage(const std::string& actor, const std::string& target,
@@ -120,9 +134,13 @@ private:
                       CombatEvent::Kind kind = CombatEvent::Kind::Damage);
     void StartPlayerTurn(Player& player);
     void AdvanceTurn(Player& player, Enemy& enemy);
-    void FinishPlayerAction(Player& player, Enemy& enemy);
+    void FinishPlayerAction(Player& player, Enemy& enemy, bool normalAction = false);
     void ResolveDefeatReward(Player& player, Enemy& enemy, ProgressionManager* progression);
     void ForfeitEncounterRewards();
+    void ReduceLongestCooldown(Player& player, bool offensiveOnly = false);
+    void OnPlayerDotDamage(Player& player, const StatusDamageResolution& tick);
+    void OnPlayerDirectHit(Player& player, Enemy& enemy, bool critical);
+    void SyncArtifactEquipment(Player& player);
 
     // Enemy-turn breakdown: each concern lives in its own short helper so the
     // orchestrating enemyTurn() stays small and individually readable.

@@ -43,18 +43,9 @@ const std::vector<StatusDamageResolution>& Player::GetStatusDamageResults() cons
 
 void Player::takeDamage(int amount) {
     lastDamageResult_ = StatusRules::Damage(hp_, statuses_, amount, 0,
-        (std::min)(CombatMath::Balance::MaximumDamageReduction, SumStatusBonus(StatusType::DamageReduction)));
+        (std::min)(CombatMath::Balance::MaximumDamageReduction, SumStatusBonus(StatusType::DamageReduction)),
+        HasArtifact("verdigris_saint_vestment") ? 90 : 100);
     barrier_ = StatusRules::Barriers(statuses_);
-    if (isAlive() && HasActiveSet("Verdigris Matron") && lastDamageResult_.hpDamage > 0) {
-        const int recovery = lastDamageResult_.hpDamage;
-        const int beforeHeal = hp_;
-        const int beforeBarrier = barrier_;
-        heal(recovery / 2);
-        AddBarrier(recovery / 4);
-        lastDamageResult_.healing = hp_ - beforeHeal;
-        lastDamageResult_.barrierGained = barrier_ - beforeBarrier;
-        lastDamageResult_.remainingHP = hp_;
-    }
 }
 
 const DamageResolution& Player::ApplyDirectDamage(int rawDamage, bool ignoreDefense) {
@@ -81,12 +72,19 @@ bool Player::ToggleEquip(Item& item) {
         inventory_.ProtectItem(item.getInstanceId());
     }
     RecalculateStats();
+    ++equipmentRevision_;
+    BeginArtifactBattle();
     return true;
 }
 
 void Player::heal(int amount) {
     lastHealResult_ = StatusRules::Heal(hp_, maxHp_, amount, SumStatusBonus(StatusType::HealResistance),
         getHealingPotency(), totalStats_.healingReceived);
+    if (lastHealResult_.overheal > 0 && HasArtifact("choirs_eternal_reliquary")) {
+        int converted = CombatMath::Scale(lastHealResult_.overheal, 40);
+        if (GetSetPieceCount("Shimmer Reliquary") >= 5) converted = CombatMath::Scale(converted, 150);
+        lastHealResult_.barrierGained = GrantCappedBarrier(converted, maxHp_);
+    }
 }
 
 void Player::RestoreHealth(int amount) {
@@ -128,6 +126,18 @@ int Player::getHP() const { return hp_; }
 int Player::getMaxHP() const { return maxHp_; }
 int Player::getAttack() const {
     return EffectiveStatsFor(totalStats_).atk;
+}
+
+int Player::GrantCappedBarrier(int finalAmount, int cap) {
+    if (!isAlive() || finalAmount <= 0 || cap <= 0) return 0;
+    const int gained = (std::min)(finalAmount, (std::max)(0, cap - GetBarrier()));
+    if (gained > 0) {
+        StatusRules::Apply(statuses_, statusApplications_,
+            {StatusType::Barrier, 0, gained, 0, 0, 0, getName(), GetCombatantId()},
+            isAlive(), 100, getResistance(), getDebuffDurationReduction(), statusRandom_);
+        barrier_ = StatusRules::Barriers(statuses_);
+    }
+    return gained;
 }
 int Player::getDefense() const {
     return EffectiveStatsFor(totalStats_).def;
@@ -233,10 +243,13 @@ bool Player::Equip(Item& item) {
         static_cast<int>(item.getSlot()) >= 5 || ViolatesTheme(item) || !inventory_.Contains(item.getInstanceId()) ||
         inventory_.FindItem(item.getInstanceId()) != &item) return false;
     const int slot = static_cast<int>(item.getSlot());
+    if (equipped_[slot] == &item) return true;
     if (equipped_[slot] != nullptr) inventory_.UnprotectItem(equipped_[slot]->getInstanceId());
     equipped_[slot] = &item;
     inventory_.ProtectItem(item.getInstanceId());
     RecalculateStats();
+    ++equipmentRevision_;
+    BeginArtifactBattle();
     return true;
 }
 
@@ -252,7 +265,7 @@ std::vector<std::string> Player::GetActiveSets() const {
         if (!item || item->getSetName().empty()) continue;
         const std::string& name = item->getSetName();
         if (std::find(activeSets.begin(), activeSets.end(), name) != activeSets.end()) continue;
-        const int activationThreshold = IsLegendarySet(name) ? 2 : 5;
+        const int activationThreshold = IsLegendarySet(name) ? 2 : 3;
         if (GetSetPieceCount(name) >= activationThreshold) activeSets.push_back(name);
     }
     return activeSets;
@@ -279,7 +292,26 @@ void Player::StartBattleEffects() {
 }
 
 int Player::CleanseNegativeStatuses() {
-    return StatusRules::Cleanse(statuses_);
+    bool hadDot = false;
+    bool hadNegative = false;
+    for (const auto& status : statuses_) if (StatusRules::Negative(status.type)) {
+        hadNegative = true;
+        hadDot |= status.type == StatusType::Bleed || status.type == StatusType::Burn || status.type == StatusType::Poison;
+    }
+    const int count = StatusRules::Cleanse(statuses_);
+    if (count && hadNegative) OnNegativeStatusResisted(hadDot ? StatusType::Bleed : StatusType::Stun);
+    return count;
+}
+
+int Player::CleanseOneNegativeStatus() {
+    const auto found = std::find_if(statuses_.begin(), statuses_.end(), [](const StatusEffect& status) {
+        return StatusRules::Negative(status.type);
+    });
+    if (found == statuses_.end()) return 0;
+    const StatusType type = found->type;
+    statuses_.erase(found);
+    OnNegativeStatusResisted(type);
+    return 1;
 }
 
 int Player::SumStatusBonus(StatusType type) const {
@@ -292,10 +324,64 @@ bool Player::HasStatus(StatusType type) const {
 }
 
 bool Player::ApplyStatus(const StatusEffect& status, int accuracy) {
-    const bool applied = StatusRules::Apply(statuses_, statusApplications_, status, isAlive(),
+    if (isAlive() && ((status.type == StatusType::Bleed && HasArtifact("choirs_eternal_ritual_gown")) ||
+        (status.type == StatusType::Slow && HasArtifact("choirs_eternal_boots")))) {
+        statusApplications_.push_back({status, false, true});
+        OnNegativeStatusResisted(status.type);
+        return false;
+    }
+    StatusEffect authored = status;
+    if (authored.type == StatusType::Barrier && GetSetPieceCount("Shimmer Reliquary") >= 5)
+        authored.potency = CombatMath::Scale(authored.potency, 150);
+    const bool applied = StatusRules::Apply(statuses_, statusApplications_, authored, isAlive(),
         accuracy, getResistance(), getDebuffDurationReduction(), statusRandom_);
+    if (applied && status.type == StatusType::Stun && HasArtifact("choirs_eternal_mourning_veil") &&
+        !artifactStunProtectionUsed_) {
+        artifactStunProtectionUsed_ = true;
+        statuses_.erase(std::remove_if(statuses_.begin(), statuses_.end(), [&](const StatusEffect& effect) {
+            return effect.type == StatusType::Stun && effect.applicationId == statusApplications_.back().status.applicationId;
+        }), statuses_.end());
+        statusApplications_.back().applied = false;
+        statusApplications_.back().resisted = true;
+        AddBarrier(CombatMath::Scale(maxHp_, 40), 2);
+        return false;
+    }
+    if (!applied && !statusApplications_.empty() && statusApplications_.back().resisted && StatusRules::Negative(status.type))
+        OnNegativeStatusResisted(status.type);
     barrier_ = StatusRules::Barriers(statuses_);
     return applied;
+}
+
+bool Player::HasArtifact(const std::string& itemName) const {
+    for (const Item* item : equipped_) if (item && item->getName() == itemName &&
+        item->getRarity() == Rarity::Artifact && item->getUniqueEffect() == itemName) return true;
+    return false;
+}
+
+void Player::BeginArtifactBattle() {
+    artifactAttackStacks_ = artifactDefenseStacks_ = artifactSpeedStacks_ = 0;
+    artifactNegativeTriggerUsed_ = artifactStunProtectionUsed_ = false;
+}
+
+void Player::BeginArtifactTurn() {
+    artifactNegativeTriggerUsed_ = false;
+    if (HasArtifact("first_light_sandals")) AddArtifactSpeedStack();
+}
+
+void Player::AddArtifactAttackStack() { artifactAttackStacks_ = (std::min)(10, artifactAttackStacks_ + 1); }
+void Player::AddArtifactDefenseStack() { artifactDefenseStacks_ = (std::min)(10, artifactDefenseStacks_ + 1); }
+void Player::AddArtifactSpeedStack() { artifactSpeedStacks_ = (std::min)(10, artifactSpeedStacks_ + 1); }
+
+void Player::OnNegativeStatusResisted(StatusType type) {
+    if (!isAlive()) return;
+    if (!artifactNegativeTriggerUsed_ && HasArtifact("choirs_eternal_ritual_gown") &&
+        (type == StatusType::Bleed || type == StatusType::Burn || type == StatusType::Poison)) {
+        artifactNegativeTriggerUsed_ = true;
+        heal(CombatMath::Scale(maxHp_, 8));
+        AddBarrier(CombatMath::Scale(maxHp_, 15));
+    }
+    if (HasArtifact("choirs_eternal_boots"))
+        ApplyStatus({StatusType::SpeedUp, 2, 25, 0, 0, 0, getName(), GetCombatantId(), 0, true});
 }
 std::vector<std::pair<StatusType, int>>& Player::EmptyDamageEvents() {
     static std::vector<std::pair<StatusType, int>> events;
@@ -338,9 +424,9 @@ void Player::BeginStatusTurn(std::vector<std::pair<StatusType, int>>& damageEven
     healing = lastHealResult_.hpRestored;
 }
 
-void Player::EndStatusTurn() {
+void Player::EndStatusTurn(bool normalAction) {
     if (!statusTurnOpen_) return;
-    StatusRules::FinishTurn(statuses_, statusTurnSnapshot_);
+    StatusRules::FinishTurn(statuses_, statusTurnSnapshot_, normalAction);
     barrier_ = StatusRules::Barriers(statuses_);
     statusTurnOpen_ = false;
 }
@@ -385,13 +471,12 @@ Stats Player::CalculateEquipmentStats(const Item* const equipment[5]) const {
         EquipmentStats::Add(total, equipment[slot]->GetStatBonuses());
         if (!equipment[slot]->getSetName().empty()) sets.insert(equipment[slot]->getSetName());
     }
-    // Artifact behavior remains separate from the approved Legendary rules.
+    // Artifact thresholds use this shared path for live stats and previews.
     for (const auto& setName : sets) {
-        if (IsLegendarySet(setName) || CountSetPieces(equipment, setName) < 5) continue;
+        if (IsLegendarySet(setName) || CountSetPieces(equipment, setName) < 3) continue;
         Stats bonus;
-        if (setName == "Verdigris Matron") { bonus.healingPotency = 100; bonus.lifesteal = 50; bonus.barrierPotency = 25; }
-        else if (setName == "Shimmer Reliquary") { bonus.barrierPotency = 50; bonus.healingReceived = 50; bonus.critRate = 25; }
-        else if (setName == "Oracle Automaton") { bonus.atk = 50; bonus.acc = 30; bonus.critDamage = 75; }
+        if (setName == "Verdigris Matron") bonus.dotPotency = 35;
+        else if (setName == "Shimmer Reliquary") { bonus.barrierPotency = 40; bonus.healingPotency = 25; }
         EquipmentStats::Add(total, bonus);
     }
     total = EquipmentStats::Finalize(total);
@@ -415,15 +500,30 @@ Stats Player::CalculateEquipmentStats(const Item* const equipment[5]) const {
         total.critRate = EquipmentStats::SaturatingAdd(total.critRate, 20);
         total.critDamage = EquipmentStats::SaturatingAdd(total.critDamage, 50);
     }
+    if (CountSetPieces(equipment, "Oracle Automaton") >= 5)
+        total.spd = EquipmentStats::ApplyPercent(total.spd, 25);
     return total;
 }
 
-Stats Player::EffectiveStatsFor(const Stats& stats) const {
+Stats Player::EffectiveStatsFor(const Stats& stats, const Item* const equipment[5]) const {
     Stats result = stats;
     const auto clamp = [](int value, int maximum) { return (std::max)(0, (std::min)(maximum, value)); };
-    result.atk = (std::max)(1, EquipmentStats::ApplyPercent(stats.atk, SumStatusBonus(StatusType::AttackUp) - SumStatusBonus(StatusType::AttackDown)));
-    result.def = EquipmentStats::ApplyPercent(stats.def, SumStatusBonus(StatusType::DefenseUp) - SumStatusBonus(StatusType::DefenseDown));
-    result.spd = (std::max)(1, EquipmentStats::ApplyPercent(stats.spd, SumStatusBonus(StatusType::SpeedUp) - (std::min)(75, SumStatusBonus(StatusType::Slow))));
+    bool sameEquipment = true;
+    if (equipment != nullptr) for (int slot = 0; slot < 5; ++slot)
+        if (equipment[slot] != equipped_[slot]) sameEquipment = false;
+    const auto has = [&](const std::string& id) {
+        if (!sameEquipment) return false; // A switch resets battle-only stacks.
+        return HasArtifact(id);
+    };
+    result.atk = (std::max)(1, EquipmentStats::ApplyPercent(stats.atk,
+        SumStatusBonus(StatusType::AttackUp) - SumStatusBonus(StatusType::AttackDown) +
+        (has("first_light_crucible") ? 5 * artifactAttackStacks_ : 0)));
+    result.def = EquipmentStats::ApplyPercent(stats.def,
+        SumStatusBonus(StatusType::DefenseUp) - SumStatusBonus(StatusType::DefenseDown) +
+        (has("first_light_sanctum_attire") ? 5 * artifactDefenseStacks_ : 0));
+    result.spd = (std::max)(1, EquipmentStats::ApplyPercent(stats.spd,
+        SumStatusBonus(StatusType::SpeedUp) - (std::min)(75, SumStatusBonus(StatusType::Slow)) +
+        (has("first_light_sandals") ? 3 * artifactSpeedStacks_ : 0)));
     result.acc = clamp(EquipmentStats::SaturatingAdd(stats.acc, SumStatusBonus(StatusType::AccuracyUp) - SumStatusBonus(StatusType::AccuracyDown)), 100);
     result.res = clamp(stats.res, CombatMath::Balance::MaximumResistance);
     result.critRate = clamp(EquipmentStats::SaturatingAdd(stats.critRate, SumStatusBonus(StatusType::CritUp)), CombatMath::Balance::MaximumCritRate);
@@ -444,7 +544,7 @@ Stats Player::PreviewEquipment(const Item& item) const {
     const Item* equipment[5];
     for (int slot = 0; slot < 5; ++slot) equipment[slot] = equipped_[slot];
     equipment[static_cast<int>(item.getSlot())] = &item;
-    return EffectiveStatsFor(CalculateEquipmentStats(equipment));
+    return EffectiveStatsFor(CalculateEquipmentStats(equipment), equipment);
 }
 
 Stats Player::PreviewUnequip(EquipSlot slot) const {
@@ -452,5 +552,5 @@ Stats Player::PreviewUnequip(EquipSlot slot) const {
     const Item* equipment[5];
     for (int index = 0; index < 5; ++index) equipment[index] = equipped_[index];
     equipment[static_cast<int>(slot)] = nullptr;
-    return EffectiveStatsFor(CalculateEquipmentStats(equipment));
+    return EffectiveStatsFor(CalculateEquipmentStats(equipment), equipment);
 }

@@ -83,16 +83,38 @@ void CombatManager::AdvanceTurn(Player& player, Enemy& enemy) {
         return;
     }
     if (!enemy.isAlive()) return;
+    enemy.SetArtifactSpeedSuppression(player.GetSetPieceCount("Oracle Automaton") >= 5);
     AccumulateGaugesUntilReady(playerGauge_, enemyGauge_, player.getSpeed(), enemy.getSpeed());
     playerTurn_ = playerGauge_ >= 1000;
     if (playerTurn_ && !playerActionStarted_) StartPlayerTurn(player);
 }
 
-void CombatManager::FinishPlayerAction(Player& player, Enemy& enemy) {
-    player.EndStatusTurn();
+void CombatManager::FinishPlayerAction(Player& player, Enemy& enemy, bool normalAction) {
+    const bool wasBonus = bonusPlayerAction_;
+    bonusPlayerAction_ = false;
+    const bool completedNormal = normalAction && !wasBonus;
+    player.EndStatusTurn(completedNormal);
+    if (completedNormal && player.isAlive()) {
+        ++normalActions_;
+        if (player.GetSetPieceCount("Oracle Automaton") >= 3 && normalActions_ % 3 == 0) {
+            playerGauge_ = CombatMath::Saturate(static_cast<std::int64_t>(playerGauge_) + 200);
+            AddEvent(CombatEvent::Kind::Buff, player.getName() + " gains 200 action gauge from Oracle Automaton.", 200);
+        }
+        if (player.HasArtifact("verdigris_saint_step") && normalActions_ % 6 == 0 && enemy.isAlive()) {
+            bonusPlayerAction_ = true;
+            AddEvent(CombatEvent::Kind::ExtraTurn, player.getName() + " gains a bonus action from Verdigris Saint Step.");
+        }
+    }
     playerActionStarted_ = false;
     ++turnNumber_;
     playerGauge_ = (std::max)(0, playerGauge_ - 1000);
+    if (bonusPlayerAction_ && enemy.isAlive() && player.isAlive()) {
+        playerGauge_ = (std::max)(1000, playerGauge_);
+        playerTurn_ = true;
+        playerActionStarted_ = true;
+        return;
+    }
+    bonusPlayerAction_ = false;
     playerTurn_ = false;
     AdvanceTurn(player, enemy);
 }
@@ -131,15 +153,12 @@ void CombatManager::ForfeitEncounterRewards() {
 void CombatManager::StartPlayerTurn(Player& player) {
     if (!player.isAlive() || playerActionStarted_) return;
     playerActionStarted_ = true;
+    player.BeginArtifactTurn();
+    firstCriticalThisTurn_ = dotCooldownUsedThisTurn_ = barrierBreakUsedThisTurn_ =
+        freeCooldownUsedThisTurn_ = false;
     consumableUsedThisTurn_ = false;
     for (auto& cooldown : shimmerCooldowns_) if (cooldown.second > 0) --cooldown.second;
     if (defaultSkill_ != nullptr) defaultSkill_->TickCooldown();
-    if (player.HasActiveSet("Verdigris Matron")) {
-        const int before = player.getHP();
-        player.heal(CombatMath::Scale(player.getMaxHP(), 25));
-        const int amount = player.getHP() - before;
-        if (amount > 0) AddEvent(CombatEvent::Kind::Heal, player.getName() + " restores " + std::to_string(amount) + " HP from Verdigris Matron.", amount);
-    }
     auto& turn = AddEvent(CombatEvent::Kind::Turn, player.getName() + "'s action begins (gauge " + std::to_string(playerGauge_) + ").");
     turn.actor = player.getName();
     const bool stunned = player.HasStatus(StatusType::Stun);
@@ -198,9 +217,18 @@ void CombatManager::ResetEncounter() {
     currentEnemyParty_.clear();
     seededEnemies_.clear();
     shimmerCooldowns_.clear();
+    artifactEquipmentRevision_ = 0;
     nextPartyEnemy_ = 0;
 }
 void CombatManager::RecordInfo(const std::string& message) { AddEvent(CombatEvent::Kind::Info, message); }
+void CombatManager::SyncArtifactEquipment(Player& player) {
+    if (artifactEquipmentRevision_ == player.GetEquipmentRevision()) return;
+    artifactEquipmentRevision_ = player.GetEquipmentRevision();
+    normalActions_ = offensiveShimmerCasts_ = markedShimmerCasts_ = 0;
+    firstDirectAttackUsed_ = firstCriticalThisTurn_ = dotCooldownUsedThisTurn_ = false;
+    barrierBreakUsedThisTurn_ = freeCooldownUsedThisTurn_ = enemyHitTriggeredThisAction_ = false;
+    echoArmed_ = bonusPlayerAction_ = false;
+}
 void CombatManager::RecordReward(const std::string& message) { AddEvent(CombatEvent::Kind::Reward, message); }
 void CombatManager::RecordEnvironmentalDefeat(const std::string& source, const Player& player) {
     if (player.isAlive()) return;
@@ -250,6 +278,18 @@ void CombatManager::RecordDamage(const std::string& actor, const std::string& ta
     event.hpDamage = result.hpDamage;
     event.remainingHP = result.remainingHP;
     if (result.barrierBroken) AddEvent(CombatEvent::Kind::BarrierBreak, target + "'s barrier breaks.");
+    if (result.barrierBroken && activePlayer_ && target == activePlayer_->getName() &&
+        activePlayer_->isAlive() && activePlayer_->GetSetPieceCount("Shimmer Reliquary") >= 3 &&
+        !barrierBreakUsedThisTurn_) {
+        barrierBreakUsedThisTurn_ = true;
+        activePlayer_->heal(CombatMath::Scale(activePlayer_->getMaxHP(), 10));
+        const int restored = activePlayer_->GetLastHealResult().hpRestored;
+        const int removed = activePlayer_->CleanseOneNegativeStatus();
+        AddEvent(CombatEvent::Kind::Heal, activePlayer_->getName() + " recovers from a broken barrier.",
+            restored);
+        AddEvent(CombatEvent::Kind::Cleanse, activePlayer_->getName() + " cleanses " +
+            std::to_string(removed) + " negative effects after barrier break.", removed);
+    }
     if (result.healing > 0) AddEvent(CombatEvent::Kind::Heal, target + " recovers " + std::to_string(result.healing) + " HP from its defensive effect.", result.healing);
     if (result.barrierGained > 0) AddEvent(CombatEvent::Kind::Shield, target + " gains " + std::to_string(result.barrierGained) + " barrier from its defensive effect.", result.barrierGained);
 }
@@ -258,7 +298,9 @@ void CombatManager::PrepareTurn(Player& player, Enemy& enemy) {
     if (activeEnemy_ == nullptr) BeginEncounter(enemy);
     if (activeEnemy_ != &enemy || encounterCompleted_ || !player.isAlive() || !enemy.isAlive()) return;
     if (activePlayer_ != nullptr && activePlayer_ != &player) return;
-    if (activePlayer_ == nullptr) { activePlayer_ = &player; player.SetStatusSeed(random_.Next()); }
+    if (activePlayer_ == nullptr) { activePlayer_ = &player; player.SetStatusSeed(random_.Next()); player.BeginArtifactBattle(); }
+    SyncArtifactEquipment(player);
+    enemy.SetArtifactSpeedSuppression(player.GetSetPieceCount("Oracle Automaton") >= 5);
     if (!battleStartEffectsApplied_) {
         const int before = player.GetBarrier();
         player.StartBattleEffects();
@@ -300,6 +342,10 @@ void CombatManager::BeginEncounter(Enemy& enemy) {
     weaknessExposed_ = false;
     consumableUsedThisTurn_ = false;
     shimmerCooldowns_.clear();
+    normalActions_ = offensiveShimmerCasts_ = markedShimmerCasts_ = 0;
+    firstDirectAttackUsed_ = firstCriticalThisTurn_ = dotCooldownUsedThisTurn_ = false;
+    barrierBreakUsedThisTurn_ = freeCooldownUsedThisTurn_ = enemyHitTriggeredThisAction_ = false;
+    echoArmed_ = bonusPlayerAction_ = false;
     events_.clear();
     battleStartEffectsApplied_ = false;
     encounterCompleted_ = false;
@@ -316,6 +362,8 @@ void CombatManager::BeginEncounter(Player& player, Enemy& enemy, int playerLevel
     if (activeEnemy_ == &enemy && activePlayer_ == &player) return;
     BeginEncounter(enemy);
     activePlayer_ = &player;
+    player.BeginArtifactBattle();
+    artifactEquipmentRevision_ = player.GetEquipmentRevision();
     player.SetStatusSeed(random_.Next());
     auto& participants = AddEvent(CombatEvent::Kind::EncounterStart,
         player.getName() + " (level " + std::to_string(playerLevel) + ", HP " + std::to_string(player.getHP()) + ") faces " + enemy.getName() + ".");
@@ -364,19 +412,22 @@ bool CombatManager::resolve(CombatAction action, Player& player, Enemy& enemy,
         const int hitChance = (std::max)(CombatMath::AccuracyChance(100, player.getAccuracy(), enemy.getEvasion()), accuracyFloor);
         if (!random_.RollPercent(hitChance)) {
             AddEvent(CombatEvent::Kind::Miss, player.getName() + " attacks " + enemy.getName() + ", but the strike is evaded.");
-            FinishPlayerAction(player, enemy);
+            FinishPlayerAction(player, enemy, true);
             return true;
         }
-        const bool critical = player.HasStatus(StatusType::GuaranteedCrit) ||
+        const bool tomeCritical = player.HasArtifact("choirs_eternal_tome") && !firstDirectAttackUsed_;
+        const bool critical = tomeCritical || player.HasStatus(StatusType::GuaranteedCrit) ||
             random_.RollPercent(player.getCritRate());
         const int rawDamage = critical
-            ? CombatMath::Scale(player.getAttack(), player.getCritDamage())
+            ? CombatMath::Scale(player.getAttack(), player.getCritDamage() + (tomeCritical ? 50 : 0))
             : player.getAttack();
+        firstDirectAttackUsed_ = true;
         AddEvent(critical ? CombatEvent::Kind::Critical : CombatEvent::Kind::Hit,
             player.getName() + (critical ? " critically hits " : " hits ") + enemy.getName() + ".");
         enemy.ApplyDirectDamage(rawDamage);
         const int actualDamage = enemy.GetLastDamageResult().hpDamage;
         RecordDamage(player.getName(), enemy.getName(), "Attack", enemy.GetLastDamageResult());
+        OnPlayerDirectHit(player, enemy, critical);
         if (player.getLifesteal() > 0) {
             const int recovery = CombatMath::Scale(actualDamage, player.getLifesteal());
             if (recovery > 0) {
@@ -394,7 +445,7 @@ bool CombatManager::resolve(CombatAction action, Player& player, Enemy& enemy,
             AddEvent(CombatEvent::Kind::Death, enemy.getName() + " has been defeated.");
             ResolveDefeatReward(player, enemy, progression);
         }
-        FinishPlayerAction(player, enemy);
+        FinishPlayerAction(player, enemy, true);
         return true;
     }
     case CombatAction::Shimmer:
@@ -415,13 +466,24 @@ bool CombatManager::resolve(CombatAction action, Player& player, Enemy& enemy,
         const auto enemyApplications = enemy.GetStatusApplications().size();
         const auto statusesBefore = player.GetStatuses().size();
         const bool offensive = skill->getTargetType() != ShimmerSkill::TargetType::Self;
+        const bool direct = offensive && effect.find("damage") == 0;
+        const bool echoThisCast = direct && echoArmed_ && player.HasArtifact("first_light_reliquary");
         auto& actionEvent = AddEvent(CombatEvent::Kind::Shimmer, player.getName() + " uses Shimmer skill " + skill->getName() + " on " + (offensive ? enemy.getName() : player.getName()) + ".");
         actionEvent.actor = player.getName(); actionEvent.target = offensive ? enemy.getName() : player.getName(); actionEvent.skill = skill->getName();
         skill->apply(player, enemy);
-        if (offensive && effect.find("damage") == 0) {
+        if (direct) {
             auto& hit = AddEvent(CombatEvent::Kind::Hit, skill->getName() + " hits " + enemy.getName() + ".");
             hit.actor = player.getName(); hit.target = enemy.getName(); hit.skill = skill->getName();
             RecordDamage(player.getName(), enemy.getName(), skill->getName(), enemy.GetLastDamageResult());
+            const int actualDirectHP = enemy.GetLastDamageResult().hpDamage;
+            if (echoThisCast) {
+                echoArmed_ = false;
+                if (enemy.isAlive() && actualDirectHP > 0) {
+                    enemy.ApplyDirectDamage(CombatMath::Scale(actualDirectHP, 40), true);
+                    RecordDamage(player.getName(), enemy.getName(), skill->getName() + " echo",
+                        enemy.GetLastDamageResult());
+                }
+            }
         }
         const auto recordStatuses = [&](const std::vector<StatusApplicationResolution>& applications, std::size_t first, const std::string& target) {
             for (std::size_t index = first; index < applications.size(); ++index) {
@@ -449,7 +511,29 @@ bool CombatManager::resolve(CombatAction action, Player& player, Enemy& enemy,
         if (effect == "cleanse_resist" && statusesBefore + (player.GetStatusApplications().size() - playerApplications) > player.GetStatuses().size())
             AddEvent(CombatEvent::Kind::Cleanse, player.getName() + " cleanses negative statuses with " + skill->getName() + ".");
         if (enemy.isAlive() && enemy.UpdatePhase()) AddEvent(CombatEvent::Kind::PhaseTransition, "Boss enters Phase " + std::to_string(enemy.GetPhase()) + ".");
-        shimmerCooldowns_[skill->getName()] = skill->getCooldown();
+        if (player.HasArtifact("first_light_crucible")) player.AddArtifactAttackStack();
+        if (offensive) {
+            ++offensiveShimmerCasts_;
+            if (player.HasArtifact("first_light_reliquary") && offensiveShimmerCasts_ % 3 == 0)
+                echoArmed_ = true;
+            if (player.GetSetPieceCount("Verdigris Matron") >= 5 && enemy.HasStatus(StatusType::VerdigrisMark)) {
+                ++markedShimmerCasts_;
+                if (markedShimmerCasts_ % 3 == 0) {
+                    const auto detonated = enemy.DetonateDots(player.GetCombatantId());
+                    for (const auto& tick : detonated) {
+                        RecordDamage(tick.source, enemy.getName(), "DOT detonation", tick.damage, CombatEvent::Kind::DotTick);
+                        OnPlayerDotDamage(player, tick);
+                    }
+                    if (!detonated.empty() && player.HasArtifact("verdigris_halo_of_saint_adelaide") && !dotCooldownUsedThisTurn_) {
+                        dotCooldownUsedThisTurn_ = true;
+                        ReduceLongestCooldown(player, true);
+                    }
+                }
+            }
+        }
+        const bool freeCooldown = player.GetSetPieceCount("Shimmer Reliquary") >= 5 && !freeCooldownUsedThisTurn_;
+        shimmerCooldowns_[skill->getName()] = freeCooldown ? 0 : skill->getCooldown();
+        if (freeCooldown) freeCooldownUsedThisTurn_ = true;
         if (!enemy.isAlive()) {
             AddEvent(CombatEvent::Kind::Death, enemy.getName() + " has been defeated.");
             ResolveDefeatReward(player, enemy, progression);
@@ -484,6 +568,57 @@ bool CombatManager::UseConsumable(const std::string& itemName, Player& player, E
         return false;
     }
     return UseConsumable(item->getInstanceId(), player, enemy, progression);
+}
+
+void CombatManager::ReduceLongestCooldown(Player& player, bool offensiveOnly) {
+    auto selected = shimmerCooldowns_.end();
+    for (auto it = shimmerCooldowns_.begin(); it != shimmerCooldowns_.end(); ++it) {
+        if (offensiveOnly) {
+            const auto skill = ShimmerSkill::Create(it->first);
+            if (!skill || skill->getTargetType() == ShimmerSkill::TargetType::Self) continue;
+        }
+        if (it->second > 0 && (selected == shimmerCooldowns_.end() || it->second > selected->second)) selected = it;
+    }
+    if (selected == shimmerCooldowns_.end()) return;
+    --selected->second;
+    AddEvent(CombatEvent::Kind::Buff, player.getName() + " reduces " + selected->first +
+        " cooldown by 1.", selected->second);
+}
+
+void CombatManager::OnPlayerDotDamage(Player& player, const StatusDamageResolution& tick) {
+    if (!player.isAlive() || tick.sourceId != player.GetCombatantId() || tick.damage.hpDamage <= 0) return;
+    int healingPercent = player.GetSetPieceCount("Verdigris Matron") >= 3 ? 10 : 0;
+    if (player.HasArtifact("verdigris_saint_reliquary")) healingPercent += 10;
+    if (healingPercent > 0) {
+        player.heal(CombatMath::Scale(tick.damage.hpDamage, healingPercent));
+        if (player.HasArtifact("verdigris_saint_reliquary") && player.GetLastHealResult().overheal > 0) {
+            int barrier = player.GetLastHealResult().overheal;
+            if (player.GetSetPieceCount("Shimmer Reliquary") >= 5) barrier = CombatMath::Scale(barrier, 150);
+            const int gained = player.GrantCappedBarrier(barrier, player.getMaxHP());
+            if (gained > 0) AddEvent(CombatEvent::Kind::Shield,
+                player.getName() + " converts DOT overhealing into barrier.", gained);
+        }
+        AddEvent(CombatEvent::Kind::Heal, player.getName() + " heals from DOT damage.",
+            player.GetLastHealResult().hpRestored);
+    }
+}
+
+void CombatManager::OnPlayerDirectHit(Player& player, Enemy& enemy, bool critical) {
+    if (!player.isAlive()) return;
+    if (enemy.isAlive() && (player.HasArtifact("verdigris_saint_relic") ||
+        player.GetSetPieceCount("Verdigris Matron") >= 5)) {
+        const bool applied = enemy.ApplyStatus({StatusType::VerdigrisMark, 3, 20, player.getAttack(),
+            player.getDotPotency(), player.getDefense(), player.getName(), player.GetCombatantId()}, player.getAccuracy());
+        AddEvent(applied ? CombatEvent::Kind::Debuff : CombatEvent::Kind::Resistance,
+            applied ? "Verdigris Mark applied." : "Verdigris Mark resisted.");
+    }
+    if (critical && !firstCriticalThisTurn_ && player.HasArtifact("locket_crown_of_the_first_light")) {
+        firstCriticalThisTurn_ = true;
+        player.heal(CombatMath::Scale(player.getMaxHP(), 8));
+        ReduceLongestCooldown(player);
+        AddEvent(CombatEvent::Kind::Heal, player.getName() + " heals from First Light critical.",
+            player.GetLastHealResult().hpRestored);
+    }
 }
 
 bool CombatManager::CanUseConsumableNow(const Player& player, const Enemy* target) const {
@@ -573,6 +708,7 @@ bool CombatManager::UseConsumable(unsigned long long instanceId, Player& player,
 
 void CombatManager::enemyTurn(Player& player, Enemy& enemy, ProgressionManager* progression) {
     if (activeEnemy_ == nullptr) { BeginEncounter(player, enemy, progression ? progression->GetLevel() : 1); PrepareTurn(player, enemy); }
+    SyncArtifactEquipment(player);
     if (activePlayer_ != &player ||
         (activeEnemy_ != &enemy && std::find(currentEnemyParty_.begin(), currentEnemyParty_.end(), &enemy) == currentEnemyParty_.end())) return;
     if (groupEnemyTurn_ && (nextPartyEnemy_ >= currentEnemyParty_.size() ||
@@ -594,6 +730,7 @@ void CombatManager::enemyTurn(Player& player, Enemy& enemy, ProgressionManager* 
     }
     const bool bonusAction = nextEnemyBonus_;
     nextEnemyBonus_ = false;
+    enemyHitTriggeredThisAction_ = false;
     if (!bonusAction) enemy.TickSkillCooldowns();
     auto& turn = AddEvent(CombatEvent::Kind::Turn, enemy.getName() + "'s action begins (gauge " + std::to_string(enemyGauge_) + ").");
     turn.actor = enemy.getName();
@@ -602,8 +739,10 @@ void CombatManager::enemyTurn(Player& player, Enemy& enemy, ProgressionManager* 
     int healing = 0;
     if (!bonusAction) {
         enemy.BeginStatusTurn(damageEvents, healing);
-        for (const auto& tick : enemy.GetStatusDamageResults())
+        for (const auto& tick : enemy.GetStatusDamageResults()) {
             RecordDamage(tick.source.empty() ? StatusDisplayName(tick.type) : tick.source, enemy.getName(), StatusDisplayName(tick.type), tick.damage, CombatEvent::Kind::DotTick);
+            OnPlayerDotDamage(player, tick);
+        }
     }
     if (healing > 0) AddEvent(CombatEvent::Kind::Heal, enemy.getName() + " heals " + std::to_string(healing) + " HP from Heal-over-time.", healing);
     if (!enemy.isAlive()) {
@@ -677,6 +816,16 @@ bool CombatManager::AttemptEnemySkillAttack(const EnemySkillDefinition& skill, E
     hit.actor = enemy.getName(); hit.target = player.getName(); hit.skill = skillName;
     player.ApplyDirectDamage(rawDamage);
     RecordDamage(enemy.getName(), player.getName(), skillName, player.GetLastDamageResult());
+    if (player.isAlive() && !enemyHitTriggeredThisAction_) {
+        enemyHitTriggeredThisAction_ = true;
+        if (player.HasArtifact("first_light_sanctum_attire")) player.AddArtifactDefenseStack();
+        if (player.HasArtifact("verdigris_saint_vestment")) {
+            const bool applied = enemy.ApplyStatus({StatusType::Bleed, 2, 0, player.getAttack(),
+                player.getDotPotency(), player.getDefense(), player.getName(), player.GetCombatantId()}, player.getAccuracy());
+            AddEvent(applied ? CombatEvent::Kind::Debuff : CombatEvent::Kind::Resistance,
+                applied ? "Verdigris Saint Vestment applies Bleed." : "Vestment Bleed resisted.");
+        }
+    }
     return true;
 }
 
@@ -688,9 +837,10 @@ Enemy* CombatManager::FindLivingAlly(Enemy& enemy) const {
 
 void CombatManager::ApplyEnemyDebuff(Player& player, Enemy& enemy, StatusType type, const EnemySkillDefinition& skill) {
     const int duration = skill.duration > 0 ? skill.duration : 2;
+    const std::size_t firstApplication = player.GetStatusApplications().size();
     const bool applied = player.ApplyStatus({type, duration, skill.statusPotency, enemy.getAtk(),
         enemy.getDotPotency(), enemy.getDefense(), enemy.getName(), enemy.GetCombatantId()}, enemy.getAccuracy());
-    const auto& result = player.GetStatusApplications().back();
+    const auto& result = player.GetStatusApplications().at(firstApplication);
     auto& event = AddEvent(applied ? CombatEvent::Kind::Debuff : result.resisted ? CombatEvent::Kind::Resistance : CombatEvent::Kind::Info,
         player.getName() + (applied ? " receives " : result.resisted ? " resists " : " does not receive ") + StatusDisplayName(type) +
         (applied ? " (" + std::to_string(result.status.turns) + " turns, potency " + std::to_string(result.status.potency) + ")" : "") + " from " + skill.name + ".");
@@ -799,6 +949,7 @@ void CombatManager::PrepareGroupTurn(Player& player, const std::vector<Enemy*>& 
         std::find(currentEnemyParty_.begin(), currentEnemyParty_.end(), enemy) == currentEnemyParty_.end()) {
         currentEnemyParty_.push_back(enemy);
         if (seededEnemies_.insert(enemy).second) enemy->SetStatusSeed(random_.Next());
+        enemy->SetArtifactSpeedSuppression(player.GetSetPieceCount("Oracle Automaton") >= 5);
     }
     std::stable_sort(currentEnemyParty_.begin(), currentEnemyParty_.end(), [](const Enemy* left, const Enemy* right) {
         if (left->getSpeed() != right->getSpeed()) return left->getSpeed() > right->getSpeed();

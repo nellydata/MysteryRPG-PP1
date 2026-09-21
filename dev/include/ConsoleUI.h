@@ -12,7 +12,7 @@ class ProgressionManager;
 class ConsoleUI {
 public:
     void RenderDashboard(const Player&, const ProgressionManager&, const std::vector<Area>&,
-                         const std::string& context) const;
+                         const std::string& context, bool developerMode = false) const;
     void RenderRoom(const Area&, const Player&, const ProgressionManager&) const;
     void RenderCombat(const Player&, const ProgressionManager&, const Enemy&, const CombatManager&) const;
     void PresentEvents(const CombatManager&) const;
@@ -30,5 +30,5 @@ public:
 
 private:
     mutable std::uint64_t lastEventSequence_ = 0;
-    void PrintPlayerPanel(const Player&, const ProgressionManager&) const;
+    void PrintPlayerPanel(const Player&, const ProgressionManager&, bool developerMode = false) const;
 };

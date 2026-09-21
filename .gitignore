@@ -457,3 +457,9 @@ FodyWeavers.xsd
 # Generated console/test captures are build artifacts, not source. The one-off
 # validation capture folder has been removed from the repository.
 dev/validation/
+!dev/validation/
+dev/validation/*
+!dev/validation/CompatibilityPass.md
+!dev/validation/full-playthrough-report.md
+!dev/validation/console-ux-report.md
+!dev/validation/inventory-ux-report.md

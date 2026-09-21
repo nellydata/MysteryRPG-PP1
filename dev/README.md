@@ -37,7 +37,7 @@ msbuild COS-PP1.slnx /m /p:Configuration=Debug /p:Platform=x64
 
 `--validate` runs the content-safety checks (`ValidateMicareContent`) over the enemy, item, and room catalogues and exits 0 when every entry is well formed. `--fast` disables the 300 ms presentation pause. `--help` prints the usage line.
 
-VS Code users should open the repository root, choose **Run Micare (Debug x64)** in Run and Debug, and press F5. The checked-in task builds with the same `Run-Micare.cmd` launcher and the debugger starts `dev\bin\x64\Debug\COS-PP1.exe`; neither path contains placeholder text. The Microsoft C/C++ extension is required for `cppvsdbg`. Do not use the generic **Run Code** button on an individual `.cpp` file. A `.slnx`, source file, README, or `COMMIT_EDITMSG` file is not itself the game executable.
+The repository intentionally has no editor-specific launch folder. Use Visual Studio with `COS-PP1` as the startup project, or run `Run-Micare.cmd`. Do not try to execute an individual `.cpp`, `.slnx`, README, or `COMMIT_EDITMSG` file as the game.
 
 ## Keyboard controls
 

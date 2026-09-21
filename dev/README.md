@@ -19,6 +19,14 @@ dev/
 The relocated local `COS-PP1.vcxproj.user` is ignored by Git. Shared working-directory settings live in the project file.
 
 ## Build and run
+The simplest terminal command is:
+
+```text
+Run-Micare.cmd
+```
+
+From the `dev/src` directory, run `..\Run-Micare.cmd`. The launcher locates MSBuild, builds Debug x64, checks that `bin\x64\Debug\COS-PP1.exe` exists, and starts it. Arguments are forwarded, so `Run-Micare.cmd --validate` performs a build followed by content validation.
+
 From this folder in a Visual Studio Developer Command Prompt:
 
 ```text

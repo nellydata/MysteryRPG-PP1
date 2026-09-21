@@ -24,7 +24,7 @@ The pre-conversion gameplay and graphical implementation are preserved at Git ch
 
 ## Milestone 3 stand-up
 
-**Overview.** This week I completed the gameplay compatibility pass and redesigned the console presentation without changing the approved balance. The game now has verified Shimmer metadata/runtime agreement, all 15 Artifact uniques and their three set families, an isolated Adelaide developer mode, production-backed room drop simulation, and category-based inventory/equipment navigation.
+**Overview.** This week I completed the gameplay compatibility pass and redesigned the console presentation without changing the approved balance. The game now has verified Shimmer metadata/runtime agreement, all 15 Artifact uniques and their three set families, an isolated Adelaide developer mode, production-backed room drop simulation, and category-based inventory/equipment navigation. I refactored and adjusted the structue and handling of multiple cpps.
 
 **Improvements.** I separated presentation helpers into `ConsoleFormat`, consolidated player panels, combat HUDs, status/rarity labels, menu formatting, progress bars, and equipment comparisons. Inventory now separates equipment, consumables, key items, and clues; equipment browsing supports pagination, sorting, slot/rarity/set filters, authoritative Artifact descriptions, real projected stat comparisons, and clear set activation changes. The maintained console smoke harness was restored to the solution and updated to drive the current menus.
 
@@ -32,4 +32,4 @@ The pre-conversion gameplay and graphical implementation are preserved at Git ch
 
 **Accomplishments.** I improved my ability to separate game state from presentation, validate statistically generated content, preserve plain testable event data while adding console styling, and test full keyboard-driven workflows through the real executable. Current Artifact, Shimmer, compatibility, header, content, and console smoke regressions pass together.
 
-**Next Steps.** Before Week 4, I will keep the current build stable, address only verified defects, maintain GitHub issue/milestone tracking, and prepare the documented pull request workflow. No new gameplay feature is required for the Milestone 3 submission.
+**Next Steps.** Before Week 4, I want to stabilize the current build and make sure that everything including the new cpps are working together before finalizing the gameplay loop and flow and other milestone 4 adjustments.

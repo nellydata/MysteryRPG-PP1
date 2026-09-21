@@ -46,4 +46,3 @@ The maintained Debug x64 solution contains the game plus Artifact, Shimmer/compa
 
 - Progress lasts for the running session; there is no disk-save system.
 - ANSI color depends on terminal support, while underlying names and events remain plain.
-- GitHub issues, Milestone 3 assignment, closures, and the final pull request must be completed on GitHub and cannot be proven solely by the local source tree.

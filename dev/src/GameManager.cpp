@@ -127,7 +127,10 @@ void GameManager::Run() {
             continue;
         }
         Area& room = map.SelectRoom(choice - 1);
-        if (!room.IsUnlocked()) { ui.ShowMessage("That room is locked."); continue; }
+        if (!room.IsUnlocked()) {
+            ui.ShowMessage(ConsoleFormat::Warning("That room is locked; defeat the previous guardian first."));
+            continue;
+        }
         encounters.Explore(room, player, progression, combat, &map);
         if (!std::cin) break;
         if (!player.isAlive()) {

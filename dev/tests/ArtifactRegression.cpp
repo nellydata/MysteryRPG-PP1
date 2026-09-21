@@ -78,10 +78,14 @@ void CheckCatalogueAndEquip() {
         ++count;
         Require(definition.uniqueEffect == definition.name && !definition.passive.empty() &&
             definition.passive != definition.uniqueEffect, "unique ID or authored passive");
+        Require(definition.name.find('\x1b') == std::string::npos &&
+            definition.passive.find('\x1b') == std::string::npos, "ANSI leaked into Artifact catalogue data");
         Player player;
         Require(!player.HasArtifact(definition.name), "unequipped unique active");
         auto item = std::make_unique<Item>(definition);
         Item& equipped = *item;
+        Require(equipped.getPassive() == definition.passive && equipped.getSetPassive() == definition.setPassive,
+            "Artifact presentation metadata diverged from catalogue");
         player.AddItem(std::move(item));
         Require(player.Equip(equipped) && player.HasArtifact(definition.name), "unique not active on equip");
         Require(player.ToggleEquip(equipped) && !player.HasArtifact(definition.name), "unique active after unequip");
@@ -612,6 +616,44 @@ void CheckDeveloperMode() {
         DeveloperDropSource::Boss, 1); } catch (const std::invalid_argument&) { rejected = true; }
     Require(rejected, "Fountain boss simulator should be unavailable");
 }
+
+void CheckConsolePresentation() {
+    const auto capped = ConsoleFormat::PlayerPanel("Clara", 100, 80, 100, 25, 12, 9, 7, 0, 100, false);
+    Require(capped.find("Clara  Lv. 100") != std::string::npos &&
+        capped.find("MAX LEVEL") != std::string::npos && capped.find("[DEV]") == std::string::npos,
+        "level-cap player panel");
+    const auto developer = ConsoleFormat::PlayerPanel("Adelaide", 100, 100, 100, 0, 12, 9, 7, 0, 100, true);
+    Require(developer.find("[DEV]") != std::string::npos && developer.find("Barrier") == std::string::npos,
+        "developer marker or collapsed zero barrier");
+    const auto normal = ConsoleFormat::PlayerPanel("Clara", 4, 75, 100, 20, 12, 9, 7, 30, 100, false);
+    Require(normal.find("HP       [#########---] 75 / 100") != std::string::npos &&
+        normal.find("Barrier  [##----------] 20") != std::string::npos &&
+        normal.find("XP       30 / 100") != std::string::npos, "player panel bars");
+    Require(ConsoleFormat::CooldownText(0) == "READY" && ConsoleFormat::CooldownText(1) == "CD 1 turn" &&
+        ConsoleFormat::CooldownText(3) == "CD 3 turns", "cooldown labels");
+    Require(ConsoleFormat::MenuOption(5, "Chapel", "defeat the previous guardian", false).find(
+        "[LOCKED - defeat the previous guardian]") != std::string::npos, "locked menu reason");
+    Require(ConsoleFormat::RarityLabel(Rarity::Artifact) == "[Artifact]", "Artifact rarity label");
+    Require(ConsoleFormat::ClampPage(99, 17, 8) == 2 && ConsoleFormat::ClampPage(4, 0, 8) == 0 &&
+        ConsoleFormat::ClampPage(4, 10, 0) == 0, "inventory pagination bounds");
+    Stats before;
+    before.hp = 100; before.atk = 20; before.critRate = 5;
+    Stats after = before;
+    after.hp = 135; after.atk = 18; after.critRate = 15;
+    const auto changes = ConsoleFormat::StatChanges(before, after);
+    Require(changes.find("HP  100 -> 135  (+35)") != std::string::npos &&
+        changes.find("ATK  20 -> 18  (-2)") != std::string::npos &&
+        changes.find("Crit Rate  5 -> 15  (+10pp)") != std::string::npos &&
+        changes.find("DEF") == std::string::npos, "effective stat comparison");
+    const auto set = ConsoleFormat::SetProgress("Verdigris Matron", 3, 5, 3, 5, "Authored bonus.");
+    Require(set.find("[3/5]") != std::string::npos && set.find("3-piece ACTIVE") != std::string::npos &&
+        set.find("5-piece LOCKED") != std::string::npos && set.find("Authored bonus.") != std::string::npos,
+        "mixed-threshold set presentation");
+    const std::vector<StatusEffect> statuses{{StatusType::Burn, 2}, {StatusType::AttackUp, 1, 40}};
+    const auto summary = ConsoleFormat::StatusSummary(statuses);
+    Require(summary.find("Burn (2)") != std::string::npos && summary.find("ATK up (1)") != std::string::npos &&
+        summary.find("turn") == std::string::npos, "compact status labels");
+}
 }
 
 void RunArtifactRegression() {
@@ -620,6 +662,7 @@ void RunArtifactRegression() {
     CheckSetStats();
     CheckDirectCombatHooks();
     CheckDeveloperMode();
+    CheckConsolePresentation();
     std::cout << "Artifact catalogue, player hooks, caps, and set-stat regression passed.\n";
 }
 

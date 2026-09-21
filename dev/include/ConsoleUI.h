@@ -30,5 +30,5 @@ public:
 
 private:
     mutable std::uint64_t lastEventSequence_ = 0;
-    void PrintPlayerPanel(const Player&, const ProgressionManager&) const;
+    void PrintPlayerPanel(const Player&, const ProgressionManager&, bool developerMode = false) const;
 };

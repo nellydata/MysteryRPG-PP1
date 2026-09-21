@@ -461,3 +461,5 @@ dev/validation/
 dev/validation/*
 !dev/validation/CompatibilityPass.md
 !dev/validation/full-playthrough-report.md
+!dev/validation/console-ux-report.md
+!dev/validation/inventory-ux-report.md

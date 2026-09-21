@@ -3,6 +3,7 @@
 #include "CombatManager.h"
 #include "ContentCatalog.h"
 #include "ConsoleUI.h"
+#include "ConsoleFormat.h"
 #include "Enemy.h"
 #include "EnemyCatalog.h"
 #include "Item.h"
@@ -276,12 +277,23 @@ void EncounterManager::UseShimmer(Player& player, Enemy& enemy,
         return;
     }
     for (std::size_t index = 0; index < equipped.size(); ++index)
-        ui.ShowMessage(std::to_string(index + 1) + ". " + equipped[index] + " cooldown " +
-            std::to_string(combat.GetSkillCooldown(equipped[index])));
+    {
+        const auto skill = ShimmerSkill::Create(equipped[index]);
+        const int cooldown = combat.GetSkillCooldown(equipped[index]);
+        std::cout << '[' << index + 1 << "] " << equipped[index]
+                  << "  Cost " << (skill ? skill->getCost() : 0)
+                  << "  [" << ConsoleFormat::CooldownText(cooldown) << "]\n";
+        if (skill) std::cout << "    " << skill->getDescription() << '\n';
+    }
     const int selected = ui.Prompt("Choose combat Shimmer, 0 cancel:", 0,
                                    static_cast<int>(equipped.size()));
     if (!selected) return;
     auto skill = ShimmerSkill::Create(equipped[selected - 1]);
+    if (!skill) { ui.ShowMessage(ConsoleFormat::Error("That Shimmer definition is unavailable.")); return; }
+    if (combat.GetSkillCooldown(skill->getName()) > 0) {
+        ui.ShowMessage(ConsoleFormat::Warning(skill->getName() + " is still on cooldown."));
+        return;
+    }
     combat.resolve(CombatAction::Shimmer, player, enemy, skill.get(), &progression);
 }
 

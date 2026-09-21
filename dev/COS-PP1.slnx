@@ -6,4 +6,5 @@
   <Project Path="COS-PP1.vcxproj" Id="7d8df32c-72dd-4528-89e7-7ca2f0727a7f" />
   <Project Path="tests/ShimmerRegression.vcxproj" Id="b1573d81-87ef-4087-b04d-42fd6cc4b887" />
   <Project Path="tests/ArtifactRegression.vcxproj" Id="a9287f44-738d-4913-a136-d6748081f113" />
+  <Project Path="ConsoleValidation.vcxproj" Id="2c5e84b8-7de6-42e8-8f7b-19327aa59351" />
 </Solution>

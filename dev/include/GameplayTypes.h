@@ -180,6 +180,8 @@ struct RoomDefinition {
 	int firstClearBossLevel = 1;
 	int intendedProgressionLevel = 1;
 	std::int64_t firstClearBossXP = 0;
+	std::vector<std::string> clueFragments;
+	std::string milestoneLore;
 };
 
 struct LootContext {

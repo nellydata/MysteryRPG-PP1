@@ -11,10 +11,12 @@ public:
     void GenerateFloor1();
     std::vector<Area>& GetRooms();
     const std::vector<Area>& GetRooms() const;
+    Area* FindRoom(const std::string& roomId);
+    const Area* FindRoom(const std::string& roomId) const;
     Area& SelectRoom(int index);
     void DescribeRoom(const Area& area) const;
-    const RoomDefinition* GetRoomDefinition(const Area& area) const;
-    const RoomDefinition* GetRoomDefinition(const std::string& roomId) const;
+    static const RoomDefinition* GetRoomDefinition(const Area& area);
+    static const RoomDefinition* GetRoomDefinition(const std::string& roomId);
     static const std::vector<RoomDefinition>& GetFloor1Definitions();
 
 private:

@@ -132,6 +132,9 @@ void CheckRooms() {
     MapManager map;
     const auto& definitions = MapManager::GetFloor1Definitions();
     Check(definitions.size() == 5 && map.GetRooms().size() == 5, "Floor I room count");
+    Check(MapManager::GetRoomDefinition("Archive Room") == &definitions[2] &&
+        map.FindRoom("Archive Room") == &map.GetRooms()[2] && map.FindRoom("missing") == nullptr,
+        "Room lookup reference/pointer contract");
     const int levels[] = {0, 8, 15, 22, 30};
     const int xp[] = {0, 200, 400, 800, 1600};
     for (std::size_t index = 0; index < definitions.size(); ++index) {
@@ -143,6 +146,8 @@ void CheckRooms() {
             definition.firstClearBossXP == xp[index] &&
             definition.firstBossSpawnChance == 50 && definition.farmBossStartingChance == 8,
             "Fixed boss configuration");
+        Check(!definition.milestoneLore.empty(), "Progression milestone lore missing");
+        Check(index == 0 || !definition.clueFragments.empty(), "Room clue lore missing");
         const auto boss = CreateFirstClearBoss(definition);
         Check(boss && boss->getLevel() == levels[index] &&
             boss->getXPReward() == xp[index] && boss->IsFirstClearBoss(), "Fixed boss runtime");
@@ -178,6 +183,36 @@ void CheckRooms() {
     Check(!firstClearEncounters.ResolveVictory(entrance, firstClearPlayer,
         firstClearProgression, firstClearMap, *guardian, 77).resolved &&
         firstClearProgression.GetXP() == xpAfterClear, "Duplicate first-clear reward");
+
+    // Every first-clear milestone must carry one fragment and unlock exactly
+    // the next configured room; the final boss intentionally unlocks no sequel.
+    MapManager chainMap;
+    Player chainPlayer;
+    ProgressionManager chainProgression;
+    EncounterManager chainEncounters;
+    auto fountainGuardian = CreateCatalogueEnemy("Devotee Acolyte", 1);
+    fountainGuardian->takeDamage(1000000);
+    const auto fountainVictory = chainEncounters.ResolveVictory(chainMap.GetRooms().front(), chainPlayer,
+        chainProgression, chainMap, *fountainGuardian, 99);
+    Check(fountainVictory.resolved && chainMap.GetRooms().front().IsHealingUnlocked() &&
+        chainMap.FindRoom("Entrance Hall")->IsUnlocked() &&
+        std::any_of(fountainVictory.messages.begin(), fountainVictory.messages.end(),
+            [](const std::string& message) { return message.rfind("Fragment: ", 0) == 0; }),
+        "Fountain milestone did not award lore and unlock Entrance Hall");
+    for (std::size_t index = 1; index < definitions.size(); ++index) {
+        Area& current = chainMap.GetRooms().at(index);
+        auto boss = CreateFirstClearBoss(definitions[index]);
+        boss->takeDamage(1000000);
+        const auto victory = chainEncounters.ResolveVictory(current, chainPlayer,
+            chainProgression, chainMap, *boss, static_cast<unsigned>(100 + index));
+        const bool hasFragment = std::any_of(victory.messages.begin(), victory.messages.end(),
+            [](const std::string& message) { return message.rfind("Fragment: ", 0) == 0; });
+        Check(victory.resolved && victory.firstClear && hasFragment,
+            "Boss milestone did not award lore fragment");
+        if (!definitions[index].nextRoomId.empty())
+            Check(chainMap.FindRoom(definitions[index].nextRoomId)->IsUnlocked(),
+                "Boss progression chain did not unlock next room");
+    }
     MapManager farmMap;
     Area& farmEntrance = farmMap.GetRooms().at(1);
     Player farmPlayer;

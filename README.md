@@ -2,7 +2,7 @@
 
 Micare is a standard C++17 console RPG for the course deliverable. Open [dev/COS-PP1.slnx](dev/COS-PP1.slnx) in Visual Studio and build **Debug x64**, with **COS-PP1** as the startup project.
 
-To build and run from a terminal, use `dev\Run-Micare.cmd` from the repository root. From a terminal currently inside `dev\src`, use `..\Run-Micare.cmd`. In VS Code, choose **Run Micare (Debug x64)** from Run and Debug and press F5. Do not use the generic **Run Code** action on an individual `.cpp` file; that action does not know the solution executable and may try to run placeholder text.
+To build and run from a terminal, use `dev\Run-Micare.cmd` from the repository root. From a terminal currently inside `dev\src`, use `..\Run-Micare.cmd`. The project intentionally has no editor-specific launch folder; build the solution or use the launcher instead of trying to execute an individual `.cpp` file.
 
 The complete Visual Studio solution, all source/header files, and build outputs are inside `dev`. The application uses keyboard input and console output; it has no GUI or Python dependency.
 

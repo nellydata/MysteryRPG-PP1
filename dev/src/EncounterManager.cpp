@@ -41,8 +41,7 @@ InvestigationResult EncounterManager::ResolveInvestigation(Area& area, Player& p
     }
     area.RecordSearch();
     std::mt19937 rng(seed);
-    MapManager map;
-    const RoomDefinition* definition = map.GetRoomDefinition(area);
+    const RoomDefinition* definition = MapManager::GetRoomDefinition(area);
     const int level = progression.GetLevel();
     if (area.IsHealingRoom() && !area.IsHealingUnlocked()) {
         result.type = InvestigationEventType::FountainDiscovery;
@@ -115,6 +114,10 @@ InvestigationResult EncounterManager::ResolveInvestigation(Area& area, Player& p
         result.discoveryId = area.getName() + ":discovery:" + std::to_string(area.GetSearchCount());
         result.xpAwarded = CalculateInvestigationXP(level, InvestigationAreaDepth(area.getName()));
         result.narrative = "You recover a meaningful fragment from the room.";
+        if (definition && !definition->clueFragments.empty()) {
+            const std::size_t fragment = static_cast<std::size_t>(area.GetSearchCount() - 1) % definition->clueFragments.size();
+            result.narrative += " " + definition->clueFragments[fragment];
+        }
         if (!area.HasClues() && area.AreAllRequiredInteractablesRevealed()) {
             result.xpAwarded += XPRequirementForLevel(level) * 20 / 100;
             result.narrative += " The room's required discoveries are complete; its guardian may now appear.";
@@ -198,6 +201,7 @@ VictoryResult EncounterManager::ResolveVictory(Area& area, Player& player, Progr
         area.SetHealingUnlocked(true);
         unlockNext = true;
         result.messages.push_back("The Fountain is purified. Full healing is now available.");
+        if (room && !room->milestoneLore.empty()) result.messages.push_back("Fragment: " + room->milestoneLore);
     }
     if (result.firstClear) {
         area.SetBossDefeated(true);
@@ -205,10 +209,11 @@ VictoryResult EncounterManager::ResolveVictory(Area& area, Player& player, Progr
         if (progression.UnlockShimmerFromTrigger(enemy.getName()))
             result.messages.push_back("Shimmer skill unlocked from " + enemy.getName() + ".");
         result.messages.push_back("First clear: " + enemy.getName() + ".");
+        if (room && !room->milestoneLore.empty()) result.messages.push_back("Fragment: " + room->milestoneLore);
     }
     if (unlockNext && room && !room->nextRoomId.empty()) {
-        for (Area& next : map.GetRooms()) if (next.getName() == room->nextRoomId && !next.IsUnlocked()) {
-            next.SetUnlocked(true);
+        if (Area* next = map.FindRoom(room->nextRoomId); next && !next->IsUnlocked()) {
+            next->SetUnlocked(true);
             result.messages.push_back(room->nextRoomId + " is now unlocked.");
         }
     }

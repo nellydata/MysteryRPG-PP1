@@ -17,8 +17,16 @@ int DirectShimmerDamage(const Player& player, int powerPercent) {
 class DefinedShimmerSkill final : public ShimmerSkill {
 public:
 	DefinedShimmerSkill(const std::string& name, int equipCost, int cooldown, const std::string& description,
-		const std::string& effect, int powerPercent = 0, int duration = 0,
-		const CombatBuff& combatBuff = CombatBuff{}, const EffectMetadata& metadata = EffectMetadata{})
+		const std::string& effect, int powerPercent = 0, int duration = 0)
+		: DefinedShimmerSkill(name, equipCost, cooldown, description, effect, powerPercent, duration,
+			CombatBuff{}, EffectMetadata{}) {}
+	DefinedShimmerSkill(const std::string& name, int equipCost, int cooldown, const std::string& description,
+		const std::string& effect, int powerPercent, int duration, const CombatBuff& combatBuff)
+		: DefinedShimmerSkill(name, equipCost, cooldown, description, effect, powerPercent, duration,
+			combatBuff, EffectMetadata{}) {}
+	DefinedShimmerSkill(const std::string& name, int equipCost, int cooldown, const std::string& description,
+		const std::string& effect, int powerPercent, int duration,
+		const CombatBuff& combatBuff, const EffectMetadata& metadata)
 		: ShimmerSkill(name, equipCost, cooldown, description, effect, powerPercent, duration, combatBuff, metadata) {}
 
 	void apply(Player& player, Enemy& enemy) override {

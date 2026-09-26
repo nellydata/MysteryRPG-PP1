@@ -50,11 +50,29 @@ class Endurance {
                 throw std::runtime_error("Invalid visible player stats or XP");
         }
         std::smatch match;
+        if (std::regex_search(screen_, match, std::regex(R"(  Lv\. (-?\d+)(?:  \[DEV\])?\r?\nHP       \[[^\]]*\] (-?\d+) / (-?\d+))"))) {
+            level_ = std::stoi(match[1]); hp_ = std::stoi(match[2]); maxHp_ = std::stoi(match[3]);
+        }
+        if (std::regex_search(screen_, match, std::regex(R"(ATK (-?\d+)   DEF (-?\d+)   SPD (-?\d+))"))) {
+            atk_ = std::stoi(match[1]); def_ = std::stoi(match[2]); spd_ = std::stoi(match[3]);
+        }
+        if (std::regex_search(screen_, match, std::regex(R"(XP       (-?\d+) / (-?\d+))"))) {
+            xp_ = std::stoll(match[1]); nextXp_ = std::stoll(match[2]);
+        } else if (Contains(screen_, "XP       MAX LEVEL")) { xp_ = 0; nextXp_ = 1; }
         if (std::regex_search(screen_, match, std::regex(R"(=== ROOM: (.+?) ===)"))) room_ = match[1];
         for (const auto& unlock : Matches(screen_, std::regex(R"((Entrance Hall|Archive Room|Chapel|Storage Room) is now unlocked\.)")))
             unlocked_ = (std::max)(unlocked_, RoomNumber(unlock[1]));
         inventoryDirty_ |= Contains(screen_, "Found:") || Contains(screen_, "Five equipment rewards were added");
         skillsDirty_ |= Contains(screen_, "Shimmer skill unlocked") || Contains(screen_, "Level up!");
+        if (std::regex_search(screen_, match, std::regex(R"(Encounter begins: (.+) \(level (\d+), (\w+)\)\.)"))) {
+            ++battles_; enemyName_ = match[1]; enemyTier_ = match[3]; farming_ = cleared_.count(room_) != 0;
+            if (room_ == "Storage Room" && farming_) { if (enemyTier_ == "Boss") ++storageBosses_; else ++storageEnemies_; }
+        }
+        if (Contains(screen_, "First clear: ")) cleared_.insert(room_);
+        if (Contains(screen_, "Encounter complete: victory.")) ++victories_;
+        if (Contains(screen_, "Encounter complete: defeat.")) ++deaths_;
+        if (Contains(screen_, "Encounter complete: fled.")) ++flees_;
+        for (const auto& cast : Matches(screen_, std::regex(R"(uses Shimmer skill (.+) on )"))) used_.insert(cast[1]);
         static const std::regex eventPattern(R"((?:^|\n)\[(\d+)\] ([^\r\n]+))");
         for (const auto& event : Matches(screen_, eventPattern)) {
             if (!events_.insert(std::stoll(event[1])).second) continue;
@@ -99,10 +117,12 @@ class Endurance {
     }
     std::vector<Entry> Entries() const {
         std::vector<Entry> result;
-        static const std::regex pattern(R"((?:^|\n)(\d+)\. (.+?) \[(Common|Uncommon|Rare|Epic|Legendary|Artifact)\]([^\r\n]*))");
+        static const std::regex pattern(R"((?:^|\n)\[(\d+)\] ([^\r\n]+)\r?\n    (Common|Uncommon|Rare|Epic|Legendary|Artifact) \| ([^|\r\n]+)([^\r\n]*)\r?\n    ([^\r\n]+))");
         for (const auto& match : Matches(screen_, pattern)) {
             Entry entry; entry.index = std::stoi(match[1]); entry.name = match[2]; entry.rarity = match[3];
-            const auto tail = match[4].str(); std::smatch identity;
+            entry.slot = match[4];
+            while (!entry.slot.empty() && entry.slot.back() == ' ') entry.slot.pop_back();
+            const auto tail = match[5].str() + match[6].str(); std::smatch identity;
             entry.id = "name:" + entry.name;
             if (std::regex_search(tail, identity, std::regex(R"(instance=(\d+))"))) {
                 entry.id = identity[1]; std::istringstream words(tail); words >> entry.slot;
@@ -113,7 +133,7 @@ class Endurance {
     }
     bool NextPage() const {
         std::smatch page;
-        return std::regex_search(screen_, page, std::regex(R"(INVENTORY page (\d+)/(\d+))")) && std::stoi(page[1]) < std::stoi(page[2]);
+        return std::regex_search(screen_, page, std::regex(R"(=== EQUIPMENT page (\d+)/(\d+) ===)")) && std::stoi(page[1]) < std::stoi(page[2]);
     }
     static double Score(const std::vector<double>& stats) {
         return std::log((std::max)(1.0, stats[0])) + 3 * std::log((std::max)(1.0, stats[1]))
@@ -122,8 +142,10 @@ class Endurance {
     }
     void Inventory() {
         Key(Contains(screen_, "Destination or panel:") ? 6 : 3);
+        if (!Contains(screen_, "Choose an inventory category.")) throw std::runtime_error("Expected inventory category menu");
+        Key(1);
         for (;;) {
-            if (!Contains(screen_, "Inventory: select item;")) throw std::runtime_error("Expected inventory menu");
+            if (!Contains(screen_, "Select an item or navigation action.")) throw std::runtime_error("Expected equipment menu");
             bool foundNew = false;
             for (auto entry : Entries()) {
                 if (items_.count(entry.id)) continue;
@@ -138,16 +160,17 @@ class Endurance {
                     for (const auto& value : stats) { before.push_back(std::stod(value[1])); after.push_back(std::stod(value[2])); }
                     if (Score(after) > Score(before) + .00001) { action = 1; gear_[entry.slot] = entry.id; }
                 }
-                Key(action);
+                if (action) { Key(1); Key(1); }
+                else Key(0);
             }
             if (!foundNew || !NextPage()) break;
-            Key(13);
+            Key(9);
         }
-        Key(0); inventoryDirty_ = false;
+        Key(0); Key(0); inventoryDirty_ = false;
     }
     std::vector<Skill> SkillRows() {
         std::vector<Skill> result;
-        for (const auto& match : Matches(screen_, std::regex(R"((?:^|\n)(\d+)\. (.+?) cost (\d+) cooldown (\d+)([^\r\n]*)\r?\n   ([^\r\n]+))"))) {
+        for (const auto& match : Matches(screen_, std::regex(R"((?:^|\n)\[(\d+)\] (.+?)  Cost (\d+)  CD (\d+)([^\r\n]*)\r?\n   ([^\r\n]+))"))) {
             Skill skill; skill.index = std::stoi(match[1]); skill.name = match[2]; skill.cost = std::stoi(match[3]);
             skill.equipped = Contains(match[5], "[EQUIPPED]"); skill.description = match[6];
             std::smatch power;
@@ -184,10 +207,10 @@ class Endurance {
         if (preferred.empty() && enemyTier_ == "Boss" && !farming_ && ready != readiness.end() && level_ < ready->second) { Key(4); return; }
         Key(3);
         if (!Contains(screen_, "Choose combat Shimmer")) { Key(1); return; }
-        auto options = Matches(screen_, std::regex(R"((?:^|\n)(\d+)\. (.+?) cooldown (\d+)\r?(?:\n|$))"));
+        auto options = Matches(screen_, std::regex(R"((?:^|\n)\[(\d+)\] (.+?)  Cost \d+  \[(READY|CD \d+)\]\r?(?:\n|$))"));
         std::string pick; int bestPower = -1;
         for (const auto& option : options) {
-            if (option[3] != "0") continue;
+            if (option[3] != "READY") continue;
             const auto name = option[2].str();
             if (!preferred.empty() && name == preferred) { pick = option[1]; break; }
             if (preferred.empty() && !used_.count(name)) { pick = option[1]; break; }
@@ -205,16 +228,20 @@ class Endurance {
     }
     void SetGear(const std::string& id, bool equip) {
         Key(3);
+        if (!Contains(screen_, "Choose an inventory category.")) throw std::runtime_error("Expected inventory category menu");
+        Key(1);
         for (;;) {
             const auto entries = Entries();
             const auto target = std::find_if(entries.begin(), entries.end(), [&](const Entry& e) { return e.id == id; });
             if (target != entries.end()) {
-                Key(target->index); Key(target->equipped == equip ? 0 : 1);
+                Key(target->index);
+                if (target->equipped != equip) { Key(1); Key(1); }
+                else Key(0);
                 if (equip) gear_[target->slot] = id; else gear_.erase(target->slot);
-                Key(0); return;
+                Key(0); Key(0); return;
             }
             if (!NextPage()) throw std::runtime_error("Earned item instance missing: " + id);
-            Key(13);
+            Key(9);
         }
     }
     void ClearGear() { const auto prior = gear_; for (const auto& entry : prior) SetGear(entry.second, false); }
@@ -292,7 +319,13 @@ public:
         capture_ << child_.Read(false);
         if (!child_.WaitForExit() || child_.ExitCode() != 0 || !Contains(screen_, "Session complete.")) throw std::runtime_error("Game did not exit normally");
         if (target == 100 && extra >= 100 && (!storageEnemies_ || !storageBosses_)) throw std::runtime_error("Storage farming coverage incomplete");
-        std::cout << "Endurance passed: real console exit 0; PE subsystem 3; " << used_.size() << " distinct skills cast.\n";
+        std::cout << "Endurance passed: real console exit 0; "
+#ifdef _WIN32
+            "PE subsystem 3; "
+#else
+            "executable console process; "
+#endif
+            << used_.size() << " distinct skills cast.\n";
     }
 };
 }

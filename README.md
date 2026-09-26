@@ -10,6 +10,7 @@ The complete Visual Studio solution, all source/header files, and build outputs 
 - [Shared gameplay architecture](docs/Micare-System-Design.md)
 - [Milestone 2 changelog](docs/NAyoola_Milestone2.md)
 - [Milestone 3 changelog](docs/Milestone3.md)
+- [Milestone 4 final-delivery changelog](docs/Milestone4.md)
 
 The gameplay loop includes Fountain recovery, room navigation, weighted investigations, items and equipment, ordinary combat, XP and level-up rewards, Shimmer loadouts, fixed first-clear bosses, room unlocks, and farming in cleared rooms. Combat events and defeat history remain reviewable in the console.
 
@@ -35,3 +36,15 @@ The pre-conversion gameplay and graphical implementation are preserved at Git ch
 **Accomplishments.** I improved my ability to separate game state from presentation, validate statistically generated content, preserve plain testable event data while adding console styling, and test full keyboard-driven workflows through the real executable. Current Artifact, Shimmer, compatibility, header, content, and console smoke regressions pass together.
 
 **Next Steps.** Before Week 4, I want to stabilize the current build and make sure that everything including the new cpps are working together before finalizing the gameplay loop and flow and other milestone 4 adjustments.
+
+## Milestone 4 final stand-up
+
+**Overview.** This week I completed Micare's final-delivery pass. I finished the five-room progression and mystery-fragment presentation, kept first-clear and repeat-farming behavior distinct, completed the final object/reference audit, and brought the maintained console automation back in sync with the current category-first menus and multiline HUD.
+
+**Improvements.** Room-definition lookup is now static, next-room access uses focused const/mutable lookup helpers, and the remaining C++17 portability problems in combat math and Shimmer construction are resolved without changing combat values. Console QA now runs through both Windows and POSIX process transports, parses the current inventory, player panel, Shimmer loadout, and combat picker, and performs ordinary-character progression, post-clear farming, Adelaide, and invalid-input coverage through the real executable.
+
+**Challenges.** The largest issue was validation drift: the short smoke test reflected the current UI, but ConsoleEndurance still expected the older flat inventory and one-line player panel. Fixing the harness exposed the difference between a test executable merely launching and it actually observing the current game state. The Linux pass supplied full endurance evidence, while the final native Windows pass separately certified the Visual Studio Debug x64 build, MSVC header checks, console smoke, and PE console subsystem.
+
+**Accomplishments.** The current source passes Artifact, Shimmer, compatibility, content, isolated-header, smoke, replay, and endurance validation in a clean GCC C++17 build. A fresh ordinary character reached level 100, cleared Fountain through Storage, completed 250 bounded post-cap investigations, observed 323 ordinary Storage encounters and 28 farming bosses, and cast all 31 Shimmers. Adelaide coverage verified level-100 isolation, advanced equipment and Artifact views, the complete Shimmer catalogue, and a 1,000-roll Storage boss sample. No combat balance values or major systems were changed.
+
+**Next Steps.** Capture the 3–5 minute showcase and any required submission screenshots, review the prepared `dev` → `main` pull request, and merge only after final approval.

@@ -1,285 +1,336 @@
-9/3/2026
+# Documentation Progress
 
+## Project Information
 
-Spent ~1 hour wrangling scaffolding and resolving small issues to ensure everything is structured properly
+- **Course:** COS Project & Portfolio 1
+- **Student:** Nelson
+- **Project:** Micare - Cathedral of Lies
+- **Language:** C++17
+- **Final Build:** Console application
 
-•	Organized the project into a cleaner include/ and src/ structure.
-•	Added the core Enemy class with:
-•	Name, health, and attack values
-•	Damage handling
-•	Alive/dead state checks
-•	Basic accessors
-•	Added enemy types:
-•	Automata
-•	Nun
-•	Boss
-•	Added the Item class with item names and descriptions.
-•	Added the Clue class for storing discovered information.
-•	Expanded Player to include:
-•	Health and maximum health
-•	Shimmer Points
-•	Healing and damage handling
-•	SP spending and recovery
-•	Inventory storage
-•	Added the abstract ShimmerSkill base class for future polymorphic Shimmer abilities.
-•	Added Area functionality for:
-•	Storing enemies with std::unique_ptr
-•	Checking whether enemies remain
-•	Finding the first living enemy
-•	Removing defeated enemies
-•	Added procedural area generation through MapManager.
-•	Area generation now creates a small selection of:
-•	Automata
-•	Nuns
-•	Shimmer Husks
-•	Bosses in special areas such as the Sanctum
-•	Added ProgressionManager for:
-•	XP tracking
-•	XP thresholds
-•	Level progression
-•	Health and SP rewards after leveling up
-•	Added a combat action system with:
-•	Attack
-•	Block
-•	Shimmer
-•	Interrogate
-•	Expose Weakness
-•	Item
-•	Flee
-•	Added enemy-turn handling, including reduced damage when blocking.
-•	Added basic weakness exposure so attacks can deal increased damage afterward.
-•	Added Shimmer skill validation based on the player’s available SP.
-•	Added EncounterManager to coordinate:
-•	Area exploration
-•	Combat menus
-•	Player actions
-•	Enemy turns
-•	XP rewards
-•	Defeated enemy cleanup
-•	Flee and defeat outcomes
-•	Added invalid numeric input handling in the console encounter menu.
-•	Connected all current managers through GameManager.
-•	Added a simple playable console flow:
-•	Adelaide enters the cathedral
-•	An area is generated
-•	Enemies are encountered
-•	Combat actions are selected
-•	XP and level progression are displayed
-•	Added a basic main.cpp entry point that starts the game.
-•	Configured the Visual Studio project for C++17.
-•	Added the canonical include/ directory to the compiler include path.
-•	Confirmed the project builds successfully with no errors or warnings.
-•	Ran a console smoke test that verified:
-•	Combat execution
-•	Enemy damage
-•	Player damage
-•	Enemy defeat
-•	XP gain
-•	Level-up behavior
-•	Area completion messages
-•	MapManager now owns the deterministic Floor 1 room list.
-•	Area stores room-specific environment and encounter metadata.
-•	EncounterManager handles room interaction and combat entry.
-•	GameManager controls the overall map-and-room loop.
-•	Progression remains minimal and fixed-threshold.
-•	The current system is ready for later clue persistence, dialogue, item usage, and map progression features.
+## Project Overview
 
+Micare began as a small multi-file C++ project and grew into a complete console RPG with exploration, investigations, combat, progression, equipment, Shimmer abilities, Artifacts, bosses, room progression, and repeatable post-clear encounters.
 
-9/4
-•	Implemented native Win32 UI for Micare - Cathedral of Lies.
-•	Added player name entry and used the chosen name in the UI, combat messages, and event logs.
-•	Added Floor, Map, Room, Inventory, Skills, and Combat views.
-•	Added deterministic Floor 1 rooms and room progression.
-•	Added room interaction buttons and investigation/search behavior.
-•	Added deterministic enemy spawning and combat encounters.
-•	Added Attack, Shimmer, and Flee combat actions.
-•	Removed the Block button.
-•	Added combat turn handling and enemy response logic.
-•	Added battle completion messages with XP and item drop information.
-•	Added inventory item selection and item information display.
-•	Added inventory sorting, paging, locking, discarding, equipping, and consumable use.
-•	Added rarity-based item text colors.
-•	Added status messages for room, inventory, and combat actions.
+Throughout the course, the project went through several major structural changes. Early development focused on building the core classes and gameplay loop. A graphical Win32 version was briefly developed, but the assessed project was later converted into a standard C++17 console application and reorganized inside the required `dev` folder.
 
-9/5
+The final version focuses on a complete Floor I experience while preserving the larger Micare concept for future development.
 
-•	Improved room, inventory, combat, and navigation button alignment.
-•	Fixed inventory controls overlapping or extending outside the window.
-•	Fixed room interaction buttons overlapping the Back button.
-•	Fixed navigation buttons being positioned below or outside the visible panel.
-•	Fixed stacked or overlapping text rendering in the UI.
-•	Fixed combat and room interactions appearing to freeze the executable.
-•	Root cause of the freeze was an infinite level-up loop caused by xpToNextLevel_ being set to 0 in completion mode.
-•	Added a level-100 cap and a defensive nonzero XP-threshold check.
-•	Added deferred UI refresh handling to reduce Win32 command/refresh re-entry issues.
-•	Added guards for invalid rooms, stale enemies, and repeated command handling.
-•	Fixed the executable build successfully after the changes.
+---
 
-•	Added a data-driven enemy catalogue for Devotee, Automata, and Verdigris factions.
-•	Added Basic, Rare, Epic, Elite, and Boss enemy tiers with catalogue skill and drop metadata.
-•	Added tier-specific HP, ATK, and DEF scaling with fixed archetype SPD values.
-•	Migrated Win32 and console enemy spawning to catalogue definitions.
-•	Added enemy skill cooldowns, faction skill effects, boss phase transitions, and structured combat events.
-•	Added elite encounter escalation from seeded Shimmer Surge events.
-•	Added tier-aware elite and boss reward selection.
-•	Added Shimmer unlock triggers and a 10-point Shimmer loadout tracker.
-•	Added enemy faction, tier, and phase details to the combat view.
-•	Validated the catalogue expansion with a successful Debug x64 build.
+## Initial Project Foundation
 
-•	Added immediate-previous-page navigation for Back and inventory access from investigation.
-•	Cleared combat ownership and event history when leaving battles so later investigations start fresh.
-•	Limited enemy encounters by room faction, room spawn condition, player level, and maximum catalogue tier.
-•	Prevented level 1 players from encountering Rare, Epic, Elite, or Boss enemies.
-•	Routed opening-turn, status, hazard, and combat deaths to the fountain recovery choices immediately.
-•	Blocked navigation, investigation, fleeing, and combat actions while the player is at 0 HP.
-•	Updated combat events to identify specific Bleed, Burn, and Poison effects and immediate status deaths.
-•	Replaced unsupported combat-log symbols with readable ASCII event labels.
-•	Recorded the navigation, encounter, recovery, and event-log changes for version-control tracking.
-•	Added metadata-driven Shimmer skill descriptions and effects to the Skills view.
-•	Added Shimmer skill equip and unequip controls using the progression loadout budget.
-•	Displayed equipped Shimmer skills in the player equipment panel.
+The first development pass established the basic architecture of the game.
 
+Completed work included:
 
-• Added [`docs/Micare-System-Design.md`](Micare-System-Design.md), documenting the current C++17 architecture.
-• Documented class responsibilities for Player, Enemy, Area, MapManager, CombatManager, Inventory, ContentCatalog, ProgressionManager, EncounterManager, GameManager, and Win32UI.
-• Documented `std::vector` usage for deterministic room order, owned runtime objects, statuses, skills, combat events, and UI views.
-• Documented `std::unique_ptr`, references, raw non-owning pointers, and value semantics, including ownership and lifetime boundaries.
-• Added source links to the relevant files under [`dev/include`](../dev/include/) and [`dev/src`](../dev/src/).
-• Added C++17, Win32, GDI, Visual Studio, smart-pointer, vector, and Git reference sources to the design documentation.
-•	Added selectable equipped Shimmer skills to combat and connected selections to combat resolution.
-•	Validated the Shimmer loadout update with a successful Debug x64 build.
-Version 0.4.1
-•	Changed the desktop Skills heading to “SKILLS” and unlocked the starter Shimmer skill during player initialization.
-•	Replaced runaway absolute-level enemy scaling with bounded level-relative HP, ATK, and DEF formulas.
-•	Cleared player and enemy statuses when battles end and kept enemy-only Verdigris Mark out of the player panel.
-•	Added turn-gated combat controls, living-target selection, and deterministic groups of up to three ordinary enemies.
-•	Added level-weighted enemy tier selection, bounded level disparity, exact “Nothing Was Found.” investigation feedback, and active equipment-set status names.
-•	Validated the correction pass with a successful Debug x64 build.
+- Organized the project into `include/` and `src/` folders.
+- Created the core `Player`, `Enemy`, `Item`, `Clue`, `Area`, and `ShimmerSkill` classes.
+- Added `MapManager`, `ProgressionManager`, `EncounterManager`, and `GameManager`.
+- Used `std::unique_ptr` for owned runtime objects such as enemies.
+- Added references and non-owning pointers where managers needed access to existing objects.
+- Added XP and level progression.
+- Added a basic combat system.
+- Added inventory and clue storage.
+- Added deterministic room generation.
+- Created a playable console loop.
+- Configured the project for C++17.
+- Completed the first successful build and gameplay smoke test.
 
-Version 0.4.2
-•	Reworked the Skills screen into separate skill-inventory and skill-information panels with selectable equip buttons.
-•	Added skill sorting by A-Z or cost and filtering by offense or support.
-•	Removed redundant single-enemy target presentation and kept target buttons for multi-enemy encounters.
-•	Converted equipment main-stat bonuses to level-scaled percentages while retaining flat SPD substats.
-•	Made investigation consumable outcomes reachable and room-aware, then validated the update with a successful Debug x64 build.
+This stage established the class structure and relationships that the rest of the project was built on.
 
-Cleanup pass
+---
 
-• Fixed the player speed regression by preserving the normalized 100 SPD baseline during level initialization.
-• Normalized boot rarity values to 5/8/12/16/20/25 and applied flat equipment main-stat values during player stat recalculation.
-• Wired healing received, barrier potency, damage reduction, lifesteal, resistance, evasion, slow, and debuff-duration reduction into runtime mechanics.
-• Implemented typed enemy buffs, barriers, cleanses, healing resistance, enemy hit checks, evasion, critical attacks, and stun-before-AI handling.
-• Replaced hard-coded boss and progression rules with room-definition interactable completion, boss IDs, spawn chances, farm weights, and next-room IDs.
-• Corrected boss/elite loot rarity, added consumable drops, applied equipment-family roll offsets, and preserved separate same-name item instances.
-• Replaced permanent Shimmer stat mutation and fake revival behavior with temporary defensive statuses.
-• Added explicit Floor I completion messaging and removed exact enemy HP numbers from desktop combat cards.
-• Validated the cleanup with a successful Debug x64 build, `MICARE_VALIDATE=1`, and `git diff --check`.
+## Gameplay and System Expansion
 
+As development continued, Micare gained more detailed RPG systems.
 
-9/7
+Major additions included:
 
-•	Deleted unused Automata, Boss, and Nun source/header files.
-•	Removed stale includes and verified project metadata no longer references them.
-•	Removed the legacy name-based Enemy constructor and speed sniffing.
-•	Added Area::ResourcePool for clue/item state and introduced SetHealingRoom(bool).
-•	Updated MapManager to explicitly mark the Fountain as the healing room.
-•	Replaced Inventory’s parallel vectors with std::vector<ItemEntry>.
-•	Merged Enemy::ProcessStatuses overloads and added SumStatusBonus.
-•	Added CombatManager::AdvanceTurn for repeated gauge transitions.
-•	Replaced direct CombatManager.cpp std::cout calls with CombatEvent logging.
-•	Fountain no longer heals on room entry.
-•	Fountain remains sealed until investigated.
-•	Win32 exposes a Fountain action only after discovery.
-•	Console has an equivalent Fountain recovery action.
-•	Investigation drops now announce exact item names.
-•	Repeat searches can drop consumables more commonly and equipment less commonly, with rarity rolls.
-•	Active status effects now display with potency.
-•	Negative statuses display red; beneficial statuses display blue.
-•	Active Attack, Defense, Speed, Accuracy, Crit, and Healing modifiers now affect calculated player/enemy stats.
-•	Phthorá uses typed DefenseDown rather than Verdigris Mark
-entralized Win32 and console investigation through ResolveInvestigation.
-•	Replaced fixed room-name investigation RNG with advancing per-room RNG.
-•	Removed duplicate console room-entry enemy spawning.
-•	Ensured item and clue outcomes are removed from weighted rolls when unavailable.
-•	Item investigation events now consume finite room item resources.
-•	Added stable discovery IDs for clue and interactable revelations.
-•	Preserved Fountain guardian discovery, healing unlock, and room progression.
-•	Removed the remaining fixed room-name seed from post-combat loot generation.
-•	Confirmed UI no longer directly grants investigation XP, rolls loot, consumes clues, or applies investigation damage.
-•	Added InvestigationHarness.vcxproj as a separate deterministic test target.
-•	Fresh investigation/combat harness build and execution passed.
+- Data-driven enemy catalogues.
+- Multiple enemy factions and rarity tiers.
+- Enemy skills, cooldowns, statuses, and boss phases.
+- Shimmer ability metadata and unlock progression.
+- Shimmer loadout management.
+- Equipment and item rarity systems.
+- Investigation rewards and room-specific outcomes.
+- Combat statuses including Bleed, Burn, Poison, barriers, buffs, and debuffs.
+- Equipment stat bonuses and set effects.
+- Level-aware encounter generation.
+- Room-specific enemy pools.
+- Boss progression and first-clear rewards.
+- Consumable items.
+- Improved inventory management.
+- Improved combat event logging.
 
-9/8 - 9/9
+During this stage, several systems were also refactored so gameplay rules were stored in catalogues and room definitions instead of being repeatedly hard-coded throughout the program.
 
-* Converted **Micare** from the GUI build into a fully course-compliant **C++ console application**.
-* Moved the full Visual Studio solution and project structure inside the required `dev` folder.
-* Preserved the old GUI version separately on the archive branch instead of deleting it.
-* Repaired project paths, include paths, output folders, debugger paths, and VS Code build/debug configuration after the restructure.
-* Removed Win32/graphical startup code and kept the assessed version console-only.
-* Verified the console build launches with no GUI window and no Python dependency.
-* Added/connected a playable console interface for navigation, rooms, inventory, Shimmer skills, combat, maps, and encounter logs.
-* Improved console input handling so malformed or out-of-range input does not break menu flow.
-* Added a complete fresh-character gameplay loop starting at the Fountain and progressing through the rooms.
-* Reworked investigation so it uses a single weighted outcome system for enemies, items, XP, clues, beneficial events, and hazards.
-* Preserved the intended investigation probabilities and repeat-investigation behavior.
-* Added required-discovery pity so players do not get stuck waiting indefinitely for room progression.
-* Kept first-clear bosses as fixed progression checks rather than scaling them to the player.
-* Preserved the **50% first-clear boss appearance chance** once eligible.
-* Preserved the separate **8% farm-boss chance** after a room has been cleared.
-* Added explicit first-clear boss levels and XP rewards for each room.
-* Reworked enemy selection so rarity/tier is chosen first, then an eligible enemy from that room/tier is selected.
-* Added/validated the intended enemy rarity curve from Level 1 through Level 100.
-* Rebalanced early enemies so starter fights are actually survivable and closer to intended action counts.
-* Improved combat logging with sequence IDs and actual HP damage rather than only requested damage.
-* Added barrier absorption, barrier break, healing, status, critical, skill, and death information to the combat event log.
-* Preserved complete encounter history after defeat instead of wiping it immediately.
-* Added a defeat review screen and acknowledgment before returning to the Fountain.
-* Fixed cases where dead players could incorrectly receive victory XP.
-* Fixed Shimmer reward queue issues that could create stale choices or stall progression after multiple level-ups.
-* Added working level-up rewards, including five equipment rewards and Shimmer choices.
-* Added console inventory management with equip/unequip, locking, discarding, sorting, pagination, and exact item instances.
-* Added Shimmer loadout management with the 12-point equipment budget.
-* Added Fountain healing after the tutorial guardian is defeated.
-* Added room unlocking, first-clear tracking, repeat farming, and final Floor I completion behavior.
-* Expanded automated validation with combat tests, investigation tests, equipment tests, content validation, and progression simulations.
-* Ran a real console smoke test through Fountain, Entrance Hall, boss defeat/retry, Shimmer use, equipment, XP, and room unlocking.
-* Started a much larger **fresh-character endurance playthrough** through the real executable.
-* Successfully cleared every required Floor I guardian using normal gameplay.
-* Reached **Level 100 legitimately** through console play rather than injected XP or test shortcuts.
-* Used all **31 Shimmer skills** during the endurance run.
-* Recorded hundreds of encounters, deliberate flees, and a real defeat/recovery path during live testing.
-* Continued Level-100 farming through thousands of investigations and more than 2,500 encounters without obvious state corruption.
-* Legitimately obtained at least **eight distinct Artifact items** during the soak test.
-* Confirmed a previous long-run timeout was caused by the input automation driver, not Micare itself.
-* Added a regression test for the Storage Room ordinary-encounter problem.
-* Established tested checkpoint commit `74540af` for the earlier combat/correctness work.
-* Began separating issues into **correctness bugs, balance problems, presentation issues, and unverified features** instead of treating everything as the same kind of failure.
+---
 
-Confirmed and known issues
+## Architecture and Refactoring
 
-* **Storage Room ordinary farming is disabled** even though the room already has an enemy pool configured.
-* **Legendary set bonuses are missing or not activating according to the approved 2-piece/3-piece rules.**
-* Some older code still uses the previous **five-piece set logic** instead of the newer Legendary and Artifact thresholds.
-* **Acceleration Shimmer skills advertise 40% stat bonuses but currently apply 25%.**
-* Some Shimmer descriptions and actual runtime effects are still inconsistent.
-* Equipment main-stat math is not fully aligned with the approved Equipment V2 rules.
-* Early ATK/DEF equipment has been capable of granting extremely large flat bonuses, such as a Common weapon giving around +80 to +120 ATK to a character starting at 20 ATK.
-* Because of that equipment scaling issue, a low-level player was able to defeat the fixed Level-8 Matron much earlier than intended.
-* Inventory item-detail output can show mostly zeroes even when the item has a real percentage-based main stat.
-* Equipment comparison/display still needs to show the actual effective stat changes rather than only the raw `Stats` structure.
-* `RollLootInstance` needs continued review to ensure randomized rolls do not erase intentionally authored fixed bonuses or unique effects.
-* The approved Legendary/Artifact set overhaul is not yet fully verified in live gameplay.
-* Only eight distinct Artifacts have been naturally obtained so far, so several Artifact unique effects still lack live-play verification.
-* Some Artifact mechanics may currently exist only as strings/placeholders or older simplified behavior and need deterministic testing.
-* Combat still contains some older deterministic hit/status roll logic that should be replaced or fully standardized around seedable RNG.
-* Consumable handling still needs a full audit for effect parsing, valid targeting, quantities, failed uses, and exact turn consumption.
-* Large inventories make automated testing slower and can overwhelm the input driver, although the game itself did not hang in the reproduced case.
-* Inventory locking/removal behavior should still be checked carefully when multiple copies of the same item exist.
-* The exact Basic-enemy gear pity implementation still needs full live verification across long farming runs.
-* Full rarity progression needs continued verification, especially Legendary and Artifact drops at high levels.
-* Not every enemy skill/status combination has been exercised through live play yet.
-* Not every individual Artifact trigger has been activated in a real naturally progressed run yet.
-* The console presentation is still intentionally rough: no polished health bars, status icons, rarity colors, compact combat HUD, or improved spacing yet.
-* The mystery/narrative side of the game is still mostly placeholder content compared with the much more developed combat/progression systems.
-* Release/x86 configurations have not been as thoroughly runtime-tested as Debug x64.
-* The newest endurance-run fixes and validation work may still be **uncommitted** because Codex hit its usage limit while staging/continuing the run.
+A large part of the course involved improving code that already worked.
+
+Refactoring included:
+
+- Replacing unused or outdated classes and constructors.
+- Replacing parallel inventory arrays with structured `ItemEntry` objects.
+- Consolidating repeated combat and status-processing logic.
+- Moving investigation behavior into `EncounterManager`.
+- Moving room configuration into shared room definitions.
+- Improving room lookup using pointers and references.
+- Separating presentation logic from gameplay state.
+- Creating shared console-formatting helpers.
+- Improving ownership boundaries between managers and game objects.
+- Reducing unnecessary temporary objects and duplicated logic.
+- Improving C++17 portability between compilers.
+
+These changes made it easier to understand which classes owned data and which systems only referenced it.
+
+---
+
+## Console Conversion
+
+The original graphical prototype was preserved separately, while the assessed project was converted into a standard console application.
+
+The conversion included:
+
+- Moving the Visual Studio solution and project into `dev`.
+- Removing Win32 startup and graphical dependencies from the assessed build.
+- Removing Python dependencies.
+- Rebuilding navigation, inventory, combat, map, Shimmer, and investigation interfaces for the console.
+- Improving numeric input validation.
+- Adding clear menu navigation and back actions.
+- Creating a fresh-character progression path beginning at the Fountain.
+- Preserving fixed first-clear bosses and separate post-clear farming encounters.
+- Adding defeat review and Fountain recovery.
+- Improving combat logs and player feedback.
+- Adding console equipment management.
+- Adding Shimmer loadout management.
+- Completing the Floor I progression loop.
+
+The archived graphical version remains in Git history, but it is not part of the final course build.
+
+---
+
+## Equipment, Shimmer, and Artifact Systems
+
+Later development focused heavily on the RPG progression systems.
+
+### Equipment
+
+The equipment system was expanded with:
+
+- Weapon and armor slots.
+- Multiple rarity levels.
+- Main stats and substats.
+- Item locking and discarding.
+- Sorting and filtering.
+- Pagination.
+- Stat comparisons before equipping.
+- Set identification and activation.
+- Repeatable loot generation.
+
+### Shimmers
+
+The final game includes:
+
+- 31 Shimmer abilities.
+- Unlock progression.
+- Equip costs and loadout limits.
+- Offensive and support skills.
+- Cooldowns.
+- Temporary buffs and debuffs.
+- Damage-over-time interactions.
+- Combat Shimmer selection.
+
+Descriptions and runtime effects were audited so the displayed information matches the implemented behavior.
+
+### Artifacts
+
+The Artifact system includes:
+
+- 15 unique Artifact effects.
+- Artifact equipment.
+- Artifact rarity drops.
+- Three Artifact set families.
+- Runtime set bonuses.
+- Interactions with damage, healing, barriers, statuses, and other combat systems.
+
+Deterministic regression tests were used to verify effects that would be difficult to obtain naturally during a normal playthrough.
+
+---
+
+## Inventory and Console Usability
+
+The console interface received a major usability pass.
+
+Improvements included:
+
+- Category-based inventory navigation.
+- Separate Equipment, Consumables, Key Items, and Clues sections.
+- Equipment pagination.
+- Slot, rarity, and set filters.
+- Sorting options.
+- Detailed equipment descriptions.
+- Projected stat comparisons.
+- Set activation and deactivation feedback.
+- Improved player status panels.
+- Improved combat HUD formatting.
+- Clearer room and investigation messages.
+- Invalid-input recovery.
+- Bounded page navigation.
+- Improved Shimmer menus.
+- Consistent Back and Exit actions.
+
+The final Visual Studio solution launches `COS-PP1` directly so normal F5 execution opens the game rather than a testing utility.
+
+---
+
+## Floor I Progression
+
+The completed assessed progression is:
+
+**Fountain → Entrance Hall → Archive Room → Chapel → Storage Room**
+
+The final progression includes:
+
+- Required investigation discoveries.
+- Room-specific narrative fragments.
+- First-clear boss encounters.
+- First-clear rewards.
+- Room unlocking.
+- Repeat investigations.
+- Ordinary post-clear encounters.
+- Farming boss encounters.
+- Final Floor I completion messaging.
+
+The Storage Room remains repeatable after Floor I completion.
+
+---
+
+## Developer Mode
+
+Adelaide developer mode was created to make late-game systems easier to verify.
+
+Developer mode provides access to:
+
+- Level 100.
+- All rooms.
+- Equipment catalogue items.
+- Artifact equipment.
+- Consumables.
+- Clues and key progression items.
+- All Shimmer abilities.
+- Advanced inventory filtering.
+- Production-backed loot sampling.
+
+Developer mode is isolated from normal characters and is intended only for testing.
+
+---
+
+## Testing and Validation
+
+Testing became increasingly important as the project grew.
+
+The project includes regression and console validation tools for:
+
+- Equipment and Artifact behavior.
+- Shimmer behavior.
+- Compatibility checks.
+- Investigation logic.
+- Room progression.
+- Boss progression.
+- Loot generation.
+- Consumable effects.
+- Damage-over-time calculations.
+- Inventory navigation.
+- Invalid input.
+- Header compatibility.
+- Real executable console interaction.
+
+A full endurance run also verified long-term progression through the actual game.
+
+The completed run included:
+
+- Progression through all five Floor I rooms.
+- Level 100 reached through normal gameplay.
+- Hundreds of combat encounters.
+- Post-clear Storage farming.
+- Farming boss encounters.
+- All 31 Shimmer abilities used.
+- Normal defeats, escapes, recovery, inventory use, and progression.
+
+The final native Windows build also passed:
+
+- Visual Studio Debug x64 compilation.
+- Artifact regression.
+- Shimmer and compatibility regression.
+- Content validation.
+- 49/49 isolated MSVC C++17 header checks.
+- Console smoke validation.
+- Windows PE console-subsystem validation.
+
+---
+
+## Milestone 4 Final Polish
+
+The final milestone focused on completing and stabilizing the existing project instead of introducing another large feature.
+
+Final work included:
+
+- Completing Floor I narrative presentation.
+- Improving boss encounter wording.
+- Improving investigation messages.
+- Improving the Floor I completion message.
+- Refactoring room lookup and reference usage.
+- Fixing remaining C++17 portability issues.
+- Updating automated tests for the current inventory and HUD layouts.
+- Cleaning generated and temporary files from the repository.
+- Simplifying the Visual Studio solution so `COS-PP1` is the primary project.
+- Completing final documentation.
+- Capturing final submission screenshots.
+- Running the final Windows validation pass.
+
+No combat rebalance or major new gameplay system was introduced during the final cleanup.
+
+---
+
+## Final Project Status
+
+Micare is now a complete and functional C++17 console RPG for the course submission.
+
+The final build includes:
+
+- Five-room Floor I progression.
+- Investigation and clue systems.
+- Turn-based combat.
+- Enemy factions and rarity tiers.
+- Boss encounters.
+- XP and leveling.
+- Equipment and inventory.
+- Consumables.
+- Shimmer abilities.
+- Artifact equipment and sets.
+- Developer-mode testing.
+- Repeatable post-clear encounters.
+- Input validation and navigation improvements.
+- Automated regression and endurance testing.
+
+## Remaining Future Development
+
+The course version is complete, but Micare can continue beyond this build.
+
+Future development could include:
+
+- Additional cathedral floors.
+- More rooms and investigations.
+- More enemies and bosses.
+- Expanded narrative content.
+- Additional Shimmers and Artifacts.
+- More complex enemy behaviors.
+- A full save/load system.
+- Deeper character progression.
+- Further presentation improvements.
+
+The project will continue using the architecture, gameplay systems, and development practices established during this course.

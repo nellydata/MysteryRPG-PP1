@@ -1,60 +1,53 @@
-# Milestone 4 final-delivery changelog
+# Milestone 4
 
-## Summary
+## Overview
 
-Milestone 4 completes the assessed Micare console build. The pass focused on finishing the existing five-room experience, improving ownership and lookup boundaries, repairing final validation drift, and documenting evidence. It deliberately does not rebalance combat or introduce a new gameplay system.
+For Milestone 4, I focused on finishing and polishing Micare so the project feels complete and stable. Most of the work this week was improving the existing gameplay loop, cleaning up code structure, fixing remaining usability issues, and completing final testing before submission.
 
-## Completed gameplay and presentation work
+## Final Features Added
 
-- Finalized the configured progression chain: Fountain → Entrance Hall → Archive Room → Chapel → Storage Room.
-- Added short room-specific clue fragments and one incomplete lore fragment to each progression milestone.
-- Preserved separate first-clear, ordinary encounter, farming-boss, flee, defeat, and duplicate-reward behavior.
-- Kept Storage as the final repeatable room; its first-clear boss intentionally unlocks no additional destination.
-- Preserved the approved enemy, reward, Shimmer, Artifact, set, drop-rate, and combat-balance values.
+- Finalized the full Floor I progression from the Fountain through the Entrance Hall, Archive Room, Chapel, and Storage Room.
+- Completed the investigation and clue flow for each room.
+- Added room-specific narrative fragments and progression messages.
+- Finalized first-clear boss encounters and repeatable post-clear room encounters.
+- Completed the equipment, Artifact, Shimmer, consumable, and inventory systems already developed during previous milestones.
+- Preserved Adelaide developer mode for testing advanced equipment, Shimmers, Artifacts, and late-game content.
+- Added clearer end-of-floor messaging while leaving room for future areas and story content.
 
-## Code-quality and portability improvements
+## Refactoring Improvements
 
-- Replaced investigation-time construction of a temporary `MapManager` with static lookup into the process-lifetime room-definition catalogue.
-- Added const and mutable `MapManager::FindRoom` overloads so callers can request one non-owning room pointer instead of traversing the full mutable container.
-- Made fixed-width combat-math expressions use consistent `std::int64_t` operands, avoiding implementation-specific `long`/`long long` template deduction failures.
-- Replaced a nested Shimmer default-argument pattern with explicit delegating overloads. Runtime metadata and balance values are unchanged.
-- Added a POSIX transport alongside the existing Windows console-process transport so maintained real-executable QA can also run in a non-Windows build environment.
+- Improved room lookup logic so the game can access room definitions without creating unnecessary temporary objects.
+- Added focused const and mutable room lookup functions using pointers and references where appropriate.
+- Cleaned up combat math types for better C++17 compiler compatibility.
+- Refactored Shimmer construction to remove problematic default-argument behavior while keeping the same gameplay effects.
+- Updated the automated console testing tools so they match the current inventory, HUD, Shimmer, and combat menu formats.
+- Separated testing utilities from the main game project so the final Visual Studio solution launches Micare directly.
 
-## Final QA repair
+## Bug Fixes and Usability Updates
 
-The short console smoke already used the category-first inventory, but ConsoleEndurance still parsed the previous flat inventory, one-line player panel, old Shimmer rows, and old combat picker. The harness now consumes the current UI:
+- Fixed older testing logic that still expected the previous flat inventory menu.
+- Updated inventory navigation for the current category-first layout and pagination system.
+- Fixed parsing for the multiline player status panel and current Shimmer menus.
+- Improved boss encounter text so it reads more naturally to the player.
+- Replaced several placeholder investigation messages with more polished narrative text.
+- Improved the final Floor I completion message.
+- Verified invalid menu inputs, locked-room navigation, page limits, and clean exits.
+- Removed unnecessary build files, temporary validation output, IDE cache files, and other files that were not needed for the final submission.
 
-- category selection before equipment browsing;
-- bracketed inventory rows and current pagination actions;
-- equipment confirmation prompts;
-- multiline level, HP, stat, and XP panels;
-- current Shimmer loadout and combat-picker formats;
-- current first-clear, victory, defeat, flee, and encounter messages.
+## Final Testing
 
-This repair is limited to QA behavior. It does not add test-only paths to the game.
+The final project was tested in both Windows and a separate C++17 environment.
 
-## Validation evidence
+The final Windows checks included:
 
-Current-source validation on 2026-09-25 includes:
+- Clean Visual Studio Debug x64 build
+- Artifact regression tests
+- Shimmer and compatibility regression tests
+- Content validation
+- 49/49 isolated header checks under MSVC C++17
+- Console smoke testing
+- PE console-subsystem verification
 
-- clean GCC C++17 Debug-equivalent build of the game and regression executables;
-- `ArtifactRegression`: passed;
-- `ShimmerRegression` and linked `CompatibilityChecks`: passed;
-- `COS-PP1 --validate`: passed;
-- 49/49 isolated headers passed GCC C++17 `-pedantic-errors -fsyntax-only`;
-- real-executable ConsoleValidation smoke: passed;
-- fresh normal-character playthrough: Fountain, Entrance Hall, Archive Room, Chapel, and Storage Room reached in order;
-- ConsoleEndurance: level 100, 1,889 investigations, 805 observed encounters, 454 victories, 250 post-cap investigations, 323 Storage ordinary encounters, 28 Storage farming bosses, and all 31 Shimmers cast; normal exit 0;
-- Adelaide replay: level 100 `[DEV]`, Artifact rarity filtering/detail, complete Shimmer view, and 1,000 Storage boss rolls with 5.18% Artifact gear in that sample; normal exit 0;
-- invalid-input/navigation replay: nonnumeric, negative, and out-of-range dashboard input; locked-room selection; first/final inventory page bounds; invalid rarity choice; normal exit 0;
-- `git diff --check`: passed.
+A full endurance test also confirmed that a normal character could progress through all five rooms, reach level 100, continue farming after completing Floor I, and use all 31 Shimmer abilities.
 
-## Native Windows checkpoint
-
-The final native Windows checkpoint passed: clean Visual Studio/MSBuild Debug x64 build, ArtifactRegression, ShimmerRegression with CompatibilityChecks, content validation, 49/49 MSVC C++17 `/permissive- /Zs` isolated-header fixtures, ConsoleValidation smoke, and the PE console subsystem 3 assertion. The existing full Linux ConsoleEndurance evidence remains separately recorded and valid; the approved final narrative edits are text-only.
-
-## Known limitations
-
-- Progress persists only for the running session; there is no disk-save system.
-- ANSI color depends on terminal support while stored names and combat events remain plain.
-- The 3–5 minute showcase video is a manual submission artifact and is not generated by the codebase.
+At the end of Milestone 4, Micare is a complete and playable console RPG build with its main gameplay systems, progression, testing, and documentation finished for submission.

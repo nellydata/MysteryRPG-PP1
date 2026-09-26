@@ -1,50 +1,98 @@
 # Micare - Cathedral of Lies
 
-Micare is a standard C++17 console RPG for the course deliverable. Open [dev/COS-PP1.slnx](dev/COS-PP1.slnx) in Visual Studio and build **Debug x64**, with **COS-PP1** as the startup project.
+Micare is a C++17 console RPG developed as my final course project. The game focuses on exploration, investigation, turn-based combat, equipment, Shimmer abilities, Artifacts, boss encounters, and progression through the first floor of the cathedral.
 
-To build and run from a terminal, use `dev\Run-Micare.cmd` from the repository root. From a terminal currently inside `dev\src`, use `..\Run-Micare.cmd`. The project intentionally has no editor-specific launch folder; build the solution or use the launcher instead of trying to execute an individual `.cpp` file.
+To build the project, open `dev/COS-PP1.slnx` in Visual Studio, select **Debug x64**, and run **COS-PP1** as the startup project.
 
-The complete Visual Studio solution, all source/header files, and build outputs are inside `dev`. The application uses keyboard input and console output; it has no GUI or Python dependency.
+The assessed version of the project is a standard console application with no GUI or Python dependency.
+
+## Project Documentation
 
 - [Build instructions and keyboard controls](dev/README.md)
-- [Shared gameplay architecture](docs/Micare-System-Design.md)
+- [Gameplay architecture](docs/Micare-System-Design.md)
 - [Milestone 2 changelog](docs/NAyoola_Milestone2.md)
 - [Milestone 3 changelog](docs/Milestone3.md)
-- [Milestone 4 final-delivery changelog](docs/Milestone4.md)
+- [Milestone 4 changelog](docs/Milestone4.md)
 
-The gameplay loop includes Fountain recovery, room navigation, weighted investigations, items and equipment, ordinary combat, XP and level-up rewards, Shimmer loadouts, fixed first-clear bosses, room unlocks, and farming in cleared rooms. Combat events and defeat history remain reviewable in the console.
+## Gameplay
 
-The pre-conversion gameplay and graphical implementation are preserved at Git checkpoint `fa9bc0b` on branch `archive/gui-before-course-conversion`. Graphical components are absent from the assessed build. Existing course/reference documents remain under `docs` and illustrations under `images`; neither is a runtime dependency.
+The gameplay loop includes:
 
-## Milestone 2 stand-up
-**Overview.** This week I continued the console conversion of Micare. I refactored the combat turn engine out of one oversized function into named helpers, split the console presentation into a pure formatting module (`ConsoleFormat`), added a shared catalogue-lookup helper (`Catalog`) used by both the enemy and item catalogues, and tightened enum validation at the catalogue boundaries in `GameplayTypes`.
+- room exploration and investigation
+- turn-based combat
+- XP and level progression
+- equipment and inventory management
+- Shimmer abilities
+- Artifact equipment and set bonuses
+- consumable items
+- boss encounters
+- room unlocking and progression
+- repeatable encounters and farming after room completion
 
-**Challenges.** The main obstacle was a linking failure introduced when `ConsoleUI` began depending on the new `ConsoleFormat` translation unit — the test/harness projects that compiled `ConsoleUI.cpp` no longer linked. I resolved it by making the dependency explicit, then simplified the repository by removing the generated capture folder and the standalone test projects so the solution builds as a single clean deliverable. Keeping combat behaviour identical while extracting helpers was the other challenge; I verified each change with MSVC C++17 `/permissive-` compile checks and a full clean rebuild.
+Floor I currently progresses through:
 
-**Accomplishments.** I levelled up on separating pure logic from I/O — `ConsoleFormat` has no console dependency, so panel text is now testable in isolation. I also learned to validate enum values at the deserialization boundary instead of scattering magic number casts, and to consolidate duplicated catalogue code into one header. The codebase is noticeably cleaner as a result.
+Fountain → Entrance Hall → Archive Room → Chapel → Storage Room
 
-**Next Steps.** Before Week 3 I plan to add disk-based save/load so progress persists across sessions, expand the ability catalogue, and finish the usability pass on combat prompts and error messages.
+The pre-conversion graphical version of the project is preserved at Git checkpoint `fa9bc0b` on branch `archive/gui-before-course-conversion`. The final assessed build is console-only.
 
-## Milestone 3 stand-up
+---
 
-**Overview.** This week I completed the gameplay compatibility pass and redesigned the console presentation without changing the approved balance. The game now has verified Shimmer metadata/runtime agreement, all 15 Artifact uniques and their three set families, an isolated Adelaide developer mode, production-backed room drop simulation, and category-based inventory/equipment navigation. I refactored and adjusted the structue and handling of multiple cpps.
+## Milestone 2 Stand-Up
 
-**Improvements.** I separated presentation helpers into `ConsoleFormat`, consolidated player panels, combat HUDs, status/rarity labels, menu formatting, progress bars, and equipment comparisons. Inventory now separates equipment, consumables, key items, and clues; equipment browsing supports pagination, sorting, slot/rarity/set filters, authoritative Artifact descriptions, real projected stat comparisons, and clear set activation changes. The maintained console smoke harness was restored to the solution and updated to drive the current menus.
+**Overview.** This week I continued the console conversion of Micare. I refactored the combat turn engine out of one oversized function into named helpers, split console presentation into the `ConsoleFormat` module, added shared catalogue lookup functionality, and improved enum validation.
 
-**Challenges.** A running debugger can lock the normal Debug executable and prevent the linker from replacing it. Validation therefore supports a separate output directory when needed, without terminating a user-owned process. The inventory redesign also made the old flat-menu smoke sequence obsolete; I corrected the harness itself instead of adding special-case behavior to the game.
+**Challenges.** One major issue was a linking failure after `ConsoleUI` began depending on the new `ConsoleFormat` translation unit. Some testing projects were not linking the new source file correctly. I fixed the project dependencies and continued simplifying the code structure while keeping combat behavior unchanged.
 
-**Accomplishments.** I improved my ability to separate game state from presentation, validate statistically generated content, preserve plain testable event data while adding console styling, and test full keyboard-driven workflows through the real executable. Current Artifact, Shimmer, compatibility, header, content, and console smoke regressions pass together.
+**Accomplishments.** I improved at separating game logic from presentation and learned how useful smaller, focused modules are for testing and maintenance. I also became more comfortable working with multiple `.h` and `.cpp` files instead of keeping too much logic in one place.
 
-**Next Steps.** Before Week 4, I want to stabilize the current build and make sure that everything including the new cpps are working together before finalizing the gameplay loop and flow and other milestone 4 adjustments.
+**Next Steps.** My next goal was to expand the game systems, improve console usability, and continue refining the overall gameplay loop.
 
-## Milestone 4 final stand-up
+---
 
-**Overview.** This week I completed Micare's final-delivery pass. I finished the five-room progression and mystery-fragment presentation, kept first-clear and repeat-farming behavior distinct, completed the final object/reference audit, and brought the maintained console automation back in sync with the current category-first menus and multiline HUD.
+## Milestone 3 Stand-Up
 
-**Improvements.** Room-definition lookup is now static, next-room access uses focused const/mutable lookup helpers, and the remaining C++17 portability problems in combat math and Shimmer construction are resolved without changing combat values. Console QA now runs through both Windows and POSIX process transports, parses the current inventory, player panel, Shimmer loadout, and combat picker, and performs ordinary-character progression, post-clear farming, Adelaide, and invalid-input coverage through the real executable.
+**Overview.** This week I completed a major gameplay and presentation pass. I finished the Artifact system, expanded Shimmer functionality, added Adelaide developer mode, improved loot testing, and redesigned the inventory and equipment menus.
 
-**Challenges.** The largest issue was validation drift: the short smoke test reflected the current UI, but ConsoleEndurance still expected the older flat inventory and one-line player panel. Fixing the harness exposed the difference between a test executable merely launching and it actually observing the current game state. The Linux pass supplied full endurance evidence, while the final native Windows pass separately certified the Visual Studio Debug x64 build, MSVC header checks, console smoke, and PE console subsystem.
+**Improvements.** Inventory now separates equipment, consumables, key items, and clues. Equipment browsing supports pagination, sorting, filters, stat comparisons, Artifact descriptions, and set bonus information. I also improved the combat HUD, player information panels, and general console formatting.
 
-**Accomplishments.** The current source passes Artifact, Shimmer, compatibility, content, isolated-header, smoke, replay, and endurance validation in a clean GCC C++17 build. A fresh ordinary character reached level 100, cleared Fountain through Storage, completed 250 bounded post-cap investigations, observed 323 ordinary Storage encounters and 28 farming bosses, and cast all 31 Shimmers. Adelaide coverage verified level-100 isolation, advanced equipment and Artifact views, the complete Shimmer catalogue, and a 1,000-roll Storage boss sample. No combat balance values or major systems were changed.
+**Challenges.** The redesigned menus caused older automated tests to stop matching the current interface. Instead of changing the game to satisfy outdated tests, I updated the testing tools to work with the new UI.
 
-**Next Steps.** Capture the 3–5 minute showcase and any required submission screenshots, review the prepared `dev` → `main` pull request, and merge only after final approval.
+**Accomplishments.** I became much more comfortable separating presentation from game state, testing generated content, and maintaining larger connected systems without breaking existing gameplay.
+
+**Next Steps.** My goal for the final milestone was to stabilize the entire project, complete the remaining progression and narrative work, and perform a full final testing pass.
+
+---
+
+## Milestone 4 Final Stand-Up
+
+### ⚙️ Overview
+
+This week I completed the final version of Micare for the course. I finished the full five-room Floor I progression, completed the investigation and narrative presentation, polished boss and room progression, and finalized the major gameplay systems that were developed throughout the project.
+
+### 🛠️ Project Wrap-Up
+
+Before submission, I focused on polishing and stability instead of adding another major system. I improved room lookup and object/reference usage, cleaned up several C++17 compatibility issues, updated the inventory and console testing tools to match the current interface, and improved several player-facing investigation and boss messages.
+
+I also cleaned the Visual Studio solution so `COS-PP1` is the main project shown and launched during normal use while keeping the testing source available in the repository for development history and validation.
+
+The final project passed a clean Visual Studio Debug x64 build along with Artifact, Shimmer, compatibility, content, header, and console validation tests.
+
+### 🌵 Challenges
+
+One of the biggest challenges was keeping older parts of the project synchronized as the game evolved. Some automated tests still expected older versions of the inventory, player panel, and Shimmer menus even though the game itself had already changed.
+
+I solved this by updating the testing tools instead of adding special behavior to the game. I also spent a lot of time tracking down compiler, project configuration, and navigation issues while making sure fixes did not change the intended gameplay balance.
+
+### 📚 Biggest Takeaway
+
+The most valuable thing I learned during this course was how important organization becomes as a project gets larger.
+
+At the beginning, I mostly thought about whether an individual feature worked. By the end of the course, I was thinking much more about class responsibilities, references and pointers, data flow, project structure, version control, regression testing, and whether a change in one system could affect another part of the game.
+
+I also became much more comfortable working with a larger C++ project split across many source and header files.
+
+### 🔮 Future Development
+
+If I continue Micare after this course, I would expand the cathedral beyond Floor I with new rooms, enemies, bosses, investigations, and narrative content.
+
+I would also like to add a proper save/load system, expand the Shimmer and Artifact systems, deepen character and enemy progression, and eventually continue developing the larger version of the game beyond the limitations of the course project.

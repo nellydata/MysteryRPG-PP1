@@ -208,8 +208,8 @@ inline void RequireConsole(const fs::path& executable) {
 #ifdef _WIN32
     const auto bytes = ReadFile(executable);
     if (bytes.size() < 0x40) throw std::runtime_error("Executable has no PE header");
-    unsigned offset = 0;
-    for (unsigned i = 0; i < 4; ++i) offset |= static_cast<unsigned char>(bytes[0x3c + i]) << (8 * i);
+    unsigned offset = 0U;
+    for (unsigned i = 0; i < 4U; ++i) offset |= static_cast<unsigned char>(bytes[0x3c + i]) << (8U * i);
     if (offset + 94 > bytes.size() || bytes.substr(offset, 4) != std::string("PE\0\0", 4) ||
         static_cast<unsigned char>(bytes[offset + 24 + 68]) != 3 || bytes[offset + 24 + 69] != 0)
         throw std::runtime_error("Expected PE console subsystem 3");

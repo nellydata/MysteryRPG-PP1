@@ -59,9 +59,9 @@ InvestigationResult EncounterManager::ResolveInvestigation(Area& area, Player& p
         result.type = InvestigationEventType::EnemyEncounter;
         result.enemyId = definition->bossId;
         result.spawnedEnemy = CreateFirstClearBoss(*definition);
-        result.narrative = "A major presence emerges: " + result.enemyId + ". Fixed level " +
-            std::to_string(definition->firstClearBossLevel) + "; prepare around level " +
-            std::to_string(definition->intendedProgressionLevel) + ". You can withdraw and continue investigating.";
+        result.narrative = "A major presence emerges: " + result.enemyId + ". It is level " +
+            std::to_string(definition->firstClearBossLevel) + "; the signs suggest returning near level " +
+            std::to_string(definition->intendedProgressionLevel) + " if you are unprepared. You can still withdraw.";
         area.MarkBossEncountered();
         result.primaryResolved = result.spawnedEnemy != nullptr;
         return result;
@@ -104,7 +104,7 @@ InvestigationResult EncounterManager::ResolveInvestigation(Area& area, Player& p
         result.type = InvestigationEventType::ExplorationXP;
         result.xpAwarded = (std::max)(std::int64_t{1}, XPRequirementForLevel(level) *
             std::uniform_int_distribution<int>(8, 12)(rng) / 100);
-        result.narrative = "You piece together a useful detail about the cathedral.";
+        result.narrative = "You trace a pattern through the room, though its purpose remains uncertain.";
         break;
     case 3: {
         const bool consumed = area.ConsumeClue();
@@ -113,7 +113,7 @@ InvestigationResult EncounterManager::ResolveInvestigation(Area& area, Player& p
         result.type = InvestigationEventType::ClueDiscovery;
         result.discoveryId = area.getName() + ":discovery:" + std::to_string(area.GetSearchCount());
         result.xpAwarded = CalculateInvestigationXP(level, InvestigationAreaDepth(area.getName()));
-        result.narrative = "You recover a meaningful fragment from the room.";
+        result.narrative = "A detail refuses to fit the room around it.";
         if (definition && !definition->clueFragments.empty()) {
             const std::size_t fragment = static_cast<std::size_t>(area.GetSearchCount() - 1) % definition->clueFragments.size();
             result.narrative += " " + definition->clueFragments[fragment];
@@ -339,7 +339,7 @@ void EncounterManager::CompleteVictory(Area& area, Player& player, Enemy& enemy,
 
     const auto* room = map.GetRoomDefinition(area);
     if (room && room->nextRoomId.empty() && area.HasBossBeenDefeated())
-        ui.ShowMessage("Floor I cleared. The cathedral falls silent.");
+        ui.ShowMessage("Floor I cleared. Beyond the sealed passage, hidden machinery continues to turn.");
     ui.PresentLevelUpRewards(progression);
 }
 

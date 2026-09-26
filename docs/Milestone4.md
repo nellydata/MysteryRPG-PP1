@@ -49,9 +49,9 @@ Current-source validation on 2026-09-25 includes:
 - invalid-input/navigation replay: nonnumeric, negative, and out-of-range dashboard input; locked-room selection; first/final inventory page bounds; invalid rarity choice; normal exit 0;
 - `git diff --check`: passed.
 
-## Final checkpoint still required
+## Native Windows checkpoint
 
-The available execution environment is Linux and has no Visual Studio/MSBuild toolchain. It cannot certify the exact clean **Debug x64** solution build, Windows PE subsystem check, or MSVC `/permissive-` header pass after these final changes. Those native Windows checks remain a blocker to calling the submission fully verified. No commit or merge should be made until the Windows result is recorded in `dev/validation/final-submission-report.md` and reviewed.
+The final native Windows checkpoint passed: clean Visual Studio/MSBuild Debug x64 build, ArtifactRegression, ShimmerRegression with CompatibilityChecks, content validation, 49/49 MSVC C++17 `/permissive- /Zs` isolated-header fixtures, ConsoleValidation smoke, and the PE console subsystem 3 assertion. The existing full Linux ConsoleEndurance evidence remains separately recorded and valid; the approved final narrative edits are text-only.
 
 ## Known limitations
 

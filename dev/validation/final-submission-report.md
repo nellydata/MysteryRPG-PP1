@@ -3,9 +3,8 @@
 Date: 2026-09-25 (America/Chicago)  
 Repository: `nellydata/MysteryRPG-PP1`  
 Branch: `dev`  
-Remote HEAD inspected: `a3842fa012a73cbe2188eec993cd1483a0529212`  
-Requested commit verified: `5b4a1039b81ea86adccae15b0e40cb9d9fff185e` (first parent of remote `dev` HEAD)  
-Commit created by this pass: no  
+Final Windows-checkpoint parent: `0ab4c9f331e61b31e8c7e5070a7f03969251a8ec`  
+Requested commit verified: `5b4a1039b81ea86adccae15b0e40cb9d9fff185e` (ancestor of the final-delivery commits)  
 Merge to `main`: no
 
 ## Scope and audit result
@@ -18,17 +17,17 @@ The final polish made room lookups more focused, fixed two C++17 portability fai
 
 | Check | Result | Evidence |
 | --- | --- | --- |
-| Repository / branch / commit | Passed | Private repo verified; `dev` remote HEAD `a3842fa`; requested `5b4a103` verified as its first parent. |
+| Repository / branch / commit | Passed | Private repo verified on `dev`; native Windows checkpoint began from `0ab4c9f`; requested `5b4a103` remains in the branch history. |
 | Starting tree | Passed | Fresh downloaded `dev` archive matched remote branch content; no project edits before the pass. |
 | Debug-equivalent clean build | Passed | Fresh GCC C++17 `-O0 -g` build produced game, Artifact, Shimmer/compatibility, and ConsoleValidation executables. |
-| Visual Studio Debug x64 | **Blocked** | Linux environment has no MSBuild/Visual Studio or Windows PE runtime. Native recheck required. |
+| Visual Studio Debug x64 | Passed | Clean native Visual Studio/MSBuild Debug x64 build completed successfully on Windows. |
 | ArtifactRegression | Passed | Exit 0; Artifact catalogue, player hooks, caps, and set-stat regression passed. |
 | ShimmerRegression | Passed | Exit 0. |
 | CompatibilityChecks | Passed | Runs inside ShimmerRegression; loot, pity, full room/boss chain, consumables/DOT, and mixed-set checks passed. |
 | `--validate` | Passed | `Micare content validation passed`; exit 0. |
-| ConsoleValidation headers | Passed (GCC) | 49/49 isolated include/construction fixtures passed C++17 `-pedantic-errors -fsyntax-only`. Native MSVC form remains blocked. |
-| ConsoleValidation smoke | Passed | Fresh character, category-first inventory, Shimmer view, Fountain combat/purification, Entrance Hall navigation, exit 0. |
-| ConsoleEndurance | Passed | Level 100, 1,889 investigations, 805 encounters, 454 victories, 250 post-cap investigations, 31/31 Shimmers cast, exit 0. |
+| ConsoleValidation headers | Passed | 49/49 isolated include/construction fixtures passed native MSVC C++17 `/permissive- /Zs`; the separate GCC C++17 `-pedantic-errors -fsyntax-only` pass also passed 49/49. |
+| ConsoleValidation smoke / PE subsystem | Passed | Native Windows smoke covered the fresh-character workflow and exited 0; the executable passed the PE console subsystem 3 assertion. |
+| ConsoleEndurance (Linux) | Passed | Existing full evidence remains valid: level 100, 1,889 investigations, 805 encounters, 454 victories, 250 post-cap investigations, 31/31 Shimmers cast, exit 0. This was not unnecessarily rerun for text-only narrative changes. |
 | Normal route | Passed | Fresh ordinary character traversed Fountain → Entrance Hall → Archive Room → Chapel → Storage Room. |
 | Post-clear sample | Passed | Storage reported 323 ordinary encounters and 28 farming bosses during the bounded run. |
 | Adelaide coverage | Passed | Level 100 `[DEV]`, Artifact filtering/detail, full Shimmer catalogue, 1,000 Storage boss-roll sample, exit 0. |
@@ -50,21 +49,19 @@ The direct Adelaide replay used the production developer initializer and real co
 ## Milestone 4 issue assessment
 
 - #51, #52, #53, and #54 are closed and consistent with the inspected implementation.
-- #55 should remain open until the native Visual Studio Debug x64 and Windows ConsoleValidation rerun is recorded.
-- #56 documentation is prepared locally, but the showcase video and final reviewed checkpoint remain outstanding; its closed state should be reconsidered until those manual deliverables are complete.
+- #55 is complete: the native Visual Studio Debug x64 build, regression executables, content validation, MSVC isolated-header pass, Windows smoke, and PE subsystem 3 check all passed.
+- #56 documentation and repository checkpoint work are complete. The 3–5 minute showcase video and any required screenshots remain manual submission artifacts.
 
-## Blocker before commit
+## Native Windows checkpoint
 
-The exact native Windows gate requested for final delivery has not been run after the final portability and QA-harness edits. This environment cannot perform the Visual Studio **clean Debug x64** build, Windows PE console-subsystem assertion, or the MSVC `/permissive-` isolated-header pass. All available current-source validation passes, but that platform-specific gap is material.
+The final native Windows checkpoint completed successfully from `dev` at `0ab4c9f` before the approved text-only narrative polish:
 
-**Checkpoint recommendation:** do not commit or merge yet. Run the native Windows commands below, append their result to this report, review the diff, then approve a `dev` commit. Do not merge to `main` without explicit approval.
+- clean Visual Studio/MSBuild Debug x64 build: passed;
+- `ArtifactRegression`: passed;
+- `ShimmerRegression` with `CompatibilityChecks`: passed;
+- `COS-PP1.exe --validate`: passed with `Micare content validation passed.`;
+- ConsoleValidation isolated headers: 49/49 passed under MSVC C++17 `/permissive- /Zs`;
+- ConsoleValidation smoke: passed with exit 0 and PE console subsystem 3;
+- `git diff --cached --check`: passed.
 
-```text
-msbuild dev\COS-PP1.slnx /t:Clean,Build /m /p:Configuration=Debug /p:Platform=x64
-dev\bin\x64\Debug\ArtifactRegression.exe
-dev\bin\x64\Debug\ShimmerRegression.exe
-dev\bin\x64\Debug\COS-PP1.exe --validate
-dev\bin\x64\Debug\ConsoleValidation.exe --headers --exe dev\bin\x64\Debug\COS-PP1.exe
-dev\bin\x64\Debug\ConsoleValidation.exe --smoke final-windows-smoke --exe dev\bin\x64\Debug\COS-PP1.exe
-dev\bin\x64\Debug\ConsoleValidation.exe --endurance final-windows-endurance 100 250 --sets --exe dev\bin\x64\Debug\COS-PP1.exe
-```
+The only subsequent source edit changes four presentation strings in `EncounterManager.cpp`; it does not alter gameplay, balance, progression, loot, or systems. The repository validation gate is complete. Merge to `main` still requires explicit approval.

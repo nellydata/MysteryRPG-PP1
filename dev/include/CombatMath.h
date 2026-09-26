@@ -38,7 +38,7 @@ inline int Scale(int value, int percent) {
 }
 inline int ApplyPercent(int value, int percent) {
     const auto numerator = static_cast<std::int64_t>((std::max)(0, value)) *
-        (std::max)(std::int64_t{0}, 100LL + percent);
+        (std::max)(std::int64_t{0}, std::int64_t{100} + percent);
     return Saturate((numerator + 50) / 100);
 }
 
@@ -78,7 +78,7 @@ inline int SubstatRoll(ItemStat stat, Rarity rarity, unsigned seed) {
 
 inline int AccuracyChance(int baseChance, int accuracy, int resistance) {
     const auto difference = static_cast<std::int64_t>(accuracy) - resistance;
-    const int bounded = static_cast<int>((std::clamp)(difference, -100LL, 100LL));
+    const int bounded = static_cast<int>((std::clamp)(difference, std::int64_t{-100}, std::int64_t{100}));
     const int adjusted = ApplyPercent(baseChance, bounded);
 	return (std::max)(15, (std::min)(100, adjusted));
 }

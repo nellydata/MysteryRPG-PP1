@@ -32,7 +32,7 @@ public:
 		const std::string& description, const std::string& effect, int powerPercent, int duration);
 	ShimmerSkill(const std::string& name, int equipCost, int cooldown,
 		const std::string& description, const std::string& effect, int powerPercent, int duration,
-		const CombatBuff& combatBuff, const EffectMetadata& effectMetadata = EffectMetadata{});
+		const CombatBuff& combatBuff, const EffectMetadata& effectMetadata);
 	ShimmerSkill(const std::string& name, int cooldown,
 		const std::string& description, const std::string& effect);
 	virtual ~ShimmerSkill();

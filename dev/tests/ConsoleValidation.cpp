@@ -59,7 +59,12 @@ void Smoke(const fs::path& dev, const fs::path& executable, const std::string& c
         if (first == std::string::npos || output.find(needle, first + 1) != std::string::npos)
             throw std::runtime_error("Duplicate or missing smoke effect: " + std::string(needle));
     }
-    std::cout << "Console smoke passed: fresh character, category-first Equipment/detail/Back and Consumables navigation, Shimmer view, Fountain investigation/combat, unlock, room navigation; exit 0; PE subsystem 3.\n";
+    std::cout << "Console smoke passed: fresh character, category-first Equipment/detail/Back and Consumables navigation, Shimmer view, Fountain investigation/combat, unlock, room navigation; exit 0; "
+#ifdef _WIN32
+        "PE subsystem 3.\n";
+#else
+        "executable console process.\n";
+#endif
 }
 
 void Replay(const fs::path& dev, const fs::path& executable, const fs::path& source, const std::string& capture) {
@@ -116,6 +121,7 @@ std::string Xml(std::string value) {
 }
 
 fs::path FindMSBuild(const fs::path& dev) {
+#ifdef _WIN32
     wchar_t programFiles[32768]{};
     GetEnvironmentVariableW(L"ProgramFiles(x86)", programFiles, 32768);
     auto vswhere = fs::path(programFiles) / "Microsoft Visual Studio/Installer/vswhere.exe";
@@ -128,6 +134,10 @@ fs::path FindMSBuild(const fs::path& dev) {
         L"Microsoft.VisualStudio.Component.VC.Tools.x86.x64",L"-find",L"MSBuild\\Current\\Bin\\MSBuild.exe"}, dev, code));
     if (code || !fs::exists(fs::u8path(path))) throw std::runtime_error("Visual Studio C++ MSBuild not found");
     return fs::u8path(path);
+#else
+    (void)dev;
+    return "/usr/bin/g++";
+#endif
 }
 
 void Headers(const fs::path& dev) {
@@ -178,6 +188,7 @@ void Headers(const fs::path& dev) {
     }
     project << "</ItemGroup><Import Project=\"$(VCTargetsPath)\\Microsoft.Cpp.targets\" /></Project>\n";
     WriteFile(output / "HeaderChecks.vcxproj", project.str());
+#ifdef _WIN32
     unsigned code = 0;
     const auto result = CaptureProcess(FindMSBuild(dev), {(output / "HeaderChecks.vcxproj").wstring(),
         L"/t:ClCompile",L"/p:Configuration=Debug",L"/p:Platform=x64",L"/v:minimal",L"/nologo"}, dev, code);
@@ -185,6 +196,22 @@ void Headers(const fs::path& dev) {
     if (code) { std::cerr << result; throw std::runtime_error("Isolated header compilation failed"); }
     const auto summary = "Header checks: " + std::to_string(total) + "/" + std::to_string(total) +
         " isolated include/construction fixtures passed under MSVC C++17 /permissive- /Zs.\n";
+#else
+    std::ostringstream compilerOutput;
+    int passed = 0;
+    for (const auto& fixture : fs::directory_iterator(output)) {
+        if (fixture.path().extension() != ".cpp") continue;
+        unsigned code = 0;
+        const auto result = CaptureProcess(FindMSBuild(dev), {L"-std=c++17", L"-pedantic-errors", L"-fsyntax-only",
+            L"-I" + (dev / "include").wstring(), fixture.path().wstring()}, dev, code);
+        compilerOutput << "== " << fixture.path().filename().string() << " ==\n" << result;
+        if (code) { WriteFile(output / "compiler-output.txt", compilerOutput.str()); throw std::runtime_error("Isolated header compilation failed"); }
+        ++passed;
+    }
+    WriteFile(output / "compiler-output.txt", compilerOutput.str());
+    const auto summary = "Header checks: " + std::to_string(passed) + "/" + std::to_string(total) +
+        " isolated include/construction fixtures passed under GCC C++17 -pedantic-errors -fsyntax-only.\n";
+#endif
     WriteFile(output / "summary.txt", summary); std::cout << summary;
 }
 }
